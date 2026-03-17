@@ -24,6 +24,7 @@ KS_DIR="${KS_DIR:-/var/lib/libvirt/images/kickstarts}"
 OEMDRV_ISO="${OEMDRV_ISO:-$ISO_DIR/OEMDRV.iso}"
 ANSIBLE_ENV_DIR="${ANSIBLE_ENV_DIR:-$HOME/.ansible/conf}"
 ANSIBLE_ENV_FILE="${ANSIBLE_ENV_FILE:-$ANSIBLE_ENV_DIR/env.yml}"
+ANSIBLE_VAULT_PASS_FILE="${ANSIBLE_VAULT_PASS_FILE:-$ANSIBLE_ENV_DIR/.vaultpass.txt}"
 
 REPO_URL="${REPO_URL:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,6 +35,8 @@ RUN_ONCE="${RUN_ONCE:-0}"
 DEMO_MODE="${DEMO_MODE:-0}"
 CLI_DEMO=""
 CLI_DEMOKILL=""
+CLI_RECONFIGURE=""
+MENU_CHOICE_CONSUMED=0
 
 # Automation Hub + AAP bundle pre-flight HTTP-serve variables
 HUB_TOKEN="${HUB_TOKEN:-}"
@@ -42,6 +45,27 @@ AAP_BUNDLE_URL="${AAP_BUNDLE_URL:-}"
 AAP_BUNDLE_DIR="${AAP_BUNDLE_DIR:-${VM_DIR}/aap-bundle}"
 AAP_HTTP_PID=""
 AAP_ADMIN_PASS="${AAP_ADMIN_PASS:-}"
+
+# Shared identity/network defaults (single source of truth)
+ADMIN_USER="${ADMIN_USER:-admin}"
+ADMIN_PASS="${ADMIN_PASS:-r3dh4t7!}"
+DOMAIN="${DOMAIN:-example.com}"
+REALM="${REALM:-}"
+NETMASK="${NETMASK:-255.255.0.0}"
+INTERNAL_GW="${INTERNAL_GW:-0.0.0.0}"
+
+# Internal interface static defaults (eth1)
+SAT_IP="${SAT_IP:-10.168.128.1}"
+AAP_IP="${AAP_IP:-10.168.128.2}"
+IDM_IP="${IDM_IP:-10.168.128.3}"
+SAT_HOSTNAME="${SAT_HOSTNAME:-satellite-618.example.com}"
+AAP_HOSTNAME="${AAP_HOSTNAME:-aap-26.example.com}"
+IDM_HOSTNAME="${IDM_HOSTNAME:-idm.example.com}"
+
+# Satellite defaults
+SAT_ORG="${SAT_ORG:-REDHAT}"
+SAT_LOC="${SAT_LOC:-CORE}"
+IDM_DS_PASS="${IDM_DS_PASS:-r3dh4t7!}"
 
 # Disk I/O mode: "fast" (cache=none,discard=unmap,io=native — optimal for SSD/NVMe)
 #                "safe" (cache=writeback — conservative; use for spinning HDDs or shared storage)
@@ -75,10 +99,11 @@ Usage: $(basename "$0") [options]
 
 Options:
   --non-interactive        Run without prompts; required values must be preseeded
-    --menu-choice <1-8>      Preselect a menu option
+  --menu-choice <0-6>      Preselect a visible menu option
   --env-file <path>        Load preseed variables from a custom env file
+  --reconfigure            Prompt for all env values and update env.yml
   --demo                   Use minimal PoC/demo VM specs and kickstarts
-    --demokill               Destroy demo VMs, remove demo files, restart libvirtd, and exit
+  --demokill               Destroy demo VMs/files/temp locks and exit (CLI-only)
   --help                   Show this help message
 EOF
 }
@@ -151,6 +176,9 @@ parse_args() {
                 CLI_DEMOKILL="1"
                 RUN_ONCE=1
                 ;;
+            --reconfigure)
+                CLI_RECONFIGURE="1"
+                ;;
             --help|-h)
                 print_usage
                 exit 0
@@ -180,6 +208,10 @@ apply_cli_overrides() {
 
     if [ -n "$CLI_DEMOKILL" ]; then
         MENU_CHOICE="8"
+    fi
+
+    if [ -n "$CLI_RECONFIGURE" ]; then
+        FORCE_PROMPT_ALL=1
     fi
 
     return 0
@@ -214,9 +246,98 @@ load_preseed_env() {
         # shellcheck disable=SC1090
         . "$PRESEED_ENV_FILE"
         set +a
-    else
-        print_warning "Preseed env file not found: $PRESEED_ENV_FILE"
     fi
+}
+
+to_upper() {
+    printf '%s' "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+is_unresolved_template_value() {
+    local value="${1:-}"
+    case "$value" in
+        *"{{"*|*"}}"*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+needs_prompt_var() {
+    local var_name="$1"
+    local value="${!var_name:-}"
+    if [ -z "$value" ] || is_unresolved_template_value "$value"; then
+        return 0
+    fi
+    return 1
+}
+
+normalize_shared_env_vars() {
+    # Guard against unresolved templating artifacts such as '{{ DOMAIN }}'.
+    if is_unresolved_template_value "${DOMAIN:-}"; then
+        DOMAIN=""
+    fi
+    if is_unresolved_template_value "${SAT_DOMAIN:-}"; then
+        SAT_DOMAIN=""
+    fi
+    if is_unresolved_template_value "${AAP_DOMAIN:-}"; then
+        AAP_DOMAIN=""
+    fi
+    if is_unresolved_template_value "${IDM_DOMAIN:-}"; then
+        IDM_DOMAIN=""
+    fi
+
+    DOMAIN="${DOMAIN:-${SAT_DOMAIN:-${AAP_DOMAIN:-${IDM_DOMAIN:-example.com}}}}"
+    REALM="${REALM:-${IDM_REALM:-${SAT_REALM:-}}}"
+    [ -n "${REALM:-}" ] || REALM="$(to_upper "$DOMAIN")"
+
+    ADMIN_USER="${ADMIN_USER:-admin}"
+    ADMIN_PASS="${ADMIN_PASS:-${AAP_ADMIN_PASS:-${IDM_ADMIN_PASS:-${SAT_ADMIN_PASS:-r3dh4t7!}}}}"
+
+    NETMASK="${NETMASK:-${SAT_NETMASK:-${AAP_NETMASK:-${IDM_NETMASK:-255.255.0.0}}}}"
+    INTERNAL_GW="${INTERNAL_GW:-${SAT_GW:-${AAP_GW:-${IDM_GW:-0.0.0.0}}}}"
+
+    SAT_IP="${SAT_IP:-10.168.128.1}"
+    AAP_IP="${AAP_IP:-10.168.128.2}"
+    IDM_IP="${IDM_IP:-10.168.128.3}"
+
+    SAT_ORG="${SAT_ORG:-REDHAT}"
+    SAT_LOC="${SAT_LOC:-CORE}"
+
+    SAT_DOMAIN="${SAT_DOMAIN:-$DOMAIN}"
+    AAP_DOMAIN="${AAP_DOMAIN:-$DOMAIN}"
+    IDM_DOMAIN="${IDM_DOMAIN:-$DOMAIN}"
+
+    if is_unresolved_template_value "${SAT_HOSTNAME:-}"; then
+        SAT_HOSTNAME=""
+    fi
+    if is_unresolved_template_value "${AAP_HOSTNAME:-}"; then
+        AAP_HOSTNAME=""
+    fi
+    if is_unresolved_template_value "${IDM_HOSTNAME:-}"; then
+        IDM_HOSTNAME=""
+    fi
+
+    SAT_HOSTNAME="${SAT_HOSTNAME:-satellite-618.${DOMAIN}}"
+    AAP_HOSTNAME="${AAP_HOSTNAME:-aap-26.${DOMAIN}}"
+    IDM_HOSTNAME="${IDM_HOSTNAME:-idm.${DOMAIN}}"
+
+    SAT_REALM="${SAT_REALM:-$REALM}"
+    IDM_REALM="${IDM_REALM:-$REALM}"
+
+    SAT_ADMIN_PASS="${SAT_ADMIN_PASS:-$ADMIN_PASS}"
+    AAP_ADMIN_PASS="${AAP_ADMIN_PASS:-$ADMIN_PASS}"
+    IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-$ADMIN_PASS}"
+
+    SAT_NETMASK="${SAT_NETMASK:-$NETMASK}"
+    AAP_NETMASK="${AAP_NETMASK:-$NETMASK}"
+    IDM_NETMASK="${IDM_NETMASK:-$NETMASK}"
+
+    SAT_GW="${SAT_GW:-$INTERNAL_GW}"
+    AAP_GW="${AAP_GW:-$INTERNAL_GW}"
+    IDM_GW="${IDM_GW:-$INTERNAL_GW}"
 }
 
 set_or_prompt() {
@@ -224,6 +345,13 @@ set_or_prompt() {
     local prompt_text="$2"
     local is_secret="${3:-0}"
     local prompt_value
+    local lower_prompt prompt_label
+
+    lower_prompt="$(printf '%s' "$prompt_text" | tr '[:upper:]' '[:lower:]')"
+    prompt_label="$prompt_text"
+    if [[ "$lower_prompt" != *"optional"* ]] && [[ "$lower_prompt" != *"required"* ]]; then
+        prompt_label="${prompt_text} [Required]"
+    fi
 
     if [ -n "${!var_name:-}" ]; then
         return 0
@@ -235,10 +363,10 @@ set_or_prompt() {
     fi
 
     if [ "$is_secret" = "1" ]; then
-        read -r -s -p "$prompt_text" prompt_value
+        read -r -s -p "$prompt_label" prompt_value
         echo ""
     else
-        read -r -p "$prompt_text" prompt_value
+        read -r -p "$prompt_label" prompt_value
     fi
 
     printf -v "$var_name" '%s' "$prompt_value"
@@ -246,11 +374,152 @@ set_or_prompt() {
     [ -n "${!var_name:-}" ]
 }
 
+set_or_prompt_optional() {
+    local var_name="$1"
+    local prompt_text="$2"
+    local is_secret="${3:-0}"
+    local prompt_value
+    local lower_prompt prompt_label
+
+    lower_prompt="$(printf '%s' "$prompt_text" | tr '[:upper:]' '[:lower:]')"
+    prompt_label="$prompt_text"
+    if [[ "$lower_prompt" != *"optional"* ]] && [[ "$lower_prompt" != *"required"* ]]; then
+        prompt_label="${prompt_text} [Optional]"
+    fi
+
+    if [ -n "${!var_name:-}" ]; then
+        return 0
+    fi
+
+    if is_noninteractive; then
+        return 0
+    fi
+
+    if [ "$is_secret" = "1" ]; then
+        read -r -s -p "$prompt_label" prompt_value
+        echo ""
+    else
+        read -r -p "$prompt_label" prompt_value
+    fi
+
+    printf -v "$var_name" '%s' "$prompt_value"
+    return 0
+}
+
+prompt_with_default() {
+    local var_name="$1"
+    local prompt_label="$2"
+    local default_value="${3:-}"
+    local is_secret="${4:-0}"
+    local is_required="${5:-0}"
+    local input_value=""
+    local prompt_with_meta lower_prompt
+
+    lower_prompt="$(printf '%s' "$prompt_label" | tr '[:upper:]' '[:lower:]')"
+    prompt_with_meta="$prompt_label"
+    if [[ "$lower_prompt" != *"optional"* ]] && [[ "$lower_prompt" != *"required"* ]]; then
+        if [ "$is_required" = "1" ]; then
+            prompt_with_meta="${prompt_label} [Required]"
+        else
+            prompt_with_meta="${prompt_label} [Optional]"
+        fi
+    fi
+
+    if is_noninteractive; then
+        if [ -n "${!var_name:-}" ] && ! is_unresolved_template_value "${!var_name:-}"; then
+            return 0
+        fi
+        if [ -n "$default_value" ] && ! is_unresolved_template_value "$default_value"; then
+            printf -v "$var_name" '%s' "$default_value"
+            return 0
+        fi
+        [ "$is_required" = "1" ] && {
+            print_warning "NONINTERACTIVE mode requires $var_name to be set."
+            return 1
+        }
+        return 0
+    fi
+
+    while true; do
+        if [ "$is_secret" = "1" ]; then
+            read -r -s -p "$prompt_with_meta: " input_value
+            echo ""
+        else
+            if [ -n "$default_value" ]; then
+                read -r -p "$prompt_with_meta [$default_value]: " input_value
+            else
+                read -r -p "$prompt_with_meta: " input_value
+            fi
+        fi
+
+        [ -n "$input_value" ] || input_value="$default_value"
+
+        if [ "$is_required" = "1" ] && [ -z "$input_value" ]; then
+            print_warning "$var_name is required. Please provide a value."
+            continue
+        fi
+
+        if is_unresolved_template_value "$input_value"; then
+            print_warning "$var_name contains an unresolved template placeholder. Please provide an actual value."
+            continue
+        fi
+
+        printf -v "$var_name" '%s' "$input_value"
+        return 0
+    done
+}
+
+count_missing_vars() {
+    local missing=0
+    local var_name
+    local value
+
+    for var_name in "$@"; do
+        value="${!var_name:-}"
+        if [ -z "$value" ] || is_unresolved_template_value "$value"; then
+            missing=$((missing + 1))
+        fi
+    done
+
+    printf '%s' "$missing"
+}
+
+validate_resolved_kickstart_inputs() {
+    local failed=0
+    local var_name value
+    local -a required_vars=(
+        DOMAIN
+        SAT_IP AAP_IP IDM_IP
+        SAT_HOSTNAME AAP_HOSTNAME IDM_HOSTNAME
+        RH_USER RH_PASS RH_ISO_URL
+        AAP_BUNDLE_URL RH_OFFLINE_TOKEN HUB_TOKEN
+    )
+
+    for var_name in "${required_vars[@]}"; do
+        value="${!var_name:-}"
+        if [ -z "$value" ] || is_unresolved_template_value "$value"; then
+            print_warning "Missing or unresolved required value: $var_name"
+            failed=1
+        fi
+    done
+
+    if [ "$failed" -ne 0 ]; then
+        print_warning "Cannot generate kickstarts until required values are resolved."
+        return 1
+    fi
+
+    return 0
+}
+
 # Menu selection
 show_menu() {
     if [ -n "${MENU_CHOICE:-}" ]; then
         choice="$MENU_CHOICE"
         print_step "Using preseeded menu choice: $choice"
+        MENU_CHOICE_CONSUMED=1
+        if ! is_noninteractive && [ "${RUN_ONCE:-0}" != "1" ]; then
+            MENU_CHOICE=""
+        fi
         return 0
     fi
 
@@ -262,10 +531,9 @@ show_menu() {
     echo "4) Full Setup (Local + Virt-Manager)"
     echo "5) Full Setup (Container + Virt-Manager)"
     echo "6) Generate Satellite OEMDRV Only"
-    echo "7) Exit"
-    echo "8) DEMOKILL (Destroy demo VMs/files + restart libvirtd)"
+    echo "0) Exit"
     echo ""
-    read -r -p "Enter choice [1-8]: " choice
+    read -r -p "Enter choice [0-6]: " choice
 }
 
 # Ensure Node.js is installed
@@ -443,15 +711,7 @@ install_local() {
     print_step "Installing dependencies"
     npm install
 
-    print_step "Creating environment configuration"
-    if [ ! -f .env ] && [ -f .env.example ]; then
-        cp .env.example .env
-        print_success ".env file created"
-    elif [ -f .env ]; then
-        print_warning ".env file already exists"
-    else
-        print_warning ".env.example not found; skipping .env creation"
-    fi
+    print_step "Skipping local .env creation (credentials are centralized in ${ANSIBLE_ENV_FILE})"
 
     print_step "Starting RHIS service"
     npm start &
@@ -639,11 +899,91 @@ ensure_jq() {
 }
 
 # ─── Credential store: ~/.ansible/conf/env.yml ────────────────────────────────
+# Ensure ansible-vault exists.
+ensure_ansible_vault() {
+    if command -v ansible-vault >/dev/null 2>&1; then
+        return 0
+    fi
+
+    print_warning "ansible-vault not found. Attempting to install ansible-core..."
+    sudo dnf install -y ansible-core >/dev/null 2>&1 || {
+        print_warning "Could not install ansible-core. Please install ansible-vault and re-run."
+        return 1
+    }
+
+    command -v ansible-vault >/dev/null 2>&1
+}
+
+# Ensure vault password file exists at ~/.ansible/conf/.vaultpass.txt (chmod 600).
+ensure_vault_password_file() {
+    mkdir -p "$ANSIBLE_ENV_DIR" || return 1
+    chmod 700 "$ANSIBLE_ENV_DIR" 2>/dev/null || true
+
+    if [ -s "$ANSIBLE_VAULT_PASS_FILE" ]; then
+        chmod 600 "$ANSIBLE_VAULT_PASS_FILE" 2>/dev/null || true
+        return 0
+    fi
+
+    if is_noninteractive; then
+        print_warning "Missing vault password file: $ANSIBLE_VAULT_PASS_FILE"
+        print_warning "Create it before using NONINTERACTIVE mode."
+        return 1
+    fi
+
+    local pass1 pass2
+    print_step "Creating Ansible Vault password file: $ANSIBLE_VAULT_PASS_FILE"
+    while true; do
+        read -r -s -p "Create Ansible Vault password: " pass1
+        echo ""
+        read -r -s -p "Confirm Ansible Vault password: " pass2
+        echo ""
+
+        if [ -z "$pass1" ]; then
+            print_warning "Vault password cannot be empty."
+            continue
+        fi
+
+        if [ "$pass1" != "$pass2" ]; then
+            print_warning "Passwords did not match. Try again."
+            continue
+        fi
+
+        printf '%s\n' "$pass1" > "$ANSIBLE_VAULT_PASS_FILE"
+        chmod 600 "$ANSIBLE_VAULT_PASS_FILE"
+        print_success "Vault password file created."
+        break
+    done
+
+    return 0
+}
+
+# Read env.yml content (decrypting via ansible-vault when needed).
+read_ansible_env_content() {
+    [ -f "$ANSIBLE_ENV_FILE" ] || {
+        ANSIBLE_ENV_CONTENT=""
+        return 0
+    }
+
+    if grep -q '^\$ANSIBLE_VAULT;' "$ANSIBLE_ENV_FILE" 2>/dev/null; then
+        ensure_ansible_vault || return 1
+        ensure_vault_password_file || return 1
+        ANSIBLE_ENV_CONTENT="$(ansible-vault view --vault-password-file "$ANSIBLE_VAULT_PASS_FILE" "$ANSIBLE_ENV_FILE" 2>/dev/null || true)"
+        if [ -z "$ANSIBLE_ENV_CONTENT" ]; then
+            print_warning "Failed to decrypt $ANSIBLE_ENV_FILE."
+            return 1
+        fi
+    else
+        ANSIBLE_ENV_CONTENT="$(cat "$ANSIBLE_ENV_FILE" 2>/dev/null || true)"
+    fi
+
+    return 0
+}
+
 # Read one YAML key from env.yml into a bash variable; no-op if already set.
 _load_env_key() {
     local var_name="$1" yml_key="$2" val
     [ -n "${!var_name:-}" ] && return 0
-    val="$(grep -E "^${yml_key}:" "$ANSIBLE_ENV_FILE" 2>/dev/null \
+    val="$(printf '%s\n' "$ANSIBLE_ENV_CONTENT" | grep -E "^${yml_key}:" 2>/dev/null \
         | sed -E "s|^${yml_key}:[[:space:]]*\"?||;s|\"?[[:space:]]*$||")"
     [ -n "$val" ] && printf -v "$var_name" '%s' "$val"
     return 0
@@ -653,14 +993,30 @@ _load_env_key() {
 # Only populates variables currently unset — preseed / CLI values always win.
 load_ansible_env_file() {
     [ -f "$ANSIBLE_ENV_FILE" ] || return 0
+    read_ansible_env_content || return 1
+    _load_env_key ADMIN_USER      admin_user
+    _load_env_key ADMIN_PASS      admin_pass
+    _load_env_key DOMAIN          domain
+    _load_env_key REALM           realm
+    _load_env_key NETMASK         netmask
+    _load_env_key INTERNAL_GW     internal_gw
     _load_env_key RH_USER          rh_user
     _load_env_key RH_PASS          rh_pass
     _load_env_key RH_OFFLINE_TOKEN rh_offline_token
+    _load_env_key RH_ACCESS_TOKEN  rh_access_token
     _load_env_key HUB_TOKEN        hub_token
+    _load_env_key SAT_ADMIN_PASS   sat_admin_pass
     _load_env_key AAP_ADMIN_PASS   aap_admin_pass
+    _load_env_key SAT_REALM        sat_realm
     _load_env_key SAT_IP           sat_ip
+    _load_env_key AAP_IP           aap_ip
+    _load_env_key IDM_IP           idm_ip
     _load_env_key SAT_NETMASK      sat_netmask
+    _load_env_key AAP_NETMASK      aap_netmask
+    _load_env_key IDM_NETMASK      idm_netmask
     _load_env_key SAT_GW           sat_gw
+    _load_env_key AAP_GW           aap_gw
+    _load_env_key IDM_GW           idm_gw
     _load_env_key SAT_HOSTNAME     sat_hostname
     _load_env_key SAT_DOMAIN       sat_domain
     _load_env_key SAT_ORG          sat_org
@@ -675,43 +1031,262 @@ load_ansible_env_file() {
     _load_env_key HOST_INT_IP      host_int_ip
     _load_env_key AAP_BUNDLE_URL   aap_bundle_url
     _load_env_key RH_ISO_URL       rh_iso_url
+    normalize_shared_env_vars
 }
 
 # Persist all RHIS credentials to ~/.ansible/conf/env.yml (atomic write, chmod 600).
 write_ansible_env_file() {
     mkdir -p "$ANSIBLE_ENV_DIR" || return 1
+    ensure_ansible_vault || return 1
+    ensure_vault_password_file || return 1
+    normalize_shared_env_vars
+
     local tmp_env
     tmp_env="$(mktemp "${ANSIBLE_ENV_DIR}/.env.yml.XXXXXX")"
     cat > "$tmp_env" <<RHIS_ENV_EOF
 # RHIS credentials — written by run_rhis_install_sequence.sh on $(date '+%Y-%m-%d %H:%M')
 # Permissions: 600 — do NOT commit this file to version control.
 ---
+admin_user: "${ADMIN_USER:-}"
+admin_pass: "${ADMIN_PASS:-}"
+domain: "${DOMAIN:-}"
+realm: "${REALM:-}"
+netmask: "${NETMASK:-}"
+internal_gw: "${INTERNAL_GW:-}"
 rh_user: "${RH_USER:-}"
 rh_pass: "${RH_PASS:-}"
 rh_offline_token: "${RH_OFFLINE_TOKEN:-}"
+rh_access_token: "${RH_ACCESS_TOKEN:-}"
 hub_token: "${HUB_TOKEN:-}"
+aap_ip: "${AAP_IP:-}"
+idm_ip: "${IDM_IP:-}"
 aap_admin_pass: "${AAP_ADMIN_PASS:-}"
 sat_ip: "${SAT_IP:-}"
 sat_netmask: "${SAT_NETMASK:-}"
 sat_gw: "${SAT_GW:-}"
 sat_hostname: "${SAT_HOSTNAME:-}"
 sat_domain: "${SAT_DOMAIN:-}"
+sat_realm: "${SAT_REALM:-}"
 sat_org: "${SAT_ORG:-}"
 sat_loc: "${SAT_LOC:-}"
 aap_hostname: "${AAP_HOSTNAME:-}"
 aap_domain: "${AAP_DOMAIN:-}"
+aap_netmask: "${AAP_NETMASK:-}"
+aap_gw: "${AAP_GW:-}"
 idm_hostname: "${IDM_HOSTNAME:-}"
 idm_domain: "${IDM_DOMAIN:-}"
 idm_realm: "${IDM_REALM:-}"
 idm_admin_pass: "${IDM_ADMIN_PASS:-}"
 idm_ds_pass: "${IDM_DS_PASS:-}"
+idm_netmask: "${IDM_NETMASK:-}"
+idm_gw: "${IDM_GW:-}"
 host_int_ip: "${HOST_INT_IP:-}"
 aap_bundle_url: "${AAP_BUNDLE_URL:-}"
 rh_iso_url: "${RH_ISO_URL:-}"
 RHIS_ENV_EOF
     chmod 600 "$tmp_env"
+
+    ansible-vault encrypt --vault-password-file "$ANSIBLE_VAULT_PASS_FILE" "$tmp_env" >/dev/null 2>&1 || {
+        print_warning "Failed to encrypt $tmp_env with ansible-vault."
+        rm -f "$tmp_env"
+        return 1
+    }
+
     mv "$tmp_env" "$ANSIBLE_ENV_FILE"
-    print_success "Credentials saved to $ANSIBLE_ENV_FILE (chmod 600)"
+    print_success "Credentials saved and encrypted in $ANSIBLE_ENV_FILE"
+}
+
+prompt_all_env_options_once() {
+    local env_changed=0
+    local global_missing sat_missing aap_missing idm_missing
+    local has_env_file=0
+    [ -f "$ANSIBLE_ENV_FILE" ] && has_env_file=1
+
+    if [ "$has_env_file" -eq 1 ] && [ "${FORCE_PROMPT_ALL:-0}" != "1" ]; then
+        load_ansible_env_file || return 1
+
+        if is_noninteractive; then
+            return 0
+        fi
+
+        global_missing="$(count_missing_vars ADMIN_USER ADMIN_PASS DOMAIN REALM NETMASK INTERNAL_GW RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL)"
+        echo ""
+        echo "=== Global (remaining missing: ${global_missing}/12) ==="
+        if [ -z "${ADMIN_USER:-}" ]; then
+            prompt_with_default ADMIN_USER "Shared Admin Username" "${ADMIN_USER:-admin}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${ADMIN_PASS:-}" ]; then
+            prompt_with_default ADMIN_PASS "Shared Admin Password" "${ADMIN_PASS:-r3dh4t7!}" 1 1 || return 1
+            env_changed=1
+        fi
+        if needs_prompt_var DOMAIN; then
+            prompt_with_default DOMAIN "Shared Domain" "${DOMAIN:-example.com}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${REALM:-}" ]; then
+            prompt_with_default REALM "Shared Kerberos Realm (blank=DOMAIN uppercased)" "${REALM:-}" 0 0 || return 1
+            env_changed=1
+        fi
+        if [ -z "${NETMASK:-}" ]; then
+            prompt_with_default NETMASK "Shared Internal Netmask" "${NETMASK:-255.255.0.0}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${INTERNAL_GW:-}" ]; then
+            prompt_with_default INTERNAL_GW "Shared Internal Gateway" "${INTERNAL_GW:-0.0.0.0}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${RH_USER:-}" ]; then
+            prompt_with_default RH_USER "Red Hat CDN Username" "${RH_USER:-}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${RH_PASS:-}" ]; then
+            prompt_with_default RH_PASS "Red Hat CDN Password" "${RH_PASS:-}" 1 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${RH_OFFLINE_TOKEN:-}" ]; then
+            prompt_with_default RH_OFFLINE_TOKEN "Red Hat Offline Token" "${RH_OFFLINE_TOKEN:-}" 1 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${RH_ACCESS_TOKEN:-}" ]; then
+            prompt_with_default RH_ACCESS_TOKEN "Red Hat Access Token (optional)" "${RH_ACCESS_TOKEN:-}" 1 0 || return 1
+            env_changed=1
+        fi
+        if [ -z "${HUB_TOKEN:-}" ]; then
+            prompt_with_default HUB_TOKEN "Automation Hub token" "${HUB_TOKEN:-}" 1 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${RH_ISO_URL:-}" ]; then
+            prompt_with_default RH_ISO_URL "RHEL ISO URL" "${RH_ISO_URL:-}" 0 1 || return 1
+            env_changed=1
+        fi
+
+        sat_missing="$(count_missing_vars SAT_IP SAT_HOSTNAME SAT_ORG SAT_LOC)"
+        echo ""
+        echo "=== Satellite (remaining missing: ${sat_missing}/4) ==="
+        if [ -z "${SAT_IP:-}" ]; then
+            prompt_with_default SAT_IP "Satellite Internal IP (eth1)" "${SAT_IP:-10.168.128.1}" 0 1 || return 1
+            env_changed=1
+        fi
+        if needs_prompt_var SAT_HOSTNAME; then
+            prompt_with_default SAT_HOSTNAME "Satellite Hostname (FQDN)" "${SAT_HOSTNAME:-satellite-618.${DOMAIN}}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${SAT_ORG:-}" ]; then
+            prompt_with_default SAT_ORG "Satellite Organization" "${SAT_ORG:-REDHAT}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${SAT_LOC:-}" ]; then
+            prompt_with_default SAT_LOC "Satellite Location" "${SAT_LOC:-CORE}" 0 1 || return 1
+            env_changed=1
+        fi
+
+        aap_missing="$(count_missing_vars AAP_IP AAP_HOSTNAME AAP_BUNDLE_URL)"
+        echo ""
+        echo "=== AAP (remaining missing: ${aap_missing}/3) ==="
+        if [ -z "${AAP_IP:-}" ]; then
+            prompt_with_default AAP_IP "AAP Internal IP (eth1)" "${AAP_IP:-10.168.128.2}" 0 1 || return 1
+            env_changed=1
+        fi
+        if needs_prompt_var AAP_HOSTNAME; then
+            prompt_with_default AAP_HOSTNAME "AAP Hostname (FQDN)" "${AAP_HOSTNAME:-aap-26.${DOMAIN}}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${AAP_BUNDLE_URL:-}" ]; then
+            prompt_with_default AAP_BUNDLE_URL "AAP bundle URL" "${AAP_BUNDLE_URL:-}" 0 1 || return 1
+            env_changed=1
+        fi
+
+        idm_missing="$(count_missing_vars IDM_IP IDM_HOSTNAME IDM_ADMIN_PASS IDM_DS_PASS)"
+        echo ""
+        echo "=== IdM (remaining missing: ${idm_missing}/4) ==="
+        if [ -z "${IDM_IP:-}" ]; then
+            prompt_with_default IDM_IP "IdM Internal IP (eth1)" "${IDM_IP:-10.168.128.3}" 0 1 || return 1
+            env_changed=1
+        fi
+        if needs_prompt_var IDM_HOSTNAME; then
+            prompt_with_default IDM_HOSTNAME "IdM Hostname (FQDN)" "${IDM_HOSTNAME:-idm.${DOMAIN}}" 0 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${IDM_ADMIN_PASS:-}" ]; then
+            prompt_with_default IDM_ADMIN_PASS "IdM Admin Password" "${IDM_ADMIN_PASS:-$ADMIN_PASS}" 1 1 || return 1
+            env_changed=1
+        fi
+        if [ -z "${IDM_DS_PASS:-}" ]; then
+            prompt_with_default IDM_DS_PASS "IdM Directory Service Password" "${IDM_DS_PASS:-r3dh4t7!}" 1 1 || return 1
+            env_changed=1
+        fi
+
+        if [ "$env_changed" = "1" ]; then
+            normalize_shared_env_vars
+            write_ansible_env_file || return 1
+            print_success "Missing environment values were captured and saved to $ANSIBLE_ENV_FILE"
+        fi
+
+        return 0
+    fi
+
+    if is_noninteractive && [ "$has_env_file" -eq 0 ]; then
+        print_warning "No encrypted env file found at $ANSIBLE_ENV_FILE."
+        print_warning "Run once interactively to bootstrap values, or create the file manually."
+        return 0
+    fi
+
+    if is_noninteractive && [ "$has_env_file" -eq 1 ] && [ "${FORCE_PROMPT_ALL:-0}" = "1" ]; then
+        print_warning "--reconfigure ignored in NONINTERACTIVE mode."
+        return 0
+    fi
+
+    if [ "$has_env_file" -eq 1 ] && [ "${FORCE_PROMPT_ALL:-0}" = "1" ]; then
+        print_step "Reconfigure mode: prompting for all values (press Enter to keep current defaults)"
+    fi
+
+    print_step "First run detected: collecting environment values and storing them in ansible-vault"
+    echo "(Press Enter to accept the shown default where applicable.)"
+
+    global_missing="$(count_missing_vars ADMIN_USER ADMIN_PASS DOMAIN REALM NETMASK INTERNAL_GW RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL)"
+    echo ""
+    echo "=== Global (remaining missing: ${global_missing}/12) ==="
+    prompt_with_default ADMIN_USER "Shared Admin Username" "${ADMIN_USER:-admin}" 0 1 || return 1
+    prompt_with_default ADMIN_PASS "Shared Admin Password" "${ADMIN_PASS:-r3dh4t7!}" 1 1 || return 1
+    prompt_with_default DOMAIN "Shared Domain" "${DOMAIN:-example.com}" 0 1 || return 1
+    prompt_with_default REALM "Shared Kerberos Realm (blank=DOMAIN uppercased)" "${REALM:-}" 0 0 || return 1
+    prompt_with_default NETMASK "Shared Internal Netmask" "${NETMASK:-255.255.0.0}" 0 1 || return 1
+    prompt_with_default INTERNAL_GW "Shared Internal Gateway" "${INTERNAL_GW:-0.0.0.0}" 0 1 || return 1
+
+    prompt_with_default RH_USER "Red Hat CDN Username" "${RH_USER:-}" 0 1 || return 1
+    prompt_with_default RH_PASS "Red Hat CDN Password" "${RH_PASS:-}" 1 1 || return 1
+    prompt_with_default RH_OFFLINE_TOKEN "Red Hat Offline Token" "${RH_OFFLINE_TOKEN:-}" 1 1 || return 1
+    prompt_with_default RH_ACCESS_TOKEN "Red Hat Access Token (optional)" "${RH_ACCESS_TOKEN:-}" 1 0 || return 1
+    prompt_with_default HUB_TOKEN "Automation Hub token" "${HUB_TOKEN:-}" 1 1 || return 1
+    prompt_with_default RH_ISO_URL "RHEL ISO URL" "${RH_ISO_URL:-}" 0 1 || return 1
+
+    sat_missing="$(count_missing_vars SAT_IP SAT_HOSTNAME SAT_ORG SAT_LOC)"
+    echo ""
+    echo "=== Satellite (remaining missing: ${sat_missing}/4) ==="
+    prompt_with_default SAT_IP "Satellite Internal IP (eth1)" "${SAT_IP:-10.168.128.1}" 0 1 || return 1
+    prompt_with_default SAT_HOSTNAME "Satellite Hostname (FQDN)" "${SAT_HOSTNAME:-satellite-618.${DOMAIN}}" 0 1 || return 1
+    prompt_with_default SAT_ORG "Satellite Organization" "${SAT_ORG:-REDHAT}" 0 1 || return 1
+    prompt_with_default SAT_LOC "Satellite Location" "${SAT_LOC:-CORE}" 0 1 || return 1
+
+    aap_missing="$(count_missing_vars AAP_IP AAP_HOSTNAME AAP_BUNDLE_URL)"
+    echo ""
+    echo "=== AAP (remaining missing: ${aap_missing}/3) ==="
+    prompt_with_default AAP_IP "AAP Internal IP (eth1)" "${AAP_IP:-10.168.128.2}" 0 1 || return 1
+    prompt_with_default AAP_HOSTNAME "AAP Hostname (FQDN)" "${AAP_HOSTNAME:-aap-26.${DOMAIN}}" 0 1 || return 1
+    prompt_with_default AAP_BUNDLE_URL "AAP bundle URL" "${AAP_BUNDLE_URL:-}" 0 1 || return 1
+
+    idm_missing="$(count_missing_vars IDM_IP IDM_HOSTNAME IDM_ADMIN_PASS IDM_DS_PASS)"
+    echo ""
+    echo "=== IdM (remaining missing: ${idm_missing}/4) ==="
+    prompt_with_default IDM_IP "IdM Internal IP (eth1)" "${IDM_IP:-10.168.128.3}" 0 1 || return 1
+    prompt_with_default IDM_HOSTNAME "IdM Hostname (FQDN)" "${IDM_HOSTNAME:-idm.${DOMAIN}}" 0 1 || return 1
+    prompt_with_default IDM_ADMIN_PASS "IdM Admin Password" "${IDM_ADMIN_PASS:-$ADMIN_PASS}" 1 1 || return 1
+    prompt_with_default IDM_DS_PASS "IdM Directory Service Password" "${IDM_DS_PASS:-r3dh4t7!}" 1 1 || return 1
+
+    normalize_shared_env_vars
+    write_ansible_env_file || return 1
+    print_success "Bootstrap complete. Future runs will reuse encrypted values from $ANSIBLE_ENV_FILE"
 }
 
 # If env.yml already has credentials, offer to reuse them before prompting.
@@ -721,38 +1296,16 @@ prompt_use_existing_env() {
         return 0
     fi
 
-    if is_noninteractive; then
-        load_ansible_env_file
-        print_step "Loaded existing credentials from $ANSIBLE_ENV_FILE (non-interactive mode)"
-        return 0
+    load_ansible_env_file || return 1
+    print_step "Loaded existing encrypted credentials from $ANSIBLE_ENV_FILE"
+}
+
+retire_preseed_env_file() {
+    local default_preseed="${SCRIPT_DIR}/.env"
+    if [ "$PRESEED_ENV_FILE" = "$default_preseed" ] && [ -f "$default_preseed" ] && [ -f "$ANSIBLE_ENV_FILE" ]; then
+        rm -f "$default_preseed"
+        print_success "Retired legacy preseed file: $default_preseed"
     fi
-
-    local existing_user existing_sat existing_aap existing_idm use_existing
-    existing_user="$(grep -E '^rh_user:'     "$ANSIBLE_ENV_FILE" 2>/dev/null | sed -E 's/^rh_user:[[:space:]]*"?([^"]*)"?.*/\1/')"
-    existing_sat="$( grep -E '^sat_hostname:' "$ANSIBLE_ENV_FILE" 2>/dev/null | sed -E 's/^sat_hostname:[[:space:]]*"?([^"]*)"?.*/\1/')"
-    existing_aap="$( grep -E '^aap_hostname:' "$ANSIBLE_ENV_FILE" 2>/dev/null | sed -E 's/^aap_hostname:[[:space:]]*"?([^"]*)"?.*/\1/')"
-    existing_idm="$( grep -E '^idm_hostname:' "$ANSIBLE_ENV_FILE" 2>/dev/null | sed -E 's/^idm_hostname:[[:space:]]*"?([^"]*)"?.*/\1/')"
-
-    echo ""
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "  Existing credentials found: $ANSIBLE_ENV_FILE"
-    echo "  rh_user:      ${existing_user:-(unset)}"
-    echo "  sat_hostname: ${existing_sat:-(unset)}"
-    echo "  aap_hostname: ${existing_aap:-(unset)}"
-    echo "  idm_hostname: ${existing_idm:-(unset)}"
-    echo "  (passwords and tokens masked)"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    read -r -p "  Use existing credentials? [Y/n]: " use_existing
-    echo ""
-    case "${use_existing:-Y}" in
-        Y|y|"")
-            load_ansible_env_file
-            print_success "Loaded credentials from $ANSIBLE_ENV_FILE"
-            ;;
-        *)
-            print_warning "Existing credentials will be overwritten once new values are entered."
-            ;;
-    esac
 }
 
 get_rh_access_token_from_offline_token() {
@@ -809,13 +1362,7 @@ prompt_for_rh_iso_auth() {
 
 	case "${rh_auth_choice:-1}" in
 		2)
-			if [ -n "${RH_OFFLINE_TOKEN:-}" ]; then
-				read -r -p "Use existing offline token from $ANSIBLE_ENV_FILE? [Y/n]: " use_existing
-				case "${use_existing:-Y}" in
-					Y|y|"") : ;;
-					*) read -r -s -p "Enter Red Hat offline token: " RH_OFFLINE_TOKEN; echo "" ;;
-				esac
-			else
+            if [ -z "${RH_OFFLINE_TOKEN:-}" ]; then
 				read -r -s -p "Enter Red Hat offline token: " RH_OFFLINE_TOKEN; echo ""
 			fi
 
@@ -958,6 +1505,7 @@ wait_for_vm_ssh() {
     local vm_ip
     local ssh_attempts=0
     local ssh_max_attempts=540  # 540 × 10s = 90 minutes
+    local elapsed_minutes=0
 
     print_step "Waiting for ${vm_name} to boot and SSH to become available (up to 90 min)..."
     print_step "  (Anaconda install + 3.5 GB bundle download typically takes 30-60 min)"
@@ -979,6 +1527,12 @@ wait_for_vm_ssh() {
 
         ssh_attempts="$((ssh_attempts + 1))"
         printf "."
+        if [ $((ssh_attempts % 6)) -eq 0 ]; then
+            elapsed_minutes=$((ssh_attempts / 6))
+            echo ""
+            print_step "Still waiting for ${vm_name} SSH... elapsed ${elapsed_minutes} minute(s)"
+            print_step "Tip: check VM state with: sudo virsh list --all"
+        fi
         sleep 10
     done
 
@@ -1019,7 +1573,7 @@ run_aap_setup_on_vm() {
 wait_for_aap_api() {
     local host="$1" pass="$2" max_wait="${3:-1800}" elapsed=0 interval=30
     print_step "Waiting for AAP API on ${host} (up to $((max_wait / 60)) min)..."
-    until curl -sk -u "admin:${pass}" "https://${host}/api/v2/ping/" 2>/dev/null | grep -q '"version"'; do
+    until curl -sk -u "${ADMIN_USER}:${pass}" "https://${host}/api/v2/ping/" 2>/dev/null | grep -q '"version"'; do
         elapsed=$((elapsed + interval))
         if [ "$elapsed" -ge "$max_wait" ]; then
             print_warning "AAP API on ${host} did not respond within $((max_wait / 60)) minutes."
@@ -1052,7 +1606,7 @@ create_aap_credentials() {
     }
 
     local base="https://${AAP_HOSTNAME}/api/v2"
-    local auth="admin:${AAP_ADMIN_PASS}"
+    local auth="${ADMIN_USER}:${AAP_ADMIN_PASS}"
     local http_code
 
     print_step "Provisioning credentials in AAP from ${ANSIBLE_ENV_FILE}..."
@@ -1203,8 +1757,11 @@ ensure_virtualization_tools() {
 }
 
 prompt_satellite_618_details() {
+    normalize_shared_env_vars
     set_or_prompt RH_USER "Red Hat CDN Username: " || return 1
     set_or_prompt RH_PASS "Red Hat CDN Password: " 1 || return 1
+    set_or_prompt ADMIN_USER "Shared Admin Username: " || return 1
+    set_or_prompt ADMIN_PASS "Shared Admin Password: " 1 || return 1
 
     echo -e "\n--- Network (eth1) ---"
     set_or_prompt SAT_IP "Static IP: " || return 1
@@ -1216,6 +1773,7 @@ prompt_satellite_618_details() {
     set_or_prompt SAT_DOMAIN "Domain Name: " || return 1
     set_or_prompt SAT_ORG "Organization Name: " || return 1
     set_or_prompt SAT_LOC "Location Name: " || return 1
+    normalize_shared_env_vars
     write_ansible_env_file
 }
 
@@ -1235,7 +1793,7 @@ generate_satellite_618_kickstart() {
     cat > "$tmp_ks" <<HEADER
 text
 reboot
-keyboard --vckeymap=us --layout=us
+keyboard us
 lang en_US.UTF-8
 
 network --bootproto=dhcp --device=eth0 --activate --onboot=yes
@@ -1310,6 +1868,14 @@ PKGS_END
 # 1. Registration
 subscription-manager register --username="${RH_USER}" --password="${RH_PASS}" --auto-attach
 
+# 1.1 Local hosts mapping (temporary DNS-independent bootstrap)
+cat > /etc/hosts <<EOF
+127.0.0.1 localhost localhost.localdomain
+${SAT_IP} ${SAT_HOSTNAME} ${SAT_HOSTNAME%%.*}
+${AAP_IP} ${AAP_HOSTNAME} ${AAP_HOSTNAME%%.*}
+${IDM_IP} ${IDM_HOSTNAME} ${IDM_HOSTNAME%%.*}
+EOF
+
 # 2. Repositories
 subscription-manager repos --disable="*"
 subscription-manager repos --enable="rhel-10-for-x86_64-baseos-rpms" --enable="rhel-10-for-x86_64-appstream-rpms" --enable="satellite-6.18-for-rhel-10-x86_64-rpms" --enable="satellite-maintenance-6.18-for-rhel-10-x86_64-rpms"
@@ -1318,7 +1884,7 @@ subscription-manager repos --enable="rhel-10-for-x86_64-baseos-rpms" --enable="r
 dnf install -y satellite
 
 # 4. Satellite Installer
-satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-password "RedHat123" --foreman-proxy-dns true --foreman-proxy-dns-interface eth1 --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface eth1 --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights true
+satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-username "${ADMIN_USER}" --foreman-initial-admin-password "${ADMIN_PASS}" --foreman-proxy-dns true --foreman-proxy-dns-interface eth1 --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface eth1 --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights true
 
 # 5. Performance baseline for virtual guests
 systemctl enable --now qemu-guest-agent || true
@@ -1357,12 +1923,16 @@ generate_satellite_oemdrv_only() {
 }
 
 prompt_aap_details() {
+    normalize_shared_env_vars
     set_or_prompt RH_USER     "Red Hat CDN Username: "  || return 1
     set_or_prompt RH_PASS     "Red Hat CDN Password: " 1 || return 1
+    set_or_prompt ADMIN_USER  "Shared Admin Username: " || return 1
+    set_or_prompt ADMIN_PASS  "Shared Admin Password: " 1 || return 1
     echo -e "\n--- AAP Identity ---"
     set_or_prompt AAP_HOSTNAME   "AAP Hostname (FQDN): "   || return 1
-    set_or_prompt AAP_DOMAIN     "AAP Domain Name: "       || return 1
-    set_or_prompt AAP_ADMIN_PASS "AAP Admin Password: " 1  || return 1
+    set_or_prompt AAP_IP         "AAP Internal IP (eth1): " || return 1
+    set_or_prompt AAP_NETMASK    "AAP Internal Netmask: "   || return 1
+    set_or_prompt AAP_GW         "AAP Internal Gateway: "   || return 1
     echo -e "\n--- AAP Bundle Delivery (HTTP pre-flight) ---"
     set_or_prompt HUB_TOKEN  "Automation Hub Token (console.redhat.com/ansible/automation-hub/token): " 1 || return 1
     set_or_prompt HOST_INT_IP "Host bridge IP for bundle HTTP server (default 192.168.122.1): " || return 1
@@ -1370,6 +1940,7 @@ prompt_aap_details() {
     if [ -z "${AAP_BUNDLE_URL:-}" ] && ! is_noninteractive; then
         read -r -p "AAP bundle .tar.gz URL from access.redhat.com (blank to skip preflight download): " AAP_BUNDLE_URL || true
     fi
+    normalize_shared_env_vars
     write_ansible_env_file
 }
 
@@ -1395,11 +1966,11 @@ generate_aap_kickstart() {
     cat > "$tmp_ks" <<HEADER
 text
 reboot
-keyboard --vckeymap=us --layout=us
+keyboard us
 lang en_US.UTF-8
 
 network --bootproto=dhcp --device=eth0 --activate --onboot=yes
-network --bootproto=dhcp --device=eth1 --activate --onboot=yes --hostname=${AAP_HOSTNAME}
+network --bootproto=static --device=eth1 --ip=${AAP_IP} --netmask=${AAP_NETMASK} --gateway=${AAP_GW} --activate --onboot=yes --hostname=${AAP_HOSTNAME}
 
 HEADER
 
@@ -1455,6 +2026,14 @@ PKGS
 %post --log=/root/ks-post.log
 # 1. Registration
 subscription-manager register --username="${RH_USER}" --password="${RH_PASS}" --auto-attach
+
+# 1.1 Local hosts mapping (temporary DNS-independent bootstrap)
+cat > /etc/hosts <<HOSTS
+127.0.0.1 localhost localhost.localdomain
+{{SAT_IP}} {{SAT_HOSTNAME}} {{SAT_SHORT}}
+{{AAP_IP}} {{AAP_HOSTNAME}} {{AAP_SHORT}}
+{{IDM_IP}} {{IDM_HOSTNAME}} {{IDM_SHORT}}
+HOSTS
 
 # 2. Repositories
 subscription-manager repos --disable="*"
@@ -1527,6 +2106,15 @@ POSTEOF
     sed -i "s|{{HOST_INT_IP}}|${HOST_INT_IP}|g" "$tmp_ks"
     sed -i "s|{{AAP_SSH_PUB_KEY}}|${aap_ssh_pub_key}|g" "$tmp_ks"
     sed -i "s|{{HUB_TOKEN}}|${HUB_TOKEN}|g" "$tmp_ks"
+    sed -i "s|{{SAT_IP}}|${SAT_IP}|g" "$tmp_ks"
+    sed -i "s|{{SAT_HOSTNAME}}|${SAT_HOSTNAME}|g" "$tmp_ks"
+    sed -i "s|{{AAP_IP}}|${AAP_IP}|g" "$tmp_ks"
+    sed -i "s|{{AAP_HOSTNAME}}|${AAP_HOSTNAME}|g" "$tmp_ks"
+    sed -i "s|{{IDM_IP}}|${IDM_IP}|g" "$tmp_ks"
+    sed -i "s|{{IDM_HOSTNAME}}|${IDM_HOSTNAME}|g" "$tmp_ks"
+    sed -i "s|{{SAT_SHORT}}|${SAT_HOSTNAME%%.*}|g" "$tmp_ks"
+    sed -i "s|{{AAP_SHORT}}|${AAP_HOSTNAME%%.*}|g" "$tmp_ks"
+    sed -i "s|{{IDM_SHORT}}|${IDM_HOSTNAME%%.*}|g" "$tmp_ks"
 
     sudo mkdir -p "$KS_DIR"
     sudo install -m 0644 "$tmp_ks" "$ks_file"
@@ -1535,22 +2123,21 @@ POSTEOF
 }
 
 prompt_idm_details() {
+    normalize_shared_env_vars
     set_or_prompt RH_USER  "Red Hat CDN Username: "  || return 1
     set_or_prompt RH_PASS  "Red Hat CDN Password: " 1 || return 1
 
-    if ! is_demo; then
-        echo -e "\n--- IdM Network (eth1 — static) ---"
-        set_or_prompt IDM_IP      "IdM Static IP for eth1: " || return 1
-        set_or_prompt IDM_NETMASK "Subnet Mask: "            || return 1
-        set_or_prompt IDM_GW      "Gateway: "               || return 1
-    fi
+    echo -e "\n--- IdM Network (eth1 — static) ---"
+    set_or_prompt IDM_IP      "IdM Static IP for eth1: " || return 1
+    set_or_prompt IDM_NETMASK "Subnet Mask: "            || return 1
+    set_or_prompt IDM_GW      "Gateway: "                || return 1
 
     echo -e "\n--- IdM Identity ---"
     set_or_prompt IDM_HOSTNAME   "IdM Hostname (FQDN): "               || return 1
-    set_or_prompt IDM_DOMAIN     "IdM Domain Name: "                   || return 1
-    set_or_prompt IDM_REALM      "Kerberos Realm (e.g. EXAMPLE.COM): " || return 1
+    set_or_prompt DOMAIN         "Shared Domain Name: "                || return 1
     set_or_prompt IDM_ADMIN_PASS "IPA Admin Password: "  1             || return 1
     set_or_prompt IDM_DS_PASS    "Directory Service Password: " 1      || return 1
+    normalize_shared_env_vars
     write_ansible_env_file
 }
 
@@ -1567,24 +2154,17 @@ generate_idm_kickstart() {
     cat > "$tmp_ks" <<HEADER
 text
 reboot
-keyboard --vckeymap=us --layout=us
+keyboard us
 lang en_US.UTF-8
 
 network --bootproto=dhcp --device=eth0 --activate --onboot=yes
 HEADER
 
-    # --- eth1 (DEMO = DHCP from Satellite; standard = static) ---
-    if is_demo; then
-        cat >> "$tmp_ks" <<'DEMO_NET'
-network --bootproto=dhcp --device=eth1 --activate --onboot=yes
-
-DEMO_NET
-    else
-        cat >> "$tmp_ks" <<NET
+    # --- eth1 (always static for internal provisioning/management network) ---
+    cat >> "$tmp_ks" <<NET
 network --bootproto=static --device=eth1 --ip=${IDM_IP} --netmask=${IDM_NETMASK} --gateway=${IDM_GW} --activate --onboot=yes --hostname=${IDM_HOSTNAME}
 
 NET
-    fi
 
     # --- Partitioning (DEMO vs production best-practice) ---
     if is_demo; then
@@ -1643,6 +2223,14 @@ subscription-manager register --username="${RH_USER}" --password="${RH_PASS}" --
 
 # 2. Hostname
 hostnamectl set-hostname "${IDM_HOSTNAME}"
+
+# 2.1 Local hosts mapping (temporary DNS-independent bootstrap)
+cat > /etc/hosts <<EOF
+127.0.0.1 localhost localhost.localdomain
+${SAT_IP} ${SAT_HOSTNAME} ${SAT_HOSTNAME%%.*}
+${AAP_IP} ${AAP_HOSTNAME} ${AAP_HOSTNAME%%.*}
+${IDM_IP} ${IDM_HOSTNAME} ${IDM_HOSTNAME%%.*}
+EOF
 
 # 3. Repositories
 subscription-manager repos --disable="*"
@@ -1829,6 +2417,17 @@ demokill_cleanup() {
     print_step "Removing staged AAP bundle directory"
     sudo rm -rf "${AAP_BUNDLE_DIR}" || true
 
+    print_step "Checking RHIS-related lock files"
+    cleanup_rhis_lock_files || true
+
+    print_step "Removing RHIS temporary/cache artifacts"
+    sudo rm -f \
+        /tmp/aap-setup-*.log \
+        /tmp/default.xml \
+        /tmp/internal.xml \
+        /tmp/OEMDRV.iso \
+        /tmp/ks.cfg || true
+
     print_step "Stopping any leftover AAP bundle HTTP server"
     sudo pkill -f "python3 -m http.server 8080 --bind" >/dev/null 2>&1 || true
     close_aap_bundle_firewall
@@ -1842,12 +2441,54 @@ demokill_cleanup() {
     sudo virsh net-start internal >/dev/null 2>&1 || true
     sudo virsh net-autostart internal >/dev/null 2>&1 || true
 
-    print_success "DEMOKILL complete. Demo VMs/files removed and libvirtd restarted."
+    print_success "DEMOKILL complete. Demo VMs/files and RHIS temp artifacts removed; libvirtd restarted."
+}
+
+cleanup_rhis_lock_files() {
+    local -a lock_candidates
+    local -a existing_locks
+    local lock_path
+
+    lock_candidates=(
+        "${VM_DIR}/satellite-618.qcow2.lock"
+        "${VM_DIR}/aap-26.qcow2.lock"
+        "${VM_DIR}/idm.qcow2.lock"
+        "${VM_DIR}/satellite-618.qcow2.lck"
+        "${VM_DIR}/aap-26.qcow2.lck"
+        "${VM_DIR}/idm.qcow2.lck"
+        "${KS_DIR}/satellite-618.ks.lock"
+        "${KS_DIR}/aap-26.ks.lock"
+        "${KS_DIR}/idm.ks.lock"
+        "/var/lock/libvirt/qemu/satellite-618.lock"
+        "/var/lock/libvirt/qemu/aap-26.lock"
+        "/var/lock/libvirt/qemu/idm.lock"
+    )
+
+    for lock_path in "${lock_candidates[@]}"; do
+        if [ -e "$lock_path" ]; then
+            existing_locks+=("$lock_path")
+        fi
+    done
+
+    if [ "${#existing_locks[@]}" -eq 0 ]; then
+        print_step "No RHIS lock files found"
+        return 0
+    fi
+
+    print_warning "Found ${#existing_locks[@]} RHIS lock file(s); removing..."
+    for lock_path in "${existing_locks[@]}"; do
+        print_step "Removing lock: $lock_path"
+        sudo rm -f "$lock_path" || true
+    done
+
+    return 0
 }
 
 create_rhis_vms() {
     print_step "Preparing Satellite / AAP / IdM qcow2 VMs"
     prompt_use_existing_env
+    normalize_shared_env_vars
+    validate_resolved_kickstart_inputs || return 1
 
     local sat_disk sat_ram sat_vcpu
     local aap_disk aap_ram aap_vcpu
@@ -1864,6 +2505,9 @@ create_rhis_vms() {
         aap_disk="50G";  aap_ram=16384; aap_vcpu=8
         idm_disk="60G";  idm_ram=16384; idm_vcpu=4
     fi
+
+    print_warning "Pre-flight lock check: stale lock files can block provisioning."
+    cleanup_rhis_lock_files || true
 
     ensure_virtualization_tools || return 1
     ensure_iso_vars
@@ -1965,9 +2609,24 @@ ensure_iso_tools() {
 
 main() {
     parse_args "$@"
-    load_preseed_env
-    load_ansible_env_file
     apply_cli_overrides
+
+    # CLI-only fast path: DEMOKILL should never require env/vault prompts.
+    if [ -n "${CLI_DEMOKILL:-}" ] || [ "${MENU_CHOICE:-}" = "8" ]; then
+        print_step "DEMOKILL requested from CLI; skipping credential prompts"
+        demokill_cleanup || { print_warning "DEMOKILL failed"; exit 1; }
+        print_success "Run complete"
+        exit 0
+    fi
+
+    if [ ! -f "$ANSIBLE_ENV_FILE" ]; then
+        load_preseed_env
+    fi
+    load_ansible_env_file
+    normalize_shared_env_vars
+    prompt_all_env_options_once
+    normalize_shared_env_vars
+    retire_preseed_env_file
     print_runtime_configuration
 
 	print_step "Startup: Checking libvirtd"
@@ -1985,9 +2644,9 @@ main() {
 			4) install_local; setup_virt_manager ;;
             5) install_container; setup_virt_manager ;;
             6) generate_satellite_oemdrv_only ;;
-            7) print_success "Exiting installation script"; exit 0 ;;
-        8) demokill_cleanup ;;
-        *) print_warning "Invalid choice. Please select 1-8." ;;
+            0) print_success "Exiting installation script"; exit 0 ;;
+            8) demokill_cleanup ;;
+            *) print_warning "Invalid choice. Please select 0-6." ;;
 		esac
 
         if is_noninteractive || [ "${RUN_ONCE:-0}" = "1" ]; then
