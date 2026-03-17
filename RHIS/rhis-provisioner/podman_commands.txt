@@ -1,0 +1,5 @@
+# Please see our sample deploy and build scripts.
+# These encapsulate a lot of the typical commands you would run to build an RHIS deployment.
+# You can execute individual tasks, roles and tasks embedded in roles using these methods.
+# For those that require more control, we have implemented tagging within the projects.
+# We will eventually publish the tagging model ...

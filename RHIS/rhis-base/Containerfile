@@ -1,0 +1,63 @@
+FROM registry.redhat.io/ubi9:latest
+MAINTAINER parmstro@redhat.com
+LABEL maintainer="Paul Armstrong <github:@parmstro>"
+LABEL contributors="Paul Armstrong <github:@parmstro>, Mike Savage <github:@heatmiser>, Charles Shaw <github: @shawkingly>" 
+LABEL description="The rhis-base container is built from rhel ubi9 and includes the binaries, python libraries and ansible collections required for rhis-builder. It is not designed to be used directly."
+LABEL summary="Provides the latest rhis-builder dependencies."
+# rpm requirements
+
+ENV ANSIBLE_VERSION=${ANSIBLE_VER}
+ENV OS_VERSION=${OS_VER}
+ENV RHIS_VERSION=${RHIS_VER}
+
+# Copy the requirements file into the container
+COPY dnf_requirements.txt /tmp/dnf_requirements.txt
+
+# Install packages efficiently in a single RUN command
+# This reads the file into an array and passes them to yum install
+RUN mapfile -t rpmArray < /tmp/dnf_requirements.txt && \
+    dnf install -y "${rpmArray[@]}" && \
+    dnf clean all && \
+    rm -rf /var/cache/yum /tmp/dnf_requirements.txt
+
+# python requirements
+RUN mkdir -p /rhis
+COPY sources/requirements.txt /rhis/requirements.txt
+COPY sources/requirements.yml /rhis/requirements.yml
+RUN /usr/bin/python3 -m pip install -r /rhis/requirements.txt
+
+# ansible configuration
+RUN mkdir -p /etc/ansible
+COPY sources/ansible.cfg /etc/ansible/ansible.cfg
+
+# Manage ansible.controller based on AAP target
+RUN if [[ $ANSIBLE_VER == "2.5" ]]; then \
+    echo "Installing ansible.controller collection for AAP 2.5"; \
+    ansible-galaxy collection install ansible.controller:">=4.6"; \
+    else \
+    echo "Installing ansible.controller collection for AAP 2.4"; \
+    ansible-galaxy collection install ansible.controller:"<4.6"; \
+    fi
+
+# install the remaining non-ansible-version dependent collections
+COPY sources/requirements.yml /tmp/requirements.yml
+RUN ansible-galaxy collection install -r /tmp/requirements.yml
+# RUN ansible-galaxy collection install ansible.posix
+# RUN ansible-galaxy collection install azure.azcollection
+# RUN ansible-galaxy collection install community.aws
+# RUN ansible-galaxy collection install community.crypto
+# RUN ansible-galaxy collection install community.general
+# RUN ansible-galaxy collection install community.vmware
+# RUN ansible-galaxy collection install containers.podman
+# RUN ansible-galaxy collection install redhat.rhel_idm
+# RUN ansible-galaxy collection install redhat.rhel_system_roles
+# RUN ansible-galaxy collection install redhat.satellite
+# RUN ansible-galaxy collection install redhat.satellite_operations
+# RUN ansible-galaxy collection install vmware.vmware
+
+# For optimized build
+# This runs long and can fail in the middle 
+# RUN ansible-galaxy collection install -r /rhis/requirements.yml
+
+# Cleanup the ansible configuration
+COPY sources/ansible.cfg.clean /etc/ansible/ansible.cfg
