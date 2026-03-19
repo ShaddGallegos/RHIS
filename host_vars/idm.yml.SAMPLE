@@ -1,0 +1,12 @@
+# idm.yml — SAMPLE host_vars for the IdM (Red Hat Identity Management) VM
+# Copy to host_vars/idm.yml and fill in real values.
+# ---
+
+ansible_user: "root"
+ansible_become: true
+ansible_password: "{{ global_admin_password | default('') }}"
+
+# IdM realm and domain are derived from the global DOMAIN / REALM values set
+# during provisioning.  Override here if they differ per host.
+# idm_realm:   "EXAMPLE.COM"
+# idm_domain:  "example.com"

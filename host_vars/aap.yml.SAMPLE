@@ -1,0 +1,7 @@
+# aap.yml — SAMPLE host_vars for the AAP (Ansible Automation Platform) VM
+# Copy to host_vars/aap.yml and fill in real values.
+# ---
+
+ansible_become_pass: "{{ global_admin_password }}"
+aap_admin_user: "admin"
+aap_admin_password: "{{ global_admin_password }}"

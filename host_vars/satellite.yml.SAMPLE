@@ -1,0 +1,21 @@
+# satellite.yml — SAMPLE host_vars for the Satellite VM
+# Copy to host_vars/satellite.yml (or name it after the FQDN in your inventory)
+# and fill in real values.
+#
+# The rhis-provisioner container mounts host_vars/ at:
+#   /rhis/vars/host_vars/
+#
+# Sensitive values (passwords, tokens) should live in your Ansible vault
+# (see ~/.ansible/conf/env.yml) and be referenced via Jinja2 lookups.
+# ---
+
+ansible_user: "root"
+ansible_admin_password: "{{ global_admin_password | default('') }}"
+ansible_password: "{{ global_admin_password | default('') }}"
+ansible_become: true
+ansible_connection: ssh
+ansible_ssh_private_key_file: "/home/{{ lookup('env', 'USER') | default('root') }}/.ssh/id_rsa"
+
+# Satellite organization and location (must match what is configured in env.yml)
+# satellite_organization: "MY_ORG"
+# satellite_location:     "MY_LOC"

@@ -1,0 +1,8 @@
+# installer.yml — SAMPLE host_vars for the installer/controller host
+# Copy to host_vars/installer.yml and fill in real values.
+# ---
+
+# Use the current shell user on the controller
+ansible_user: "{{ installer_user }}"
+aap_remote_user: "{{ installer_user }}"
+ansible_ssh_private_key_file: "/home/{{ installer_user }}/.ssh/id_rsa"

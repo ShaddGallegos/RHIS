@@ -235,6 +235,7 @@ If you want the shortest practical checklist, gather these first:
 - [ ] Satellite / AAP / IdM internal IPs and hostnames
 - [ ] Satellite org and location
 - [ ] IdM DS password
+- [ ] AAP deployment model choice (enterprise multi-node `inventory.j2` or growth single-node `inventory-growth.j2`; DEMO is auto-selected with `--demo`)
 
 ---
 
@@ -243,12 +244,18 @@ If you want the shortest practical checklist, gather these first:
 1. Fill in the required values
 2. Run:
    - `./run_rhis_install_sequence.sh --reconfigure`
+   - During `--reconfigure`, an interactive **inventory architecture submenu** will appear
+     to select the AAP installer deployment model (enterprise or growth; use `--demo` to skip)
 3. Verify values were written to:
    - `~/.ansible/conf/env.yml`
 4. Clean old lab state if needed:
    - `./run_rhis_install_sequence.sh --demokill`
 5. Build the demo stack:
    - `./run_rhis_install_sequence.sh --demo`
+6. Optional: run a fast validation sweep after cleanup / before a full rebuild:
+  - `./run_rhis_install_sequence.sh --test=fast --demo`
+7. Optional: run the broader integration-style test sweep:
+  - `./run_rhis_install_sequence.sh --test=full --demo`
 
 ---
 
@@ -268,5 +275,6 @@ If you want the shortest practical checklist, gather these first:
 - [ ] URLs are current authenticated download URLs
 - [ ] Tokens are still valid
 - [ ] Host has enough free disk space for ISO + qcow2 images + AAP bundle
+- [ ] If using test mode, review `~/.ansible/conf/ansible-provisioner.log` after the run
 - [ ] KVM/libvirt is working (`virsh list --all` succeeds)
 - [ ] Your chosen internal IPs do not conflict with an existing network

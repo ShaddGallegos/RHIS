@@ -45,6 +45,19 @@ This is primarily an **infrastructure provisioning and bootstrap repository**, n
 
 ## Quick start
 
+### What's new
+
+- Container-first automation now supports a prescribed config order:
+  - `IdM -> Satellite -> AAP`
+- Menu option `2` (Container Deployment) now auto-runs config-as-code by default.
+- New one-shot workflow:
+  - `./run_rhis_install_sequence.sh --container-config-only`
+- Retry behavior for transient failures:
+  - Failed phases are retried once by default.
+  - Disable with `RHIS_RETRY_FAILED_PHASES_ONCE=0`.
+- Auto-sequence after menu option `2` can be disabled with:
+  - `RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0`
+
 ### Recommended first run
 
 ```bash
@@ -54,13 +67,13 @@ This is primarily an **infrastructure provisioning and bootstrap repository**, n
 ### Clean up a previous demo run
 
 ```bash
-./run_rhis_install_sequence.sh --demokill
+./run_rhis_install_sequence.sh --DEMOKILL
 ```
 
 ### Build the demo stack
 
 ```bash
-./run_rhis_install_sequence.sh --demo
+./run_rhis_install_sequence.sh --DEMO
 ```
 
 ---
@@ -76,23 +89,100 @@ The main workflow is:
 ### Interactive menu options
 
 - `1` Local Installation (npm)
-- `2` Container Deployment (Podman)
+- `2` Container Deployment (Podman) + auto config-as-code (`IdM -> Satellite -> AAP`)
 - `3` Setup Virt-Manager Only
 - `4` Full Setup (Local + Virt-Manager)
 - `5` Full Setup (Container + Virt-Manager)
 - `6` Generate Satellite OEMDRV Only
+- `7` Container Config-Only (`IdM -> Satellite -> AAP`)
+- `8` Live Status Dashboard
 - `0` Exit
+
+Environment toggles:
+
+- `RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0` disables auto config-as-code after menu option `2`
+- `RHIS_RETRY_FAILED_PHASES_ONCE=0` disables automatic retry of failed config-as-code phases
 
 ### Command-line options
 
 ```text
 --non-interactive        Run without prompts; required values must already be set
---menu-choice <0-6>      Preselect a visible menu option
+--menu-choice <0-8>      Preselect a visible menu option
 --env-file <path>        Load preseed variables from a custom env file
+--inventory <template>   Pin AAP inventory template; skips interactive submenu
+--inventory-growth <tpl> Pin AAP inventory-growth template; skips interactive submenu
+                         Interactive (no --non-interactive): a guided submenu with
+                         About pages is presented when template values are unset.
+                         --DEMO always forces DEMO-inventory.j2 and skips the submenu.
+--container-config-only  One-shot: start container + run IdM -> Satellite -> AAP
+--attach-consoles        Re-open VM console monitors for Satellite/AAP/IdM
 --reconfigure            Prompt for all installer values and update env.yml
---demo                   Use demo sizing/profile for VM specs
---demokill               CLI-only cleanup for demo VMs/files/temp artifacts/lock files/processes
+--test[=fast|full]       Run a curated non-interactive test sweep and print a summary
+--DEMO|--demo            Use demo sizing/profile for VM specs
+--DEMOKILL|--demokill    CLI-only cleanup for demo VMs/files/temp artifacts/lock files/processes
 --help                   Show usage
+```
+
+### AAP installer inventory selection
+
+When running interactively without a pre-configured template, the script presents
+a guided **inventory architecture submenu**:
+
+```
+  0) Exit              -- Return to previous menu
+  1) inventory         -- Enterprise / Multi-Node deployment
+  2) About inventory   -- Name, synopsis, diagram & guidance
+  3) inventory-growth  -- Growth / Single-Node containerized
+  4) About inventory-growth
+                       -- Name, synopsis, diagram & guidance
+```
+
+Choosing **2** or **4** shows a full About page (topology diagram, setup steps,
+why Red Hat recommends that model) and then returns to the submenu.
+`--DEMO` bypasses the submenu and auto-selects `DEMO-inventory.j2`.
+
+To skip the submenu non-interactively, pass `--inventory` and `--inventory-growth`
+or pre-set `AAP_INVENTORY_TEMPLATE` / `AAP_INVENTORY_GROWTH_TEMPLATE` in your env file.
+See [inventory/README.md](inventory/README.md) for template details.
+
+### Generated Ansible runtime files
+
+RHIS now generates a host-side Ansible config for provisioner runs and mounts it into the container automatically:
+
+- `~/.ansible/conf/rhis-ansible.cfg` — generated RHIS Ansible runtime config
+- `~/.ansible/conf/ansible-provisioner.log` — stable provisioner log file
+- `~/.ansible/conf/facts-cache/` — Ansible fact cache
+
+The provisioner container uses that generated config via `ANSIBLE_CONFIG` and writes logs/cache on the host through the existing vault bind mount.
+
+### Container one-shot examples
+
+```bash
+./run_rhis_install_sequence.sh --container-config-only
+```
+
+Run one-shot container workflow without retries:
+
+```bash
+RHIS_RETRY_FAILED_PHASES_ONCE=0 ./run_rhis_install_sequence.sh --container-config-only
+```
+
+Re-open VM console monitors after boot:
+
+```bash
+./run_rhis_install_sequence.sh --attach-consoles
+```
+
+Run a fast noninteractive validation sweep (recommended after `--DEMOKILL`):
+
+```bash
+./run_rhis_install_sequence.sh --test=fast --DEMO
+```
+
+Run the broader integration-style validation sweep:
+
+```bash
+./run_rhis_install_sequence.sh --test=full --DEMO
 ```
 
 ### Common examples
@@ -124,7 +214,7 @@ Re-prompt for all saved values:
 Destroy demo resources and clean leftovers:
 
 ```bash
-./run_rhis_install_sequence.sh --demokill
+./run_rhis_install_sequence.sh --DEMOKILL
 ```
 
 ---
@@ -261,6 +351,14 @@ When you choose a libvirt build path, the script:
 5. enables `virsh autostart` for each VM
 6. checks that the three VMs are left in an ON/running state so automation can continue
 
+After provisioning, config-as-code is executed in dependency order:
+
+1. `IdM`
+2. `Satellite`
+3. `AAP`
+
+If a phase fails, the script retries only failed phases once by default.
+
 ### Console monitoring during build
 
 During provisioning, the script attempts to open console monitors automatically:
@@ -294,7 +392,7 @@ This matches the intended RHIS lab design.
 
 ## DEMOKILL behavior
 
-`--demokill` is intended for interrupted runs, rebuilds, and stale lab cleanup.
+`--DEMOKILL` is intended for interrupted runs, rebuilds, and stale lab cleanup.
 
 It currently cleans up:
 
@@ -329,6 +427,18 @@ The script includes bootstrap logic for a lightweight RHIS CMDB-style dashboard 
 
 The intent is to provide a single-pane view of the RHIS nodes and related services.
 
+### Live Status Dashboard (menu option `8`)
+
+The interactive dashboard now includes:
+
+- VM power state and discovered IPs
+- current provisioning / installer activity
+- provisioner container state and recent logs
+- tail of `~/.ansible/conf/ansible-provisioner.log`
+- tail of the temporary AAP bundle HTTP log
+- AAP callback log presence
+- Satellite CMDB URL / port status
+
 ### Ports used by the workflow
 
 - `3000/tcp` — RHIS container/web application
@@ -355,10 +465,13 @@ cat CHECKLIST.md
 ./run_rhis_install_sequence.sh --reconfigure
 
 # 3. Clean old lab state if needed
-./run_rhis_install_sequence.sh --demokill
+./run_rhis_install_sequence.sh --DEMOKILL
 
 # 4. Build the demo stack
-./run_rhis_install_sequence.sh --demo
+./run_rhis_install_sequence.sh --DEMO
+
+# 5. Optional: run a fast end-to-end wiring check
+./run_rhis_install_sequence.sh --test=fast --DEMO
 ```
 
 ---
@@ -372,7 +485,7 @@ If provisioning behaves unexpectedly:
 - watch the console monitor windows / tmux monitor
 - inspect generated kickstarts in `/var/lib/libvirt/images/kickstarts/`
 - inspect guest `%post` logs such as `/root/ks-post.log`
-- use `--demokill` before retrying a clean rebuild
+- use `--DEMOKILL` before retrying a clean rebuild
 
 If configuration values are wrong, rerun:
 
