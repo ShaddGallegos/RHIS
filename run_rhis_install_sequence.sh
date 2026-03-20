@@ -69,6 +69,7 @@ CLI_AAP_INVENTORY_TEMPLATE=""
 CLI_AAP_INVENTORY_GROWTH_TEMPLATE=""
 CLI_CONTAINER_CONFIG_ONLY=""
 CLI_ATTACH_CONSOLES=""
+CLI_STATUS=""
 CLI_TEST=""
 CLI_TEST_PROFILE="full"
 MENU_CHOICE_CONSUMED=0
@@ -89,6 +90,9 @@ RHIS_RETRY_FAILED_PHASES_ONCE="${RHIS_RETRY_FAILED_PHASES_ONCE:-1}"
 # Internal SSH readiness wait for config-as-code preflight
 RHIS_INTERNAL_SSH_WAIT_TIMEOUT="${RHIS_INTERNAL_SSH_WAIT_TIMEOUT:-1800}"
 RHIS_INTERNAL_SSH_WAIT_INTERVAL="${RHIS_INTERNAL_SSH_WAIT_INTERVAL:-10}"
+RHIS_POST_VM_SETTLE_GRACE="${RHIS_POST_VM_SETTLE_GRACE:-300}"
+RHIS_INTERNAL_SSH_WARN_GRACE="${RHIS_INTERNAL_SSH_WARN_GRACE:-600}"
+RHIS_INTERNAL_SSH_LOG_EVERY="${RHIS_INTERNAL_SSH_LOG_EVERY:-60}"
 
 # Automation Hub + AAP bundle pre-flight HTTP-serve variables
 HUB_TOKEN="${HUB_TOKEN:-}"
@@ -178,6 +182,13 @@ print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
+print_phase() {
+    local index="$1"
+    local total="$2"
+    local label="$3"
+    echo -e "${CYAN}[PHASE ${index}/${total}]${NC} ${BOLD}${label}${NC}"
+}
+
 print_usage() {
     cat <<EOF
 Usage: $(basename "$0") [options]
@@ -193,6 +204,7 @@ Options:
                            --DEMO always forces DEMO-inventory.j2 and skips the submenu.
   --container-config-only  Start container and run config order (IdM -> Satellite -> AAP)
   --attach-consoles        Re-open VM console monitors for Satellite/AAP/IdM
+    --status                 Read-only status snapshot (no provisioning changes)
   --reconfigure            Prompt for all env values and update env.yml
   --test[=fast|full]       Run a curated non-interactive test sweep and print a summary
   --demo                   Use minimal PoC/demo VM specs and kickstarts
@@ -593,6 +605,11 @@ parse_args() {
                 CLI_ATTACH_CONSOLES="1"
                 RUN_ONCE=1
                 ;;
+            --status)
+                CLI_STATUS="1"
+                CLI_NONINTERACTIVE="1"
+                RUN_ONCE=1
+                ;;
             --test|--TEST)
                 CLI_TEST="1"
                 CLI_TEST_PROFILE="full"
@@ -671,6 +688,11 @@ apply_cli_overrides() {
 
     if [ -n "$CLI_TEST" ]; then
         RHIS_TEST_MODE=1
+        NONINTERACTIVE=1
+        RUN_ONCE=1
+    fi
+
+    if [ -n "$CLI_STATUS" ]; then
         NONINTERACTIVE=1
         RUN_ONCE=1
     fi
@@ -1704,7 +1726,12 @@ preflight_config_as_code_targets() {
     local missing_vm=0
     local unreachable_target=0
     local vm_name vm_state target_ip
-    local wait_deadline now remaining
+    local wait_deadline wait_start now remaining elapsed
+    local last_progress_log=0
+    local show_detail_logs=0
+    local target_count=0
+    local missing_count=0
+    local -a missing_vms=()
     local all_ready reached
     local -a vm_specs
 
@@ -1725,12 +1752,14 @@ preflight_config_as_code_targets() {
 
     print_step "Preflight: validating RHIS VM state and internal SSH reachability"
     print_step "Preflight targets: ${vm_specs[*]}"
+    target_count="${#vm_specs[@]}"
     for spec in "${vm_specs[@]}"; do
         vm_name="${spec%%:*}"
         target_ip="${spec#*:}"
 
         if ! sudo virsh dominfo "$vm_name" >/dev/null 2>&1; then
-            print_warning "Required VM is not defined: ${vm_name}"
+            missing_vms+=("${vm_name}")
+            missing_count=$((missing_count + 1))
             missing_vm=1
             continue
         fi
@@ -1743,12 +1772,18 @@ preflight_config_as_code_targets() {
         fi
 
         if ! timeout 3 bash -lc "cat < /dev/tcp/${target_ip}/22" >/dev/null 2>&1; then
-            print_warning "Internal SSH is not reachable yet for ${vm_name} at ${target_ip}:22"
             unreachable_target=1
         fi
     done
 
     if [ "$missing_vm" -ne 0 ]; then
+        if [ "$missing_count" -eq "$target_count" ]; then
+            print_step "Expected on fresh installs or right after --DEMOKILL: target VMs are not defined yet (${missing_vms[*]})."
+        else
+            for vm_name in "${missing_vms[@]}"; do
+                print_warning "Required VM is not defined: ${vm_name}"
+            done
+        fi
         print_warning "Container Config-Only assumes Satellite, AAP, and IdM already exist."
         print_warning "After --DEMOKILL, rebuild the VMs first with menu option 3 or 5 (or your normal VM build path)."
         return 1
@@ -1756,7 +1791,8 @@ preflight_config_as_code_targets() {
 
     if [ "$unreachable_target" -ne 0 ]; then
         print_step "Waiting for internal SSH readiness (timeout=${RHIS_INTERNAL_SSH_WAIT_TIMEOUT}s, interval=${RHIS_INTERNAL_SSH_WAIT_INTERVAL}s)"
-        wait_deadline=$(( $(date +%s) + RHIS_INTERNAL_SSH_WAIT_TIMEOUT ))
+        wait_start="$(date +%s)"
+        wait_deadline=$(( wait_start + RHIS_INTERNAL_SSH_WAIT_TIMEOUT ))
 
         while true; do
             all_ready=1
@@ -1769,8 +1805,8 @@ preflight_config_as_code_targets() {
                     reached=0
                     all_ready=0
                 fi
-                if [ "$reached" -eq 0 ]; then
-                    print_step "Still waiting: ${vm_name} (${target_ip}:22)"
+                if [ "$reached" -eq 0 ] && [ "$show_detail_logs" -eq 1 ]; then
+                    print_warning "Internal SSH is not reachable yet for ${vm_name} at ${target_ip}:22"
                 fi
             done
 
@@ -1786,13 +1822,79 @@ preflight_config_as_code_targets() {
             fi
 
             remaining=$(( wait_deadline - now ))
-            print_step "Internal SSH still converging; retrying in ${RHIS_INTERNAL_SSH_WAIT_INTERVAL}s (remaining ~${remaining}s)"
+            elapsed=$(( now - wait_start ))
+
+            if [ "$elapsed" -ge "${RHIS_INTERNAL_SSH_WARN_GRACE}" ]; then
+                show_detail_logs=1
+            fi
+
+            if [ $((now - last_progress_log)) -ge "${RHIS_INTERNAL_SSH_LOG_EVERY}" ] || [ "$show_detail_logs" -eq 1 ]; then
+                if [ "$show_detail_logs" -eq 1 ]; then
+                    print_warning "Internal SSH still converging after ${elapsed}s (warn_grace=${RHIS_INTERNAL_SSH_WARN_GRACE}s, timeout=${RHIS_INTERNAL_SSH_WAIT_TIMEOUT}s, remaining~${remaining}s)"
+                else
+                    print_step "Internal SSH is still converging (elapsed=${elapsed}s/${RHIS_INTERNAL_SSH_WAIT_TIMEOUT}s, remaining~${remaining}s). Detailed warnings start after ${RHIS_INTERNAL_SSH_WARN_GRACE}s."
+                fi
+                last_progress_log="$now"
+            fi
+
             sleep "$RHIS_INTERNAL_SSH_WAIT_INTERVAL"
         done
     fi
 
     print_success "Preflight passed: RHIS VMs are running and reachable on the internal network."
     return 0
+}
+
+wait_for_post_vm_settle() {
+    local grace="${1:-${RHIS_POST_VM_SETTLE_GRACE:-300}}"
+    local remaining
+    local original_grace elapsed
+
+    case "$grace" in
+        ''|*[!0-9]*) grace=300 ;;
+    esac
+
+    if [ "$grace" -le 0 ]; then
+        return 0
+    fi
+
+    original_grace="$grace"
+    print_step "Guest install settle window: giving RHIS VMs ${grace}s before internal SSH checks begin"
+    while [ "$grace" -gt 0 ]; do
+        remaining="$grace"
+        if [ "$remaining" -gt 60 ]; then
+            remaining=60
+        fi
+        elapsed=$(( original_grace - grace ))
+        print_step "Initial settle countdown: elapsed=${elapsed}s total=${original_grace}s remaining=${grace}s"
+        sleep "$remaining"
+        grace=$((grace - remaining))
+    done
+}
+
+print_rhis_health_summary() {
+    local vm state ip
+    local -a vms=("satellite-618:${SAT_IP}" "aap-26:${AAP_IP}" "idm:${IDM_IP}")
+
+    echo ""
+    echo "================ RHIS Health Summary ================"
+    for spec in "${vms[@]}"; do
+        vm="${spec%%:*}"
+        ip="${spec#*:}"
+        if sudo virsh dominfo "$vm" >/dev/null 2>&1; then
+            state="$(sudo virsh domstate "$vm" 2>/dev/null | tr -d '[:space:]' || true)"
+        else
+            state="undefined"
+        fi
+
+        if timeout 2 bash -lc "cat < /dev/tcp/${ip}/22" >/dev/null 2>&1; then
+            echo "  - ${vm} (${ip}) state=${state:-unknown} ssh=up"
+        else
+            echo "  - ${vm} (${ip}) state=${state:-unknown} ssh=down"
+        fi
+    done
+    echo "====================================================="
+    echo ""
 }
 
 run_deferred_aap_callback() {
@@ -5045,6 +5147,7 @@ cleanup_rhis_lock_files() {
 }
 
 create_rhis_vms() {
+    print_phase 1 8 "Provision VM artifacts and prerequisites"
     print_step "Preparing Satellite / AAP / IdM qcow2 VMs"
     prompt_use_existing_env
     normalize_shared_env_vars
@@ -5100,6 +5203,8 @@ create_rhis_vms() {
     # Create IdM immediately after AAP VM request, before any long AAP callback wait.
     create_vm_if_missing "idm"           "${VM_DIR}/idm.qcow2"           "$idm_disk" "$idm_ram" "$idm_vcpu" "${KS_DIR}/idm.ks" || return 1
 
+    print_phase 2 8 "Guest settle and initial readiness"
+
     # Keep all VMs ON through installer reboot/power transitions while callbacks run.
     start_vm_power_watchdog 10800 || true
 
@@ -5113,12 +5218,20 @@ create_rhis_vms() {
 
     stop_vm_power_watchdog || true
     ensure_rhis_vms_powered_on
-    fix_vm_root_passwords || print_warning "Root password fix step did not complete cleanly; continuing."
+    wait_for_post_vm_settle || true
 
     # All VMs are running — trigger config-as-code via the provisioner container
+    print_phase 3 8 "Config-as-code orchestration"
     run_rhis_config_as_code || print_warning "Config-as-code phase did not complete cleanly. VMs are running; re-run manually if needed."
+    print_phase 4 8 "SSH mesh bootstrap"
     setup_rhis_ssh_mesh || print_warning "SSH mesh bootstrap did not complete cleanly; continuing."
+    print_phase 5 8 "SSH mesh validation"
     validate_rhis_ssh_mesh || print_warning "SSH mesh validation reported failures; continuing."
+    print_phase 6 8 "Root password normalization"
+    fix_vm_root_passwords || print_warning "Root password fix step did not complete cleanly; continuing."
+    print_phase 7 8 "Final health summary"
+    print_rhis_health_summary
+    print_phase 8 8 "Workflow complete"
 }
 
 # Fix the OS root password on all RHIS VMs using virsh set-user-password (via qemu-guest-agent).
@@ -5350,6 +5463,18 @@ main() {
     fi
     load_ansible_env_file
     normalize_shared_env_vars
+
+    if [ -n "${CLI_STATUS:-}" ]; then
+        print_phase 1 1 "Read-only status snapshot"
+        print_runtime_configuration
+        print_rhis_health_summary
+        RHIS_DASHBOARD_SINGLE_SHOT=1
+        show_live_status_dashboard || true
+        RHIS_DASHBOARD_SINGLE_SHOT=0
+        print_success "Status snapshot complete"
+        exit 0
+    fi
+
     prompt_all_env_options_once
     normalize_shared_env_vars
     retire_preseed_env_file
