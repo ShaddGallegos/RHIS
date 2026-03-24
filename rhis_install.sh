@@ -108,6 +108,17 @@ RHIS_INTERNAL_SSH_WAIT_INTERVAL="${RHIS_INTERNAL_SSH_WAIT_INTERVAL:-10}"
 RHIS_POST_VM_SETTLE_GRACE="${RHIS_POST_VM_SETTLE_GRACE:-650}"
 RHIS_INTERNAL_SSH_WARN_GRACE="${RHIS_INTERNAL_SSH_WARN_GRACE:-600}"
 RHIS_INTERNAL_SSH_LOG_EVERY="${RHIS_INTERNAL_SSH_LOG_EVERY:-60}"
+# Inventory transport selection for managed nodes.
+# 0 (default): use internal RHIS IPs (10.168.x.x) for Ansible connectivity.
+# 1: prefer externally discovered eth0/NAT addresses (192.168.122.x) when available.
+RHIS_MANAGED_SSH_OVER_ETH0="${RHIS_MANAGED_SSH_OVER_ETH0:-0}"
+# IdM web UI readiness check after IdM configuration phase.
+RHIS_IDM_WEB_UI_TIMEOUT="${RHIS_IDM_WEB_UI_TIMEOUT:-900}"
+RHIS_IDM_WEB_UI_INTERVAL="${RHIS_IDM_WEB_UI_INTERVAL:-15}"
+# Post-install healthcheck/repair controls.
+RHIS_ENABLE_POST_HEALTHCHECK="${RHIS_ENABLE_POST_HEALTHCHECK:-1}"
+RHIS_HEALTHCHECK_AUTOFIX="${RHIS_HEALTHCHECK_AUTOFIX:-1}"
+RHIS_HEALTHCHECK_RERUN_COMPONENT="${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"
 RHC_AUTO_CONNECT="${RHC_AUTO_CONNECT:-1}"
 # If enabled, fail the run when root-to-root SSH mesh cannot be fully established.
 # Default keeps root mesh best-effort while installer-user mesh remains mandatory.
@@ -405,8 +416,12 @@ Options:
   (env) RHIS_RETRY_FAILED_PHASES_ONCE=0       Disable automatic retry of failed phases
     (env) RHIS_ENABLE_CONTAINER_HOTFIXES=0      Disable runtime role hotfix patching in container
     (env) RHIS_ENFORCE_CONTAINER_HOTFIXES=0     Do not fail when hotfix verification cannot be confirmed
-        (env) RHIS_REFRESH_KNOWN_HOSTS=0            Do not refresh RHIS node host keys in ~/.ssh/known_hosts
-        (env) RHIS_INSTALLER_SSH_KEY_DIR=<path>     Override dedicated persistent RHIS installer SSH key directory
+    (env) RHIS_MANAGED_SSH_OVER_ETH0=1          Prefer external/NAT (eth0) addresses for managed-node Ansible SSH
+    (env) RHIS_ENABLE_POST_HEALTHCHECK=0        Disable post-install healthchecks (IdM/Satellite/AAP)
+    (env) RHIS_HEALTHCHECK_AUTOFIX=0            Disable automatic healthcheck remediation attempts
+    (env) RHIS_HEALTHCHECK_RERUN_COMPONENT=0    Disable targeted component rerun after healthcheck failure
+    (env) RHIS_REFRESH_KNOWN_HOSTS=0            Do not refresh RHIS node host keys in ~/.ssh/known_hosts
+    (env) RHIS_INSTALLER_SSH_KEY_DIR=<path>     Override dedicated persistent RHIS installer SSH key directory
     (env) RHC_AUTO_CONNECT=0                    Disable automatic rhc connect in guest kickstarts
   --help                   Show this help message
 EOF
@@ -785,6 +800,12 @@ print_runtime_configuration() {
     echo "  RHIS_RETRY_FAILED_PHASES_ONCE=${RHIS_RETRY_FAILED_PHASES_ONCE:-1}"
     echo "  RHIS_ENABLE_CONTAINER_HOTFIXES=${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"
     echo "  RHIS_ENFORCE_CONTAINER_HOTFIXES=${RHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"
+    echo "  RHIS_MANAGED_SSH_OVER_ETH0=${RHIS_MANAGED_SSH_OVER_ETH0:-0}"
+    echo "  RHIS_IDM_WEB_UI_TIMEOUT=${RHIS_IDM_WEB_UI_TIMEOUT:-900}"
+    echo "  RHIS_IDM_WEB_UI_INTERVAL=${RHIS_IDM_WEB_UI_INTERVAL:-15}"
+    echo "  RHIS_ENABLE_POST_HEALTHCHECK=${RHIS_ENABLE_POST_HEALTHCHECK:-1}"
+    echo "  RHIS_HEALTHCHECK_AUTOFIX=${RHIS_HEALTHCHECK_AUTOFIX:-1}"
+    echo "  RHIS_HEALTHCHECK_RERUN_COMPONENT=${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"
     echo "  RHIS_REQUIRE_ROOT_SSH_MESH=${RHIS_REQUIRE_ROOT_SSH_MESH:-0}"
     echo "  RHIS_REFRESH_KNOWN_HOSTS=${RHIS_REFRESH_KNOWN_HOSTS:-1}"
     echo "  RHIS_INSTALLER_SSH_KEY_DIR=${RHIS_INSTALLER_SSH_KEY_DIR:-'(unset)'}"
@@ -2296,6 +2317,33 @@ EOF'
     return 1
 }
 
+ensure_container_managed_idm_chrony_template() {
+    local _tpl_path="/rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2"
+    local _mk_cmd='mkdir -p /rhis/rhis-builder-idm/roles/idm_pre/templates && cat > /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
+# RHIS fallback chrony template (auto-generated when upstream template is missing)
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+pool 2.rhel.pool.ntp.org iburst
+EOF'
+
+    if podman exec "${RHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
+        return 0
+    fi
+
+    print_warning "Managed container patch: IdM chrony.j2 missing; applying fallback template."
+
+    if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
+       podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
+        print_success "Managed container patch applied: IdM fallback chrony.j2 created."
+        return 0
+    fi
+
+    print_warning "Managed container patch failed: could not create IdM fallback chrony.j2."
+    return 1
+}
+
 ensure_container_managed_satellite_foreman_patch() {
     local _root="/rhis/rhis-builder-satellite/roles/satellite_pre/tasks"
     local _py='import pathlib
@@ -2492,7 +2540,7 @@ else:
 }
 
 apply_managed_container_patches() {
-    local _verify_cmd='test -f /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 && grep -q "failed_when: false" /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml'
+    local _verify_cmd='test -f /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 && test -f /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 && grep -q "failed_when: false" /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml'
 
     if ! is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
         print_step "Managed container patches disabled (RHIS_ENABLE_CONTAINER_HOTFIXES=${RHIS_ENABLE_CONTAINER_HOTFIXES})."
@@ -2502,6 +2550,7 @@ apply_managed_container_patches() {
     print_step "Applying RHIS-managed patches to provisioner container components"
 
     ensure_container_managed_chrony_template || true
+    ensure_container_managed_idm_chrony_template || true
     ensure_container_managed_satellite_foreman_patch || true
     ensure_container_managed_idm_update_patch || true
 
@@ -2622,6 +2671,91 @@ run_container_config_only() {
     fi
 
     run_container_prescribed_sequence || return 1
+    return 0
+}
+
+sync_rhis_external_hosts_entries() {
+    local block_file rendered_file
+    local vm ext_ip fqdn alias
+    local -a rows=()
+    local -a specs=(
+        "satellite-618:${SAT_HOSTNAME}:${SAT_ALIAS}"
+        "aap-26:${AAP_HOSTNAME}:${AAP_ALIAS}"
+        "idm:${IDM_HOSTNAME}:${IDM_ALIAS}"
+    )
+
+    if ! command -v virsh >/dev/null 2>&1; then
+        print_warning "Skipping /etc/hosts external-entry sync: virsh not found."
+        return 0
+    fi
+
+    for spec in "${specs[@]}"; do
+        vm="${spec%%:*}"
+        fqdn="${spec#*:}"; fqdn="${fqdn%%:*}"
+        alias="${spec##*:}"
+
+        ext_ip="$(sudo -n virsh domifaddr "${vm}" 2>/dev/null | awk '/ipv4/ {print $4}' | cut -d/ -f1 | awk '$1 !~ /^10\.168\./ {print; exit}' || true)"
+        [ -n "${ext_ip}" ] || continue
+
+        if [ -n "${fqdn}" ] && [ -n "${alias}" ]; then
+            rows+=("${ext_ip} ${fqdn} ${alias}")
+        elif [ -n "${fqdn}" ]; then
+            rows+=("${ext_ip} ${fqdn}")
+        elif [ -n "${alias}" ]; then
+            rows+=("${ext_ip} ${alias}")
+        fi
+    done
+
+    if [ "${#rows[@]}" -eq 0 ]; then
+        print_step "No external RHIS VM addresses discovered for /etc/hosts sync yet."
+        return 0
+    fi
+
+    block_file="$(mktemp /tmp/rhis-hosts-block.XXXXXX)"
+    rendered_file="$(mktemp /tmp/rhis-hosts-rendered.XXXXXX)"
+
+    {
+        echo "# BEGIN RHIS EXTERNAL HOSTS"
+        for row in "${rows[@]}"; do
+            printf '%s\n' "${row}"
+        done
+        echo "# END RHIS EXTERNAL HOSTS"
+    } > "${block_file}"
+
+    if sudo grep -q '^# BEGIN RHIS EXTERNAL HOSTS$' /etc/hosts 2>/dev/null && \
+       sudo grep -q '^# END RHIS EXTERNAL HOSTS$' /etc/hosts 2>/dev/null; then
+        sudo awk -v bf="${block_file}" '
+            BEGIN {
+                while ((getline line < bf) > 0) {
+                    block = block line ORS
+                }
+                close(bf)
+            }
+            /^# BEGIN RHIS EXTERNAL HOSTS$/ {
+                print block
+                inblock = 1
+                next
+            }
+            inblock && /^# END RHIS EXTERNAL HOSTS$/ {
+                inblock = 0
+                next
+            }
+            !inblock { print }
+        ' /etc/hosts > "${rendered_file}" || true
+    else
+        {
+            sudo cat /etc/hosts
+            cat "${block_file}"
+        } > "${rendered_file}" || true
+    fi
+
+    if [ -s "${rendered_file}" ] && sudo cp -f "${rendered_file}" /etc/hosts 2>/dev/null; then
+        print_success "Updated /etc/hosts with RHIS external interface entries."
+    else
+        print_warning "Could not update /etc/hosts with RHIS external interface entries."
+    fi
+
+    rm -f "${block_file}" "${rendered_file}" || true
     return 0
 }
 
@@ -2889,9 +3023,11 @@ generate_rhis_inventory() {
     local controller_host_e host_int_ip_e installer_user_e sat_host_e sat_alias_e sat_ip_e aap_host_e aap_alias_e aap_ip_e idm_host_e idm_alias_e idm_ip_e admin_user_e
     local sat_connect_host aap_connect_host idm_connect_host
 
-    # Prefer external (eth0) addressing for SSH/config-as-code connectivity.
-    # This is especially important for registration flows that require external
-    # network reachability. Fallback order when enabled:
+    # Default behavior uses internal RHIS addressing (10.168.x.x) for stable
+    # node-to-node trust and predictable Ansible reachability across rebuilds.
+    # Optional eth0 mode can be enabled for environments that intentionally
+    # manage nodes via external/NAT addressing.
+    # Fallback order when eth0 mode is enabled:
     #   detected external IP via virsh -> FQDN hostname -> configured internal IP
     resolve_vm_connect_host() {
         local vm_name="$1"
@@ -2899,7 +3035,7 @@ generate_rhis_inventory() {
         local fallback_ip="$3"
         local detected_ip=""
 
-        if is_enabled "${RHIS_MANAGED_SSH_OVER_ETH0:-1}"; then
+        if is_enabled "${RHIS_MANAGED_SSH_OVER_ETH0:-0}"; then
             detected_ip="$(sudo virsh domifaddr "${vm_name}" 2>/dev/null | awk 'NR>2{print $4}' | cut -d/ -f1 | awk '$1 !~ /^10\.168\./ {print; exit}')"
             if [ -n "${detected_ip}" ]; then
                 printf '%s' "${detected_ip}"
@@ -3118,6 +3254,9 @@ run_rhis_config_as_code() {
     load_ansible_env_file || true
     normalize_shared_env_vars
 
+    # Keep installer-host /etc/hosts aligned with current external/NAT VM IPs.
+    sync_rhis_external_hosts_entries || true
+
     # Re-sync installer/user/root trust before entering phase playbooks.
     # This is intentionally best-effort here because some nodes may still be
     # converging; phase auth fallback remains the final safety net.
@@ -3257,6 +3396,33 @@ EOF'
         fi
 
         print_warning "Failed to create fallback chrony.j2; will skip tags_satellite_pre_chrony."
+        return 1
+    }
+
+    ensure_idm_chrony_template() {
+        local _tpl_path="/rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2"
+        local _mk_cmd='mkdir -p /rhis/rhis-builder-idm/roles/idm_pre/templates && cat > /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
+# RHIS fallback chrony template (auto-generated when upstream template is missing)
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+pool 2.rhel.pool.ntp.org iburst
+EOF'
+
+        if podman exec "${RHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
+            return 0
+        fi
+
+        print_warning "chrony.j2 is missing in rhis-builder-idm; applying fallback template workaround."
+
+        if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
+           podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
+            print_success "Fallback chrony.j2 created in rhis-builder-idm templates."
+            return 0
+        fi
+
+        print_warning "Failed to create IdM fallback chrony.j2; idm_pre chrony task may fail."
         return 1
     }
 
@@ -3459,12 +3625,13 @@ else:
     }
 
     ensure_container_playbook_hotfixes() {
-        local _verify_cmd='grep -q "failed_when: false" /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml'
+        local _verify_cmd='test -f /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 && test -f /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 && grep -q "failed_when: false" /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml'
         local _verified=1
 
         print_step "Pre-flight: applying container role hotfixes"
 
         ensure_satellite_foreman_service_check_nonfatal || true
+        ensure_idm_chrony_template || true
         ensure_idm_update_task_nogpgcheck || true
 
         if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1 || \
@@ -3529,6 +3696,7 @@ else:
         # the package is pre-installed by ensure_core_role_packages_on_managed_nodes.
         if [ "${phase_limit}" = "idm" ]; then
             if is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+                ensure_idm_chrony_template || true
                 ensure_idm_update_task_nogpgcheck || true
             fi
             phase_args+=( --extra-vars "{\"rhc_insights\":{\"remediation\":\"absent\"},\"idm_repository_ids\":${IDM_REPOSITORY_IDS_JSON},\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay}}" )
@@ -3583,6 +3751,7 @@ else:
         fi
         if [ "${phase_limit}" = "idm" ]; then
             if is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+                ensure_idm_chrony_template || true
                 ensure_idm_update_task_nogpgcheck || true
             fi
             fallback_phase_args+=( --extra-vars "{\"rhc_insights\":{\"remediation\":\"absent\"},\"idm_repository_ids\":${IDM_REPOSITORY_IDS_JSON},\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay}}" )
@@ -4088,6 +4257,120 @@ else:
         return 0
     }
 
+    dump_idm_web_ui_diagnostics() {
+        local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
+        local diag_shell='echo "=== hostname ==="; hostname -f || hostname; echo "=== service states ==="; systemctl is-active ipa || true; systemctl is-active httpd || true; systemctl is-active pki-tomcatd@pki-tomcat || true; systemctl --no-pager --full -l status ipa httpd pki-tomcatd@pki-tomcat 2>/dev/null | tail -120 || true; echo "=== port 443 listeners ==="; ss -ltnp | grep -E "(:443\\b|:80\\b)" || true; echo "=== local curl /ipa/ui ==="; curl -k -sS -o /dev/null -w "HTTP %{http_code}\\n" https://localhost/ipa/ui/ || true'
+
+        print_step "Diagnostics: collecting IdM Web UI/service state"
+
+        if [ -n "$root_auth_pass" ]; then
+            if [ "$use_interactive_vault_prompt" = "1" ]; then
+                podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
+                    -e "ansible_user=root" \
+                    -e "ansible_password=${root_auth_pass}" \
+                    -e "ansible_become=false" \
+                    -e "ansible_become_password=${root_auth_pass}" \
+                    -m shell -a "${diag_shell}" && return 0
+            else
+                podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
+                    -e "ansible_user=root" \
+                    -e "ansible_password=${root_auth_pass}" \
+                    -e "ansible_become=false" \
+                    -e "ansible_become_password=${root_auth_pass}" \
+                    -m shell -a "${diag_shell}" && return 0
+            fi
+        fi
+
+        if [ "$use_interactive_vault_prompt" = "1" ]; then
+            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                ansible "idm" ${inv} "${vault_arg[@]}" ${evars} -m shell -a "${diag_shell}" || true
+        else
+            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                ansible "idm" ${inv} "${vault_arg[@]}" ${evars} -m shell -a "${diag_shell}" || true
+        fi
+
+        return 0
+    }
+
+    ensure_idm_web_ui_ready() {
+        local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
+        local timeout interval start_ts now elapsed
+        local rc=0
+        local check_out=""
+        local remediate_shell='systemctl enable --now chronyd >/dev/null 2>&1 || true; systemctl enable --now httpd >/dev/null 2>&1 || true; ipactl status >/dev/null 2>&1 || ipactl start >/dev/null 2>&1 || true; systemctl restart httpd pki-tomcatd@pki-tomcat >/dev/null 2>&1 || true; curl -k -sS -o /dev/null -w "HTTP %{http_code}\\n" https://localhost/ipa/ui/ || true'
+        local check_shell='code="$(curl -k -sS -o /dev/null -w "%{http_code}" https://localhost/ipa/ui/ 2>/dev/null || true)"; ss -ltn | grep -q ":443\\b" || exit 1; case "$code" in 200|301|302|303|307|308|401|403) echo "IDM_WEB_UI_READY:$code" ;; *) echo "IDM_WEB_UI_NOT_READY:$code"; exit 1 ;; esac'
+
+        timeout="${RHIS_IDM_WEB_UI_TIMEOUT:-900}"
+        interval="${RHIS_IDM_WEB_UI_INTERVAL:-15}"
+        case "${timeout}" in ''|*[!0-9]*) timeout=900 ;; esac
+        case "${interval}" in ''|*[!0-9]*) interval=15 ;; esac
+        [ "${timeout}" -gt 0 ] || timeout=900
+        [ "${interval}" -gt 0 ] || interval=15
+
+        print_step "IdM Web UI gate: attempting service remediation before readiness checks"
+        if [ -n "$root_auth_pass" ]; then
+            if [ "$use_interactive_vault_prompt" = "1" ]; then
+                podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
+                    -e "ansible_user=root" -e "ansible_password=${root_auth_pass}" -e "ansible_become=false" -e "ansible_become_password=${root_auth_pass}" \
+                    -m shell -a "${remediate_shell}" >/dev/null 2>&1 || true
+            else
+                podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
+                    -e "ansible_user=root" -e "ansible_password=${root_auth_pass}" -e "ansible_become=false" -e "ansible_become_password=${root_auth_pass}" \
+                    -m shell -a "${remediate_shell}" >/dev/null 2>&1 || true
+            fi
+        fi
+
+        print_step "IdM Web UI gate: waiting up to ${timeout}s for https://${IDM_HOSTNAME:-idm}/ipa/ui"
+        start_ts="$(date +%s)"
+        while true; do
+            rc=0
+            if [ -n "$root_auth_pass" ]; then
+                if [ "$use_interactive_vault_prompt" = "1" ]; then
+                    check_out=$(podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
+                        -e "ansible_user=root" -e "ansible_password=${root_auth_pass}" -e "ansible_become=false" -e "ansible_become_password=${root_auth_pass}" \
+                        -m shell -a "${check_shell}" --one-line 2>&1) || rc=$?
+                else
+                    check_out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
+                        -e "ansible_user=root" -e "ansible_password=${root_auth_pass}" -e "ansible_become=false" -e "ansible_become_password=${root_auth_pass}" \
+                        -m shell -a "${check_shell}" --one-line 2>&1) || rc=$?
+                fi
+            else
+                if [ "$use_interactive_vault_prompt" = "1" ]; then
+                    check_out=$(podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "idm" ${inv} "${vault_arg[@]}" ${evars} -m shell -a "${check_shell}" --one-line 2>&1) || rc=$?
+                else
+                    check_out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "idm" ${inv} "${vault_arg[@]}" ${evars} -m shell -a "${check_shell}" --one-line 2>&1) || rc=$?
+                fi
+            fi
+
+            if [ "$rc" -eq 0 ] && printf '%s\n' "${check_out}" | grep -q 'IDM_WEB_UI_READY:'; then
+                print_success "IdM Web UI is reachable and healthy (${check_out##*IDM_WEB_UI_READY:})."
+                return 0
+            fi
+
+            now="$(date +%s)"
+            elapsed=$(( now - start_ts ))
+            if [ "$elapsed" -ge "$timeout" ]; then
+                print_warning "IdM Web UI did not become ready within ${timeout}s."
+                print_warning "Last Web UI probe output: ${check_out}"
+                dump_idm_web_ui_diagnostics || true
+                return 1
+            fi
+
+            if [ $(( elapsed % 60 )) -eq 0 ]; then
+                print_step "IdM Web UI still converging (elapsed=${elapsed}s/${timeout}s)."
+            fi
+            sleep "$interval"
+        done
+    }
+
     # Print Satellite RHSM identity, status, and enabled repos after a failure
     # so entitlement and repo issues are immediately visible.
     dump_satellite_rhsm_diagnostics() {
@@ -4341,13 +4624,20 @@ else:
         any_failed=1
         print_warning "IdM config-as-code failed.  Check the output above."
         dump_idm_network_diagnostics || true
+        dump_idm_web_ui_diagnostics || true
         print_warning "You can re-run manually:"
         print_manual_rerun_template
         print_warning "  podman exec -it ${manual_podman_env} ${RHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${manual_idm_extras} --limit idm /rhis/rhis-builder-idm/main.yml"
     else
         idm_auth_fallback_status="${phase_auth_fallback_status}"
-        idm_status="success"
-        print_success "IdM configuration complete."
+        if ensure_idm_web_ui_ready; then
+            idm_status="success"
+            print_success "IdM configuration complete."
+        else
+            idm_status="failed-webui"
+            any_failed=1
+            print_warning "IdM phase completed but Web UI readiness gate failed."
+        fi
     fi
     print_step "Auth fallback (IdM): ${idm_auth_fallback_status}"
 
@@ -4440,6 +4730,160 @@ else:
             aap_auth_fallback_status="${phase_auth_fallback_status}"
             print_step "Auth fallback (AAP retry): ${aap_auth_fallback_status}"
         fi
+    fi
+
+    run_post_install_healthcheck() {
+        local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
+        local local_failures=0
+
+        healthcheck_run_shell() {
+            local _target="$1"
+            local _label="$2"
+            local _shell="$3"
+            local _out=""
+            local _rc=0
+
+            print_step "Healthcheck: ${_label}"
+
+            if [ -n "${root_auth_pass}" ]; then
+                if [ "$use_interactive_vault_prompt" = "1" ]; then
+                    _out=$(podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} \
+                        -e "ansible_user=root" \
+                        -e "ansible_password=${root_auth_pass}" \
+                        -e "ansible_become=false" \
+                        -e "ansible_become_password=${root_auth_pass}" \
+                        -m shell -a "${_shell}" --one-line 2>&1) || _rc=$?
+                else
+                    _out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} \
+                        -e "ansible_user=root" \
+                        -e "ansible_password=${root_auth_pass}" \
+                        -e "ansible_become=false" \
+                        -e "ansible_become_password=${root_auth_pass}" \
+                        -m shell -a "${_shell}" --one-line 2>&1) || _rc=$?
+                fi
+            else
+                if [ "$use_interactive_vault_prompt" = "1" ]; then
+                    _out=$(podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} -m shell -a "${_shell}" --one-line 2>&1) || _rc=$?
+                else
+                    _out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                        ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} -m shell -a "${_shell}" --one-line 2>&1) || _rc=$?
+                fi
+            fi
+
+            [ -n "${_out}" ] && printf '%s\n' "${_out}" | head -40
+            return ${_rc}
+        }
+
+        if ! is_enabled "${RHIS_ENABLE_POST_HEALTHCHECK:-1}"; then
+            print_step "Post-install healthcheck is disabled (RHIS_ENABLE_POST_HEALTHCHECK=0)."
+            return 0
+        fi
+
+        print_step "===== Post-install healthcheck (IdM/Satellite/AAP) ====="
+
+        local idm_check='code="$(curl -k -sS -o /dev/null -w "%{http_code}" https://localhost/ipa/ui/ 2>/dev/null || true)"; ipactl status >/dev/null 2>&1; systemctl is-active --quiet httpd; ss -ltn | grep -q ":443\\b"; case "$code" in 200|301|302|303|307|308|401|403) echo "IDM_HEALTH_OK:$code" ;; *) echo "IDM_HEALTH_BAD:$code"; exit 1 ;; esac'
+        local idm_fix='systemctl enable --now chronyd >/dev/null 2>&1 || true; systemctl enable --now httpd >/dev/null 2>&1 || true; ipactl status >/dev/null 2>&1 || ipactl start >/dev/null 2>&1 || true; systemctl restart httpd pki-tomcatd@pki-tomcat >/dev/null 2>&1 || true; true'
+
+        if healthcheck_run_shell "idm" "IdM web/service readiness" "${idm_check}"; then
+            print_success "Healthcheck passed: IdM"
+        else
+            local_failures=$((local_failures + 1))
+            print_warning "Healthcheck failed: IdM"
+            if is_enabled "${RHIS_HEALTHCHECK_AUTOFIX:-1}"; then
+                print_step "Healthcheck autofix: IdM service remediation"
+                healthcheck_run_shell "idm" "IdM autofix action" "${idm_fix}" || true
+                if healthcheck_run_shell "idm" "IdM post-autofix verification" "${idm_check}"; then
+                    print_success "IdM recovered after autofix."
+                    local_failures=$((local_failures - 1))
+                elif is_enabled "${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
+                    print_warning "Healthcheck rerun: IdM component playbook"
+                    if run_phase_playbook_with_auth_fallback "Healthcheck repair — IdM" "idm" "/rhis/rhis-builder-idm/main.yml" && \
+                       healthcheck_run_shell "idm" "IdM post-rerun verification" "${idm_check}"; then
+                        print_success "IdM recovered after targeted component rerun."
+                        local_failures=$((local_failures - 1))
+                    else
+                        dump_idm_network_diagnostics || true
+                        dump_idm_web_ui_diagnostics || true
+                    fi
+                else
+                    dump_idm_network_diagnostics || true
+                    dump_idm_web_ui_diagnostics || true
+                fi
+            fi
+        fi
+
+        local sat_check='systemctl is-active --quiet httpd; ss -ltn | grep -q ":443\\b"; code="$(curl -k -sS -o /dev/null -w "%{http_code}" https://localhost/ 2>/dev/null || true)"; case "$code" in 200|301|302|303|307|308|401|403) echo "SAT_HEALTH_OK:$code" ;; *) echo "SAT_HEALTH_BAD:$code"; exit 1 ;; esac'
+        local sat_fix='systemctl enable --now httpd >/dev/null 2>&1 || true; satellite-maintain service start >/dev/null 2>&1 || true; systemctl restart httpd >/dev/null 2>&1 || true; true'
+
+        if healthcheck_run_shell "scenario_satellite" "Satellite web/service readiness" "${sat_check}"; then
+            print_success "Healthcheck passed: Satellite"
+        else
+            local_failures=$((local_failures + 1))
+            print_warning "Healthcheck failed: Satellite"
+            if is_enabled "${RHIS_HEALTHCHECK_AUTOFIX:-1}"; then
+                print_step "Healthcheck autofix: Satellite service remediation"
+                healthcheck_run_shell "scenario_satellite" "Satellite autofix action" "${sat_fix}" || true
+                if healthcheck_run_shell "scenario_satellite" "Satellite post-autofix verification" "${sat_check}"; then
+                    print_success "Satellite recovered after autofix."
+                    local_failures=$((local_failures - 1))
+                elif is_enabled "${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
+                    print_warning "Healthcheck rerun: Satellite component playbook"
+                    if run_phase_playbook_with_auth_fallback "Healthcheck repair — Satellite" "scenario_satellite" "/rhis/rhis-builder-satellite/main.yml" && \
+                       healthcheck_run_shell "scenario_satellite" "Satellite post-rerun verification" "${sat_check}"; then
+                        print_success "Satellite recovered after targeted component rerun."
+                        local_failures=$((local_failures - 1))
+                    else
+                        dump_satellite_rhsm_diagnostics || true
+                    fi
+                else
+                    dump_satellite_rhsm_diagnostics || true
+                fi
+            fi
+        fi
+
+        local aap_check='(ss -ltn | grep -q ":443\\b" || ss -ltn | grep -q ":80\\b"); code="$(curl -k -sS -o /dev/null -w "%{http_code}" https://localhost/ 2>/dev/null || true)"; [ "$code" != "000" ] || code="$(curl -sS -o /dev/null -w "%{http_code}" http://localhost/ 2>/dev/null || true)"; case "$code" in 200|301|302|303|307|308|401|403) echo "AAP_HEALTH_OK:$code" ;; *) echo "AAP_HEALTH_BAD:$code"; exit 1 ;; esac'
+        local aap_fix='systemctl enable --now podman >/dev/null 2>&1 || true; systemctl restart podman >/dev/null 2>&1 || true; true'
+
+        if [ "${aap_status}" = "success" ] || [ "${aap_status}" = "success-after-retry" ]; then
+            if healthcheck_run_shell "aap" "AAP web/service readiness" "${aap_check}"; then
+                print_success "Healthcheck passed: AAP"
+            else
+                local_failures=$((local_failures + 1))
+                print_warning "Healthcheck failed: AAP"
+                if is_enabled "${RHIS_HEALTHCHECK_AUTOFIX:-1}"; then
+                    print_step "Healthcheck autofix: AAP service remediation"
+                    healthcheck_run_shell "aap" "AAP autofix action" "${aap_fix}" || true
+                    if healthcheck_run_shell "aap" "AAP post-autofix verification" "${aap_check}"; then
+                        print_success "AAP recovered after autofix."
+                        local_failures=$((local_failures - 1))
+                    elif is_enabled "${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
+                        print_warning "Healthcheck rerun: AAP component playbook"
+                        if run_phase_playbook_with_auth_fallback "Healthcheck repair — AAP" "aap" "/rhis/rhis-builder-aap/main.yml" && \
+                           healthcheck_run_shell "aap" "AAP post-rerun verification" "${aap_check}"; then
+                            print_success "AAP recovered after targeted component rerun."
+                            local_failures=$((local_failures - 1))
+                        fi
+                    fi
+                fi
+            fi
+        else
+            print_warning "Skipping AAP post-install healthcheck because AAP phase status is '${aap_status}'."
+        fi
+
+        if [ "${local_failures}" -ne 0 ]; then
+            print_warning "Post-install healthcheck finished with ${local_failures} unresolved issue(s)."
+            return 1
+        fi
+
+        print_success "Post-install healthcheck passed for all applicable components."
+        return 0
+    }
+
+    if ! run_post_install_healthcheck; then
+        any_failed=1
     fi
 
     print_step "===== Config-as-Code Summary ====="
@@ -7565,6 +8009,7 @@ create_rhis_vms() {
 
     ensure_rhis_vms_powered_on
     wait_for_post_vm_settle || true
+    sync_rhis_external_hosts_entries || true
 
     # As soon as VMs first come up, bootstrap SSH trust mesh before config-as-code.
     print_phase 3 8 "SSH mesh bootstrap"

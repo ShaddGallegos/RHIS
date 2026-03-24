@@ -11,6 +11,21 @@ This file tracks repository changes from this point forward.
 
 ---
 
+## 2026-03-24 09:51:57 MDT
+
+### 2026-03-24 09:51:57 MDT — Emergency recovery: Missing provisioner templates
+- **Area:** `RECOVERY_PROCEDURES.md`, `QUICK_RECOVERY.md`, (provisioner container patches applied)
+- **Summary:**
+  - Diagnosed config-as-code phase failures: IdM/Satellite playbooks failed due to missing `chrony.j2` template in provisioner container.
+  - Root cause: Provisioner container image (`quay.io/parmstro/rhis-provisioner-9-2.5:latest`) missing rhis-builder roles/templates.
+  - Applied emergency hotfix: Injected fallback chrony.j2 templates into running provisioner container for both IdM and Satellite roles via `podman cp`.
+  - Created comprehensive recovery procedures documentation with 4 recovery options (retry phases, full restart, manual execution, isolated testing).
+  - Created quick reference recovery guide for immediate phase re-execution with step-by-step instructions.
+  - Verified templates now in place; ready for playbook retry.
+- **Reason:** Unblock failed deployment; provide clear recovery path for user without full infrastructure rebuild.
+
+---
+
 ## 2026-03-23 17:39:04 MDT
 
 ### 2026-03-23 17:39:04 MDT — Script hardening and orchestration updates
@@ -91,3 +106,37 @@ This file tracks repository changes from this point forward.
   - Added config-as-code preflight call to refresh SSH trust baseline (`setup_rhis_ssh_mesh`) before phase playbooks (best-effort in this path).
   - Added config-as-code preflight root password normalization (`fix_vm_root_passwords`) before phase execution to improve root fallback reliability.
 - **Reason:** Reduce repeated phase failures in container config-only/rerun workflows caused by SSH trust drift and root password mismatch between current vault values and guest state.
+
+### 2026-03-24 09:17:24 MDT — /etc/hosts sync for RHIS external interfaces
+- **Area:** `rhis_install.sh`
+- **Summary:**
+  - Added `sync_rhis_external_hosts_entries()` to discover RHIS VM external/NAT interface IPs via `virsh domifaddr` and write them to a managed `/etc/hosts` block.
+  - Added managed markers (`# BEGIN RHIS EXTERNAL HOSTS` / `# END RHIS EXTERNAL HOSTS`) so reruns replace/update entries cleanly instead of duplicating lines.
+  - Wired sync calls into VM settle flow (`create_rhis_vms`) and config-as-code preflight (`run_rhis_config_as_code`) for recurring refresh.
+- **Reason:** Ensure installer-host name resolution has up-to-date external interface mappings after VM reprovision/re-IP events.
+
+### 2026-03-24 09:21:37 MDT — Fix missing IdM chrony.j2 template during idm_pre
+- **Area:** `rhis_install.sh`
+- **Summary:**
+  - Added managed container hotfix creation for `/rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2` (fallback template) alongside existing Satellite chrony fallback.
+  - Extended container hotfix verification checks to require both Satellite and IdM `chrony.j2` template files.
+  - Added IdM chrony template preflight application in config-as-code hotfix path and before IdM phase/fallback playbook execution.
+- **Reason:** Prevent `TASK [idm_pre : Configure time servers]` failures caused by missing `chrony.j2` in the IdM role templates.
+
+### 2026-03-24 09:28:18 MDT — IdM Web UI readiness gate + diagnostics
+- **Area:** `rhis_install.sh`
+- **Summary:**
+  - Added IdM Web UI readiness controls (`RHIS_IDM_WEB_UI_TIMEOUT`, `RHIS_IDM_WEB_UI_INTERVAL`) and runtime config visibility.
+  - Added automated post-IdM remediation/start checks for key services (`ipa`, `httpd`, `pki-tomcatd@pki-tomcat`) with `/ipa/ui` HTTPS readiness probing.
+  - Added focused IdM Web UI diagnostics (service state, listener ports, local curl status) and integrated them into IdM failure handling.
+  - IdM phase now marks status as failed when web UI readiness does not converge, instead of reporting a false-success state.
+- **Reason:** Ensure the workflow only reports IdM success when the actual IdM web UI is reachable and healthy.
+
+### 2026-03-24 09:43:07 MDT — Cross-component post-install healthcheck/remediation framework
+- **Area:** `rhis_install.sh`
+- **Summary:**
+  - Added post-install healthcheck controls: `RHIS_ENABLE_POST_HEALTHCHECK`, `RHIS_HEALTHCHECK_AUTOFIX`, `RHIS_HEALTHCHECK_RERUN_COMPONENT`.
+  - Added healthcheck stage after phase execution/retries to validate IdM, Satellite, and AAP service/web readiness.
+  - Added automatic remediation attempts for failed checks and optional targeted component playbook reruns when remediation is insufficient.
+  - Wired all healthcheck activity into existing log stream (`/var/log/rhis/...`) so failures, fixes, and final status are captured in the RHIS install log.
+- **Reason:** Provide after-the-fact validation that role-delivered functionality is actually operational, with auto-fix and component-level rerun fallback when possible.
