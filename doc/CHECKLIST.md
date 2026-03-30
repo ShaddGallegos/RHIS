@@ -283,6 +283,10 @@ persisted in encrypted `~/.ansible/conf/env.yml`):
 
 ### How it works
 
+- The script auto-discovers the latest manifest file matching `manifest_*.zip` in `~/Downloads/`
+- If present, it stages the manifest for automatic import by the Satellite provisioning playbook
+- During Satellite configuration, the playbook will import the manifest using `hammer subscription upload`
+- If no manifest is found, the script continues — the Satellite instance will use portal-generated manifests instead
 
 ### Fallback search locations
 
@@ -290,12 +294,16 @@ persisted in encrypted `~/.ansible/conf/env.yml`):
 - **Fallback location:** `/var/lib/libvirt/images/manifest_*.zip` (checked if primary location is empty)
 - The script searches the primary location first, then falls back to the libvirt images directory if needed
 - This allows manifest staging from either user downloads or pre-staged libvirt directory
+
 ### Notes
 
-
+- File pattern: `manifest_*.zip` (the script finds the latest by modification time)
+- Location: Must be in `~/Downloads/` directory on the installer host (or `/var/lib/libvirt/images/` for fallback staging)
+- Optional: Only required if you want to pre-stage a manifest for automatic import
+- The manifest import is skipped silently if no file is found — not an error condition
+- For air-gapped deployments, this is the recommended way to pre-load entitlements
 ---
 ---
-
 ## 9. IdM-specific values
 
 ### Required / prompted
