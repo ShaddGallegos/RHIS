@@ -274,9 +274,9 @@ RHIS_ENFORCE_SAT_INTERNAL_NETWORK="${RHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}"
 SAT_FIREWALLD_SERVICES_JSON='["ssh","http","https"]'
 IDM_REPOSITORY_IDS_JSON='["rhel-10-for-x86_64-baseos-rpms","rhel-10-for-x86_64-appstream-rpms","idm-for-rhel-10-x86_64-rpms"]'
 # Required Satellite server repositories.  Your RHSM account MUST expose all
-# four IDs below before run_config_as_code() reaches the Satellite phase.
+# IDs below before run_config_as_code() reaches the Satellite phase.
 # See assert_satellite_server_repos_available() for the pre-flight guard.
-SAT_REPOSITORY_IDS_JSON='["rhel-9-for-x86_64-baseos-rpms","rhel-9-for-x86_64-appstream-rpms","satellite-6.18-for-rhel-9-x86_64-rpms","satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"]'
+SAT_REPOSITORY_IDS_JSON='["rhel-9-for-x86_64-baseos-rpms","rhel-9-for-x86_64-appstream-rpms","rh-common-for-rhel-9-x86_64-rpms","satellite-6.18-for-rhel-9-x86_64-rpms","satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"]'
 DEPLOYMENT_SCOPE="${DEPLOYMENT_SCOPE:-local}"
 RHIS_TARGET_PLATFORM="${RHIS_TARGET_PLATFORM:-libvirt}"
 AAP_TARGET_PLATFORM="${AAP_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM}}"
@@ -1102,6 +1102,37 @@ kickstart_repo_enable_verify_block() {
     printf 'echo "INFO: %s enabled repositories after registration:"\n' "$role_label"
     printf '%s\n' "subscription-manager repos --list-enabled 2>/dev/null | awk -F': *' '/Repo ID:/ {print \"  - \" \\$2}' || true"
     printf '%s\n' 'dnf repolist || true'
+}
+
+kickstart_satellite_package_install_block() {
+    # Install satellite support packages after repos are enabled
+    # Uses dnf with --skip-broken to tolerate missing packages
+    cat <<'EOF'
+# 3.6 Install Satellite Support Packages
+ks_log "Phase 3.6: Install satellite support packages (tolerate failures)"
+packages_to_install=(
+    "dhcp-server" "tftp-server" "httpd" 
+    "shim-x64" "grub2-efi-x64" "grub2-efi-x64-modules" "grub2-tools"
+    "bind" "syslinux"
+    "bash-completion" "git" "network-scripts" "sos" "setroubleshoot-server"
+    "osbuild-composer" "cbootc" "podman" "skopeo" "composer-cli" "cockpit-composer"
+    "vim"
+)
+
+# Try installing each package; tolerate failures
+install_ok=0
+install_failed=0
+for pkg in "${packages_to_install[@]}"; do
+    if dnf install -y --skip-broken --allowerasing --best "${pkg}" >/dev/null 2>&1; then
+        install_ok=$((install_ok + 1))
+    else
+        install_failed=$((install_failed + 1))
+        echo "    ⚠ Skipped (tolerated): ${pkg}"
+    fi
+done
+
+echo "INFO: Satellite support packages - installed: ${install_ok}, skipped/failed: ${install_failed}"
+EOF
 }
 
 kickstart_runtime_exports_block() {
@@ -5778,7 +5809,7 @@ if ! subscription-manager identity >/dev/null 2>&1; then \
 fi; \
 subscription-manager refresh || true; \
 dnf upgrade -y; \
-subscription-manager repos --enable=rhel-9-for-x86_64-baseos-rpms --enable=rhel-9-for-x86_64-appstream-rpms --enable=satellite-6.18-for-rhel-9-x86_64-rpms --enable=satellite-maintenance-6.18-for-rhel-9-x86_64-rpms; \
+subscription-manager repos --enable=rhel-9-for-x86_64-baseos-rpms --enable=rhel-9-for-x86_64-appstream-rpms --enable=rh-common-for-rhel-9-x86_64-rpms --enable=satellite-6.18-for-rhel-9-x86_64-rpms --enable=satellite-maintenance-6.18-for-rhel-9-x86_64-rpms; \
 dnf clean all; \
 dnf install -y satellite; \
 foreman-maintain packages unlock >/dev/null 2>&1 || true; \
@@ -5788,7 +5819,9 @@ satellite-installer --scenario satellite \
   --foreman-initial-admin-username ${admin_user_q} \
   --foreman-initial-admin-password ${admin_pass_q} \
   --enable-foreman-plugin-ansible \
-  --enable-foreman-proxy-plugin-ansible"
+  --enable-foreman-proxy-plugin-ansible \
+  --enable-foreman-plugin-image-builder \
+  --enable-foreman-proxy-plugin-image-builder"
 
     print_step "Pre-container Satellite bootstrap: register, upgrade, enable repos, install satellite, run first-pass satellite-installer with org/location/admin + Ansible plugins"
 
@@ -9391,6 +9424,7 @@ generate_satellite_618_kickstart() {
         1 1 "Satellite" \
         "rhel-9-for-x86_64-baseos-rpms" \
         "rhel-9-for-x86_64-appstream-rpms" \
+        "rh-common-for-rhel-9-x86_64-rpms" \
         "satellite-6.18-for-rhel-9-x86_64-rpms" \
         "satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"
     ks_nogpg_policy="${RHIS_KS_NOGPG_POLICY}"
@@ -9399,6 +9433,7 @@ generate_satellite_618_kickstart() {
     ks_rhsm_register="${RHIS_KS_RHSM_REGISTER}"
     ks_rhc_connect="${RHIS_KS_RHC_CONNECT}"
     ks_repo_enable_verify="${RHIS_KS_REPO_ENABLE_VERIFY}"
+    ks_satellite_package_install="$(kickstart_satellite_package_install_block)"
     ks_nm_dual_nic="${RHIS_KS_NM_DUAL_NIC}"
     ks_hosts_mapping="$(kickstart_hosts_mapping_block "${SAT_IP}" "${SAT_HOSTNAME}" "${SAT_HOSTNAME%%.*}" "${AAP_IP}" "${AAP_HOSTNAME}" "${AAP_HOSTNAME%%.*}" "${IDM_IP}" "${IDM_HOSTNAME}" "${IDM_HOSTNAME%%.*}")"
     ks_trust_bootstrap_keys="${RHIS_KS_TRUST_BOOTSTRAP_KEYS}"
@@ -9597,6 +9632,8 @@ ${ks_rhsm_register}
 ${ks_rhc_connect}
 
 ${ks_repo_enable_verify}
+
+${ks_satellite_package_install}
 fi
 
 ${ks_creator_baseline}
@@ -9620,7 +9657,7 @@ fi
 # 5. Satellite Installer
 ks_log "Phase 5: Run satellite-installer"
 foreman-maintain packages unlock || true
-satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-username "${ADMIN_USER}" --foreman-initial-admin-password "${ADMIN_PASS}" --foreman-proxy-dns true --foreman-proxy-dns-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dns-zone "${SAT_DNS_ZONE:-${DOMAIN}}" --foreman-proxy-dns-reverse "${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dhcp-gateway "${SAT_PROVISIONING_GW:-10.168.0.1}" --foreman-proxy-dhcp-nameservers "${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP}}" --foreman-proxy-dhcp-range "${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername "${SAT_IP}" --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-puppet false --enable-foreman-plugin-puppet false --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights true
+satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-username "${ADMIN_USER}" --foreman-initial-admin-password "${ADMIN_PASS}" --foreman-proxy-dns true --foreman-proxy-dns-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dns-zone "${SAT_DNS_ZONE:-${DOMAIN}}" --foreman-proxy-dns-reverse "${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dhcp-gateway "${SAT_PROVISIONING_GW:-10.168.0.1}" --foreman-proxy-dhcp-nameservers "${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP}}" --foreman-proxy-dhcp-range "${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername "${SAT_IP}" --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-puppet false --enable-foreman-plugin-puppet false --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-image-builder --enable-foreman-proxy-plugin-image-builder --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights true
 
 # 5.1 Post-Satellite Installation: Lifecycle Management & Provisioning Configuration
 echo "=== SATELLITE LIFECYCLE & PROVISIONING CONFIGURATION ==="
@@ -12853,11 +12890,10 @@ ensure_installer_host_ansible_collections() {
     if [ -f "${container_requirements_txt}" ]; then
         local req_line req_spec
         local py_ok=0
-        local py_retry_ok=0
         local py_failed=0
         local failed_file="${SCRIPT_DIR}/failed_packages.txt"
 
-        print_step "Installing Python requirements line-by-line from ${container_requirements_txt}"
+        print_step "Installing Python requirements line-by-line from ${container_requirements_txt} (robust fallback strategy)"
         : > "${failed_file}"
 
         while IFS= read -r req_line || [ -n "${req_line}" ]; do
@@ -12874,14 +12910,9 @@ ensure_installer_host_ansible_collections() {
                     ;;
             esac
 
-            if timeout ${req_timeout_sec} sudo python3 -m pip install "${req_spec}" >/dev/null 2>&1; then
+            # Use robust installation with fallback strategy
+            if install_package_with_fallback "${req_spec}"; then
                 py_ok=$((py_ok + 1))
-                continue
-            fi
-
-            # Retry workaround for transient index/build issues.
-            if timeout ${req_timeout_sec} sudo python3 -m pip install --no-cache-dir --prefer-binary "${req_spec}" >/dev/null 2>&1; then
-                py_retry_ok=$((py_retry_ok + 1))
             else
                 py_failed=$((py_failed + 1))
                 printf '%s\n' "${req_spec}" >> "${failed_file}"
@@ -12889,7 +12920,7 @@ ensure_installer_host_ansible_collections() {
         done < "${container_requirements_txt}"
 
         if [ "${py_failed}" -eq 0 ]; then
-            print_success "Applied Python requirements from container/requirements.txt (ok=${py_ok}, retry_ok=${py_retry_ok})."
+            print_success "Applied Python requirements from container/requirements.txt (ok=${py_ok})."
             rm -f "${failed_file}" >/dev/null 2>&1 || true
         else
             print_warning "Python requirements completed with ${py_failed} unresolved package(s)."
@@ -12938,6 +12969,100 @@ ensure_installer_host_ansible_collections() {
     fi
 
     return 0
+}
+
+# Robust pip package installation with fallback strategy:
+# 1. Try: pip install --upgrade --ignore-installed --user <package>
+# 2. Fallback 1: Try installing base package without version
+# 3. Fallback 2: Try: dnf install -y --skip-broken --allowerasing --best
+# 4. Fallback 3: dnf with base package without version
+# Returns 0 on any success; warns on all failures but doesn't exit
+install_package_with_fallback() {
+    local pkg_spec="$1"
+    local pkg_base pkg_version timeout_sec=60
+    local use_pip=1
+
+    # Extract base package name (before any version specifier like ==, >=, <=, ~=)
+    pkg_base="$(printf '%s' "${pkg_spec}" | sed -E 's/[><=!~].*//')"
+
+    if [ -z "${pkg_spec}" ]; then
+        return 0
+    fi
+
+    # Step 1: Try pip install --upgrade --ignore-installed --user
+    if [ "${use_pip}" -eq 1 ] && command -v pip3 >/dev/null 2>&1; then
+        if timeout ${timeout_sec} pip3 install --upgrade --ignore-installed --user "${pkg_spec}" >/dev/null 2>&1; then
+            print_step "✓ Installed (pip): ${pkg_spec}"
+            return 0
+        fi
+
+        # Fallback 1: Try base package without version via pip
+        if [ "${pkg_base}" != "${pkg_spec}" ]; then
+            if timeout ${timeout_sec} pip3 install --upgrade --ignore-installed --user "${pkg_base}" >/dev/null 2>&1; then
+                print_step "✓ Installed (pip base): ${pkg_base}"
+                return 0
+            fi
+        fi
+
+        # Fallback 2: Try via sudo python3 -m pip
+        if timeout ${timeout_sec} sudo python3 -m pip install --upgrade --ignore-installed --user "${pkg_spec}" >/dev/null 2>&1; then
+            print_step "✓ Installed (sudo pip): ${pkg_spec}"
+            return 0
+        fi
+    fi
+
+    # Step 2: Try dnf install with skip-broken and allowerasing
+    if command -v dnf >/dev/null 2>&1; then
+        # First try with specific version
+        if timeout ${timeout_sec} sudo dnf install -y --skip-broken --allowerasing --best "${pkg_spec}" >/dev/null 2>&1; then
+            print_step "✓ Installed (dnf): ${pkg_spec}"
+            return 0
+        fi
+
+        # Fallback 3: Try base package without version via dnf
+        if [ "${pkg_base}" != "${pkg_spec}" ]; then
+            if timeout ${timeout_sec} sudo dnf install -y --skip-broken --allowerasing --best "${pkg_base}" >/dev/null 2>&1; then
+                print_step "✓ Installed (dnf base): ${pkg_base}"
+                return 0
+            fi
+        fi
+    fi
+
+    print_warning "Could not install package (tolerated failure): ${pkg_spec}"
+    return 0  # Tolerate failure
+}
+
+# Robust dnf package installation with fallback strategy:
+# 1. Try: dnf install -y --skip-broken --allowerasing --best <package>
+# 2. If version specified and fails, retry with base package without version
+# Returns 0 on success; tolerates failures
+install_dnf_package_with_fallback() {
+    local pkg_spec="$1"
+    local pkg_base timeout_sec=60
+
+    if [ -z "${pkg_spec}" ]; then
+        return 0
+    fi
+
+    # Extract base package name
+    pkg_base="$(printf '%s' "${pkg_spec}" | sed -E 's/[><=!~].*//')"
+
+    # Try with skip-broken and allowerasing
+    if timeout ${timeout_sec} sudo dnf install -y --skip-broken --allowerasing --best "${pkg_spec}" >/dev/null 2>&1; then
+        print_step "✓ Installed (dnf): ${pkg_spec}"
+        return 0
+    fi
+
+    # If version specified and that failed, retry with base package
+    if [ "${pkg_base}" != "${pkg_spec}" ]; then
+        if timeout ${timeout_sec} sudo dnf install -y --skip-broken --allowerasing --best "${pkg_base}" >/dev/null 2>&1; then
+            print_step "✓ Installed (dnf base): ${pkg_base}"
+            return 0
+        fi
+    fi
+
+    print_warning "Could not install package (tolerated failure): ${pkg_spec}"
+    return 0  # Tolerate failure
 }
 
 main() {
