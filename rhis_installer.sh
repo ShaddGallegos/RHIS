@@ -5650,7 +5650,16 @@ stage_satellite_manifest() {
             return 0
         fi
     else
+        # Try to discover manifest in primary location first
         staged_host_path="$(ls -1t ${HOME}/Downloads/manifest_*.zip 2>/dev/null | head -1 || true)"
+        
+        # If not found in Downloads, check libvirt images directory as fallback
+        if [ -z "${staged_host_path}" ] && [ -d "/var/lib/libvirt/images" ]; then
+            staged_host_path="$(ls -1t /var/lib/libvirt/images/manifest_*.zip 2>/dev/null | head -1 || true)"
+            if [ -n "${staged_host_path}" ]; then
+                print_step "Manifest not found in ${HOME}/Downloads/, using fallback location: ${staged_host_path}"
+            fi
+        fi
     fi
     if [ -z "${staged_host_path}" ]; then
         return 0   # No manifest found — silent skip; portal-generated manifests are used instead
