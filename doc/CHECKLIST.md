@@ -267,6 +267,37 @@ persisted in encrypted `~/.ansible/conf/env.yml`):
 
 ---
 
+## 8.1 Satellite manifest (optional but recommended for air-gapped or disconnected scenarios)
+
+### Optional for auto-import during provisioning
+
+- [ ] Satellite manifest ZIP file downloaded to `~/Downloads/manifest_*.zip`
+
+### Where to obtain it
+
+- Red Hat Customer Portal / Hybrid Cloud Console:
+  - <https://access.redhat.com/>
+  - Go to **Subscription Allocations** or navigate to your organization's manifests
+  - Download the manifest (typically named with pattern `manifest_Satellite_X.XX_*.zip`)
+  - Save to `~/Downloads/` on the installer host
+
+### How it works
+
+- The script auto-discovers the latest manifest file matching `manifest_*.zip` in `~/Downloads/`
+- If present, it stages the manifest for automatic import by the Satellite provisioning playbook
+- During Satellite configuration, the playbook will import the manifest using `hammer subscription upload`
+- If no manifest is found, the script continues — the Satellite instance will use portal-generated manifests instead
+
+### Notes
+
+- File pattern: `manifest_*.zip` (the script finds the latest by modification time)
+- Location: Must be in `~/Downloads/` directory on the installer host
+- Optional: Only required if you want to pre-stage a manifest for automatic import
+- The manifest import is skipped silently if no file is found — not an error condition
+- For air-gapped deployments, this is the recommended way to pre-load entitlements
+
+---
+
 ## 9. IdM-specific values
 
 ### Required / prompted
