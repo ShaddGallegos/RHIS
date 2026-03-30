@@ -5668,6 +5668,12 @@ stage_satellite_manifest() {
         print_warning "Could not copy manifest to ${FILES_DIR}."
 
     # Stage to vault/conf dir — mounted as /rhis/vars/vault/ inside the container
+    if [ ! -d "${ANSIBLE_ENV_DIR}" ]; then
+        mkdir -p "${ANSIBLE_ENV_DIR}" && chmod 0755 "${ANSIBLE_ENV_DIR}" || {
+            print_warning "Could not create ANSIBLE_ENV_DIR at ${ANSIBLE_ENV_DIR}; skipping manifest staging."
+            return 0
+        }
+    fi
     cp -f "${staged_host_path}" "${ANSIBLE_ENV_DIR}/manifest.zip" || {
         print_warning "Could not copy manifest to ${ANSIBLE_ENV_DIR}; manifest will not be auto-imported."
         return 0
