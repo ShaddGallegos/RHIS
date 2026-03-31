@@ -1,0 +1,49 @@
+# Python requirements for RHIS container roles and Ansible automation
+# 
+# Core Ansible runtime and dependencies
+ansible>=2.14.0,<3.0.0
+ansible-core>=2.14.0,<2.16.0
+
+# Common Python dependencies for Ansible modules and collections
+requests>=2.28.0
+jinja2>=3.0.0
+PyYAML>=6.0
+paramiko>=2.12.0
+netaddr>=0.8.0
+
+# Azure SDK dependencies
+azure-common>=1.1.0
+azure-identity>=1.13.0
+azure-mgmt-common>=4.0.0
+
+# AWS SDK
+boto3>=1.26.0
+botocore>=1.29.0
+
+# VMware SDK
+pyVmomi>=7.0
+
+# IdM/FreeIPA support
+ipalib>=4.9.0
+python-gssapi>=1.7.0
+pysocks>=1.7.1
+
+# Additional HTTP and connectivity
+urllib3>=1.26.0
+chardet>=4.0.0
+certifi>=2022.12.7
+
+# Utilities
+six>=1.16.0
+setuptools>=59.0
+wheel>=0.38.0
+
+# DNS and network utilities
+dnspython>=2.2.0
+
+# SSH key handling (if needed)
+cryptography>=38.0.0
+pycryptodome>=3.15.0
+
+# Additional SDK dependencies
+simplejson>=3.18.0

@@ -74,7 +74,7 @@ RHIS_LOCAL_ROLE_FALLBACK="${RHIS_LOCAL_ROLE_FALLBACK:-1}"
 RHIS_LOCAL_ROLE_WORKDIR="${RHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
 
 # RHIS Provisioner container
-RHIS_CONTAINER_IMAGE="${RHIS_CONTAINER_IMAGE:-quay.io/parmstro/rhis-provisioner-9-2.5:latest}"
+RHIS_CONTAINER_IMAGE="${RHIS_CONTAINER_IMAGE:-quay.io/parmstro/rhis-provisioner-9-2.5}"
 RHIS_CONTAINER_NAME="${RHIS_CONTAINER_NAME:-rhis-provisioner}"
 # Ansible inventory consumed by the rhis-builder playbooks inside the container.
 # Defaults to an 'inventory/' subdirectory alongside this script so the repo is
@@ -276,7 +276,7 @@ IDM_REPOSITORY_IDS_JSON='["rhel-10-for-x86_64-baseos-rpms","rhel-10-for-x86_64-a
 # Required Satellite server repositories.  Your RHSM account MUST expose all
 # IDs below before run_config_as_code() reaches the Satellite phase.
 # See assert_satellite_server_repos_available() for the pre-flight guard.
-SAT_REPOSITORY_IDS_JSON='["rhel-9-for-x86_64-baseos-rpms","rhel-9-for-x86_64-appstream-rpms","rh-common-for-rhel-9-x86_64-rpms","satellite-6.18-for-rhel-9-x86_64-rpms","satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"]'
+SAT_REPOSITORY_IDS_JSON='["rhel-9-for-x86_64-baseos-rpms","rhel-9-for-x86_64-appstream-rpms","satellite-6.18-for-rhel-9-x86_64-rpms","satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"]'
 DEPLOYMENT_SCOPE="${DEPLOYMENT_SCOPE:-local}"
 RHIS_TARGET_PLATFORM="${RHIS_TARGET_PLATFORM:-libvirt}"
 AAP_TARGET_PLATFORM="${AAP_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM}}"
@@ -328,7 +328,7 @@ AAP_SSH_PROGRESS_EVERY="${AAP_SSH_PROGRESS_EVERY:-30}"
 # If there is no observed callback-stage progress for this long, fail fast.
 AAP_SSH_NO_PROGRESS_TIMEOUT="${AAP_SSH_NO_PROGRESS_TIMEOUT:-900}"
 
-# Function to print colored output
+# ─── Core logging and retry controls ──────────────────────────────────────────
 sanitize_log_message() {
     local message="$*"
     printf '%s' "${message}" | sed -E \
@@ -338,8 +338,7 @@ sanitize_log_message() {
         -e 's#((^|[[:space:]])(password|passwd|token|secret|api_key|apikey|offline_token|access_token|refresh_token)[[:space:]]*[:=][[:space:]]*)[^[:space:]]+#\1<redacted>#Ig'
 }
 
-# Try to ensure the provisioner container is running, with optional restart attempts.
-# Retries count and interval can be tuned via RHIS_CONTAINER_RESTART_RETRIES and RHIS_CONTAINER_RESTART_INTERVAL.
+# Retries count and interval for provisioner container restart attempts.
 RHIS_CONTAINER_RESTART_RETRIES="${RHIS_CONTAINER_RESTART_RETRIES:-2}"
 RHIS_CONTAINER_RESTART_INTERVAL="${RHIS_CONTAINER_RESTART_INTERVAL:-10}"
 # DEMOKILL console behavior controls
@@ -347,29 +346,6 @@ RHIS_CONTAINER_RESTART_INTERVAL="${RHIS_CONTAINER_RESTART_INTERVAL:-10}"
 RHIS_DEMOKILL_COMPACT="${RHIS_DEMOKILL_COMPACT:-1}"
 # 1 = run terminal reset after DEMOKILL (enabled by default)
 RHIS_DEMOKILL_RESET_TERMINAL="${RHIS_DEMOKILL_RESET_TERMINAL:-1}"
-ensure_container_running_with_retry() {
-    local tries=0
-    local max=${RHIS_CONTAINER_RESTART_RETRIES:-2}
-    local interval=${RHIS_CONTAINER_RESTART_INTERVAL:-10}
-
-    while true; do
-        if ensure_container_running; then
-            return 0
-        fi
-
-        tries=$((tries + 1))
-        if [ "$tries" -gt "$max" ]; then
-            print_warning "Provisioner container failed to start after ${max} attempts."
-            return 1
-        fi
-
-        print_step "Attempting to restart provisioner container (attempt ${tries}/${max})..."
-        podman rm -f "${RHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
-        # give a moment for system to cleanup resources
-        sleep "${interval}"
-        # next loop will call ensure_container_running again
-    done
-}
 
 print_step() {
     local msg
@@ -825,7 +801,8 @@ cat > /etc/ssh/ssh_config.d/99-rhis-client.conf <<'EOF_SSH'
 Host *
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
-    ForwardX11 yes
+    ForwardX11 no
+    ForwardX11Trusted no
 EOF_SSH
 
 systemctl enable --now sshd || true
@@ -3402,7 +3379,7 @@ install_local() {
     echo "Access dashboard at http://localhost:3000"
 }
 
-# Container Deployment
+# ─── Container lifecycle and managed provisioner patches ─────────────────────
 ensure_rootless_podman() {
     if [ "$(id -u)" -eq 0 ]; then
         print_warning "Run this script as a regular user (not root) for rootless Podman."
@@ -3868,6 +3845,31 @@ ensure_container_running() {
     echo "    --limit idm_primary /rhis/rhis-builder-idm/main.yml"
 }
 
+# Try to ensure the provisioner container is running, with optional restart
+# attempts. This wrapper lives with the container lifecycle helpers so callers
+# can find all start/restart behavior in one place.
+ensure_container_running_with_retry() {
+    local tries=0
+    local max=${RHIS_CONTAINER_RESTART_RETRIES:-2}
+    local interval=${RHIS_CONTAINER_RESTART_INTERVAL:-10}
+
+    while true; do
+        if ensure_container_running; then
+            return 0
+        fi
+
+        tries=$((tries + 1))
+        if [ "$tries" -gt "$max" ]; then
+            print_warning "Provisioner container failed to start after ${max} attempts."
+            return 1
+        fi
+
+        print_step "Attempting to restart provisioner container (attempt ${tries}/${max})..."
+        podman rm -f "${RHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
+        sleep "${interval}"
+    done
+}
+
 install_container() {
     print_step "Starting Container Deployment"
     ensure_rootless_podman || return 1
@@ -4260,44 +4262,50 @@ run_component_config_scope() {
 }
 
 ensure_satellite_content_profile_bootstrap() {
-        local profile_path="${RHIS_HOST_VARS_DIR}/satellite_content_profile.yml"
-        local sync_date_default
-        local sync_date
-        local include_product_links="1"
-        local answer=""
+                local profile_path="${RHIS_HOST_VARS_DIR}/satellite_content_profile.yml"
+                local sync_date_default
+                local sync_date
+                local include_product_links="1"
+                local include_repo_sets="1"
+                local answer=""
 
-        mkdir -p "${RHIS_HOST_VARS_DIR}" || return 1
+                mkdir -p "${RHIS_HOST_VARS_DIR}" || return 1
 
-        if [ -f "${profile_path}" ]; then
-                print_step "Satellite content profile already exists: ${profile_path}"
-                return 0
-        fi
-
-        # weekly Sunday 02:00 by default
-        sync_date_default="$(date +%Y-%m-%d) 02:00:00"
-        sync_date="${sync_date_default}"
-
-        if ! is_noninteractive && [ "${RUN_ONCE:-0}" != "1" ]; then
-                echo ""
-                print_step "Satellite first-run bootstrap: generating host_vars/satellite_content_profile.yml"
-                read -r -p "Create default Satellite content profile now? [Y/n]: " answer
-                if [[ "${answer:-Y}" =~ ^[Nn]$ ]]; then
-                        print_warning "Skipping automatic profile bootstrap by user choice."
-                        return 0
+                if [ -f "${profile_path}" ]; then
+                                print_step "Satellite content profile already exists: ${profile_path}"
+                                return 0
                 fi
 
-                read -r -p "Weekly sync date/time (YYYY-MM-DD HH:MM:SS) [${sync_date_default}]: " answer
-                if [ -n "${answer}" ]; then
-                        sync_date="${answer}"
+                # weekly Sunday 02:00 by default
+                sync_date_default="$(date +%Y-%m-%d) 02:00:00"
+                sync_date="${sync_date_default}"
+
+                if ! is_noninteractive && [ "${RUN_ONCE:-0}" != "1" ]; then
+                                echo ""
+                                print_step "Satellite first-run bootstrap: generating host_vars/satellite_content_profile.yml"
+                                read -r -p "Create default Satellite content profile now? [Y/n]: " answer
+                                if [[ "${answer:-Y}" =~ ^[Nn]$ ]]; then
+                                                print_warning "Skipping automatic profile bootstrap by user choice."
+                                                return 0
+                                fi
+
+                                read -r -p "Weekly sync date/time (YYYY-MM-DD HH:MM:SS) [${sync_date_default}]: " answer
+                                if [ -n "${answer}" ]; then
+                                                sync_date="${answer}"
+                                fi
+
+                                read -r -p "Attach sync plan to common default products (best-effort)? [Y/n]: " answer
+                                if [[ "${answer:-Y}" =~ ^[Nn]$ ]]; then
+                                                include_product_links="0"
+                                fi
+
+                                read -r -p "Enable baseline Red Hat repository sets (RHEL 9/10 + Satellite Client)? [Y/n]: " answer
+                                if [[ "${answer:-Y}" =~ ^[Nn]$ ]]; then
+                                                include_repo_sets="0"
+                                fi
                 fi
 
-                read -r -p "Attach sync plan to common default products (best-effort)? [Y/n]: " answer
-                if [[ "${answer:-Y}" =~ ^[Nn]$ ]]; then
-                        include_product_links="0"
-                fi
-        fi
-
-        cat > "${profile_path}" <<EOF
+                cat > "${profile_path}" <<EOF
 ---
 # satellite_content_profile.yml — generated by rhis_install.sh (Satellite bootstrap)
 
@@ -4308,8 +4316,8 @@ foreman_password: "{{ sat_admin_pass | default(global_admin_password) | default(
 hammer_username: "admin"
 hammer_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
 
-satellite_organization: "{{ satellite_organization | default('REDHAT') }}"
-satellite_location: "{{ satellite_location | default('CORE') }}"
+satellite_organization: "{{ sat_org | default('REDHAT') }}"
+satellite_location: "{{ sat_loc | default('CORE') }}"
 
 # Service/UI endpoint policy: internal network only
 satellite_url: "https://${SAT_IP:-10.168.128.1}"
@@ -4322,8 +4330,8 @@ sync_plans:
 
 EOF
 
-        if [ "${include_product_links}" = "1" ]; then
-                cat >> "${profile_path}" <<'EOF'
+                if [ "${include_product_links}" = "1" ]; then
+                                cat >> "${profile_path}" <<'EOF'
 product_plans:
     - name: "Red Hat Enterprise Linux for x86_64"
         plan: "weekly_rhis_sync"
@@ -4335,43 +4343,91 @@ product_plans:
         plan: "weekly_rhis_sync"
 
 EOF
-        else
-                cat >> "${profile_path}" <<'EOF'
+                else
+                                cat >> "${profile_path}" <<'EOF'
 product_plans: []
 
 EOF
-        fi
+                fi
 
-        cat >> "${profile_path}" <<'EOF'
+                if [ "${include_repo_sets}" = "1" ]; then
+                                cat >> "${profile_path}" <<'EOF'
+repository_sets:
+    - name: "Red Hat Enterprise Linux 9 for x86_64 - BaseOS (RPMs)"
+        product: "Red Hat Enterprise Linux for x86_64"
+        repository_list:
+            - releasever: "9"
+                basearch: "x86_64"
+    - name: "Red Hat Enterprise Linux 9 for x86_64 - AppStream (RPMs)"
+        product: "Red Hat Enterprise Linux for x86_64"
+        repository_list:
+            - releasever: "9"
+                basearch: "x86_64"
+    - name: "Red Hat Satellite Client 6 for RHEL 9 x86_64 (RPMs)"
+        product: "Red Hat Enterprise Linux for x86_64"
+        repository_list:
+            - basearch: "x86_64"
+    - name: "Red Hat Enterprise Linux 10 for x86_64 - BaseOS (RPMs)"
+        product: "Red Hat Enterprise Linux for x86_64"
+        repository_list:
+            - releasever: "10"
+                basearch: "x86_64"
+    - name: "Red Hat Enterprise Linux 10 for x86_64 - AppStream (RPMs)"
+        product: "Red Hat Enterprise Linux for x86_64"
+        repository_list:
+            - releasever: "10"
+                basearch: "x86_64"
+
+EOF
+                else
+                                cat >> "${profile_path}" <<'EOF'
+repository_sets: []
+
+EOF
+                fi
+
+                cat >> "${profile_path}" <<'EOF'
 lifecycle_environments:
     - name: "DEV_RHEL_9_X86_64"
+        label: "dev_rhel_9_x86_64"
+        description: "Development lifecycle for RHEL 9"
         organization: "{{ satellite_organization }}"
         prior: "Library"
     - name: "TEST_RHEL_9_X86_64"
+        label: "test_rhel_9_x86_64"
+        description: "Test lifecycle for RHEL 9"
         organization: "{{ satellite_organization }}"
         prior: "DEV_RHEL_9_X86_64"
     - name: "PROD_RHEL_9_X86_64"
+        label: "prod_rhel_9_x86_64"
+        description: "Production lifecycle for RHEL 9"
         organization: "{{ satellite_organization }}"
         prior: "TEST_RHEL_9_X86_64"
     - name: "DEV_RHEL_10_X86_64"
+        label: "dev_rhel_10_x86_64"
+        description: "Development lifecycle for RHEL 10"
         organization: "{{ satellite_organization }}"
         prior: "Library"
     - name: "TEST_RHEL_10_X86_64"
+        label: "test_rhel_10_x86_64"
+        description: "Test lifecycle for RHEL 10"
         organization: "{{ satellite_organization }}"
         prior: "DEV_RHEL_10_X86_64"
     - name: "PROD_RHEL_10_X86_64"
+        label: "prod_rhel_10_x86_64"
+        description: "Production lifecycle for RHEL 10"
         organization: "{{ satellite_organization }}"
         prior: "TEST_RHEL_10_X86_64"
 
 content_views:
     - name: "RHEL_9_X86_64"
-        organization: "{{ satellite_organization }}"
+        desc: "RHEL 9 content view"
         repositories:
             - name: "rhel-9-for-x86_64-baseos-rpms"
             - name: "rhel-9-for-x86_64-appstream-rpms"
             - name: "satellite-client-6-for-rhel-9-x86_64-rpms"
     - name: "RHEL_10_X86_64"
-        organization: "{{ satellite_organization }}"
+        desc: "RHEL 10 content view"
         repositories:
             - name: "rhel-10-for-x86_64-baseos-rpms"
             - name: "rhel-10-for-x86_64-appstream-rpms"
@@ -4381,26 +4437,32 @@ activation_keys:
         organization: "{{ satellite_organization }}"
         lifecycle_environment: "DEV_RHEL_9_X86_64"
         content_view: "RHEL_9_X86_64"
+        unlimited_hosts: true
     - name: "TEST_RHEL_9_X86_64"
         organization: "{{ satellite_organization }}"
         lifecycle_environment: "TEST_RHEL_9_X86_64"
         content_view: "RHEL_9_X86_64"
+        unlimited_hosts: true
     - name: "PROD_RHEL_9_X86_64"
         organization: "{{ satellite_organization }}"
         lifecycle_environment: "PROD_RHEL_9_X86_64"
         content_view: "RHEL_9_X86_64"
+        unlimited_hosts: true
     - name: "DEV_RHEL_10_X86_64"
         organization: "{{ satellite_organization }}"
         lifecycle_environment: "DEV_RHEL_10_X86_64"
         content_view: "RHEL_10_X86_64"
+        unlimited_hosts: true
     - name: "TEST_RHEL_10_X86_64"
         organization: "{{ satellite_organization }}"
         lifecycle_environment: "TEST_RHEL_10_X86_64"
         content_view: "RHEL_10_X86_64"
+        unlimited_hosts: true
     - name: "PROD_RHEL_10_X86_64"
         organization: "{{ satellite_organization }}"
         lifecycle_environment: "PROD_RHEL_10_X86_64"
         content_view: "RHEL_10_X86_64"
+        unlimited_hosts: true
 
 # Optional repo intent notes (edit as needed):
 # - satellite-6.18-for-rhel-9-x86_64-rpms
@@ -4409,9 +4471,9 @@ activation_keys:
 # - idm / freeipa channels if entitled/available
 EOF
 
-        chmod 600 "${profile_path}" 2>/dev/null || true
-        print_success "Generated default Satellite content profile: ${profile_path}"
-        return 0
+                chmod 600 "${profile_path}" 2>/dev/null || true
+                print_success "Generated default Satellite content profile: ${profile_path}"
+                return 0
 }
 
 install_satellite_only() {
@@ -5781,6 +5843,7 @@ run_rhis_config_as_code() {
         preflight_config_as_code_targets "${phase_gate_targets[@]}" || return 1
     fi
 
+    # ---- Pre-container bootstrap helpers -----------------------------------
     run_satellite_precontainer_bootstrap() {
         local sat_target_ip="${SAT_IP:-10.168.128.1}"
         local sat_target_host="${SAT_HOSTNAME:-satellite}"
@@ -5814,7 +5877,7 @@ run_rhis_config_as_code() {
             ssh_key="${HOME}/.ssh/id_rsa"
         fi
 
-                remote_cmd="set -euo pipefail; \
+                                remote_cmd="set -euo pipefail; \
 hostnamectl set-hostname ${sat_target_host}; \
 grep -q \"${sat_target_ip}.*${sat_target_host}\" /etc/hosts || echo \"${sat_target_ip} ${sat_target_host} satellite\" >> /etc/hosts; \
 nmcli device modify eth1 ipv4.addresses ${sat_target_ip}/16 ipv4.method manual >/dev/null 2>&1 || true; \
@@ -5823,22 +5886,21 @@ if ! subscription-manager identity >/dev/null 2>&1; then \
     subscription-manager register --username ${rh_user_q} --password ${rh_pass_q} --force; \
 fi; \
 subscription-manager refresh || true; \
-dnf upgrade -y; \
-subscription-manager repos --enable=rhel-9-for-x86_64-baseos-rpms --enable=rhel-9-for-x86_64-appstream-rpms --enable=rh-common-for-rhel-9-x86_64-rpms --enable=satellite-6.18-for-rhel-9-x86_64-rpms --enable=satellite-maintenance-6.18-for-rhel-9-x86_64-rpms; \
+subscription-manager repos --enable=rhel-9-for-x86_64-baseos-rpms --enable=rhel-9-for-x86_64-appstream-rpms --enable=satellite-6.18-for-rhel-9-x86_64-rpms --enable=satellite-maintenance-6.18-for-rhel-9-x86_64-rpms; \
 dnf clean all; \
-dnf install -y satellite; \
-foreman-maintain packages unlock >/dev/null 2>&1 || true; \
+if command -v foreman-maintain >/dev/null 2>&1; then foreman-maintain packages unlock >/dev/null 2>&1 || true; fi; \
+dnf upgrade -y; \
+if ! rpm -q satellite >/dev/null 2>&1; then dnf install -y satellite; fi; \
+if command -v foreman-maintain >/dev/null 2>&1; then foreman-maintain packages unlock >/dev/null 2>&1 || true; fi; \
 satellite-installer --scenario satellite \
   --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" \
   --foreman-initial-location \"${SAT_LOC:-CORE}\" \
   --foreman-initial-admin-username ${admin_user_q} \
   --foreman-initial-admin-password ${admin_pass_q} \
   --enable-foreman-plugin-ansible \
-  --enable-foreman-proxy-plugin-ansible \
-  --enable-foreman-plugin-image-builder \
-  --enable-foreman-proxy-plugin-image-builder"
+    --enable-foreman-proxy-plugin-ansible"
 
-    print_step "Pre-container Satellite bootstrap: register, upgrade, enable repos, install satellite, run first-pass satellite-installer with org/location/admin + Ansible plugins"
+    print_step "Pre-container Satellite bootstrap: register, clear package locks when possible, upgrade, install satellite, then run first-pass satellite-installer"
 
         if [ -r "${ssh_key}" ] && timeout 10 ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${sat_target_ip}" 'echo ready' >/dev/null 2>&1; then
             if ssh -i "${ssh_key}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "root@${sat_target_ip}" "${remote_cmd}"; then
@@ -5897,6 +5959,7 @@ satellite-installer --scenario satellite \
     local staged_vault_pass_host=""
     local staged_vault_pass_file=""
 
+    # ---- Vault / container execution context --------------------------------
     cleanup_staged_vaultpass() {
         # Keep a stable staged vaultpass file so manual reruns can reuse:
         #   --vault-password-file /rhis/vars/vault/.vaultpass.container
@@ -5997,6 +6060,7 @@ satellite-installer --scenario satellite \
     local manual_satellite_extras="--extra-vars '${_sat_manual_json}'"
     local manual_podman_env="-e ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}"
 
+    # ---- Nested ansible/podman helper wrappers ------------------------------
     run_ansible_shell_in_container() {
         local target="$1"
         local shell_cmd="$2"
@@ -6034,6 +6098,7 @@ satellite-installer --scenario satellite \
         fi
     }
 
+    # ---- Container hotfix / compatibility helpers ---------------------------
     ensure_satellite_chrony_template() {
         local _tpl_path="/rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2"
         local _mk_cmd='mkdir -p /rhis/rhis-builder-satellite/roles/satellite_pre/templates && cat > /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
@@ -6085,6 +6150,66 @@ EOF'
         fi
 
         print_warning "Failed to create IdM fallback chrony.j2; idm_pre chrony task may fail."
+        return 1
+    }
+
+    ensure_fix_satellite_content_profile() {
+        # Patch the container copy of satellite_content_profile.yml to ensure
+        # non-recursive satellite_organization and explicit admin password.
+        local _path="/rhis/vars/host_vars/satellite_content_profile.yml"
+        local _py='import pathlib
+p=pathlib.Path("'"'"'"'"'"'"' + _path + "'"'"'"'"'"'"')
+if not p.exists():
+    print("MISSING")
+    raise SystemExit(0)
+text=p.read_text(encoding="utf-8",errors="ignore")
+text=text.replace("satellite_organization: \"{{ satellite_organization | default('REDHAT') }}\"","satellite_organization: \"REDHAT\"")
+text=text.replace("satellite_organization: \"{{ sat_org | default('REDHAT') }}\"","satellite_organization: \"REDHAT\"")
+text=text.replace("satellite_password: \"{{ sat_admin_pass | default(global_admin_password) | default('') }}\"","satellite_password: \"bj8H7ndC7$\"")
+text=text.replace("foreman_password: \"{{ sat_admin_pass | default(global_admin_password) | default('') }}\"","foreman_password: \"bj8H7ndC7$\"")
+text=text.replace("hammer_password: \"{{ sat_admin_pass | default(global_admin_password) | default('') }}\"","hammer_password: \"bj8H7ndC7$\"")
+p.write_text(text,encoding="utf-8")
+print("PATCHED")
+'
+
+        if podman exec "${RHIS_CONTAINER_NAME}" python3 - <<'PY'
+${_py}
+PY
+        then
+            print_success "Patched satellite_content_profile inside container"
+            return 0
+        fi
+
+        print_warning "Could not patch satellite_content_profile inside container"
+        return 1
+    }
+
+    ensure_patch_lifecycle_tasks() {
+        # Remove no_log and add debug output in lifecycle_environments tasks inside container
+        local _path="/rhis/rhis-builder-satellite/roles/lifecycle_environments/tasks/main.yml"
+        local _py='import pathlib
+p=pathlib.Path("'"'"'"'"'"'"' + _path + "'"'"'"'"'"'"')
+if not p.exists():
+    print("MISSING")
+    raise SystemExit(0)
+text=p.read_text(encoding="utf-8",errors="ignore")
+if "no_log: true" in text:
+    text=text.replace("no_log: true","no_log: false")
+if "Debug: show lifecycle_environment item" not in text:
+    text=text.replace("ansible.builtin.include_tasks: \"ensure_lifecycle_environment.yml\"","# debug-enabled include\n  - name: \"Debug: show lifecycle_environment item\"\n      ansible.builtin.debug:\n        var: lifecycle_environment\n      when: lifecycle_environment is defined\n\n    - ansible.builtin.include_tasks: \"ensure_lifecycle_environment.yml\"")
+p.write_text(text,encoding="utf-8")
+print("PATCHED")
+'
+
+        if podman exec "${RHIS_CONTAINER_NAME}" python3 - <<'PY'
+${_py}
+PY
+        then
+            print_success "Patched lifecycle_environments tasks inside container"
+            return 0
+        fi
+
+        print_warning "Could not patch lifecycle_environments tasks inside container"
         return 1
     }
 
@@ -6295,6 +6420,9 @@ else:
         ensure_satellite_foreman_service_check_nonfatal || true
         ensure_idm_chrony_template || true
         ensure_idm_update_task_nogpgcheck || true
+        # New hotfixes applied during troubleshooting (MiniRHIS fixes):
+        ensure_fix_satellite_content_profile || true
+        ensure_patch_lifecycle_tasks || true
 
         if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1 || \
            podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1; then
@@ -6327,6 +6455,7 @@ else:
         ensure_container_playbook_hotfixes || return 1
     fi
 
+    # ---- Manual rerun / local fallback helpers ------------------------------
     print_manual_rerun_template() {
         print_warning "Manual rerun template (works for all groups):"
         print_warning "  # Ensure the provisioner container exists/runs before re-run"
@@ -6436,6 +6565,7 @@ EOF
     print_step "Ansible log: ${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}"
     print_step "Ansible config: ${RHIS_ANSIBLE_CFG_HOST}"
 
+    # ---- Phase execution wrappers -------------------------------------------
     run_phase_playbook() {
         local phase_label="$1"
         local phase_limit="$2"
@@ -6622,6 +6752,7 @@ EOF
         return 1
     }
 
+    # ---- Satellite post-config and post-container helpers -------------------
     run_satellite_post_container_setup() {
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
         local sat_target_ip="${SAT_IP:-10.168.128.1}"
@@ -6687,7 +6818,7 @@ EOF
         local sat_validation_dns="${SAT_PROVISIONING_DNS_PRIMARY:-${sat_target_ip}}"
         local sat_validation_reverse="${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}"
         while [ $retry_count -lt $max_retries ]; do
-            if timeout 5 ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" "foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" --foreman-initial-location \"${SAT_LOC:-CORE}\" --foreman-initial-admin-username \"${ADMIN_USER:-admin}\" --foreman-initial-admin-password ${admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface eth1 --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse \"${sat_validation_reverse}\" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface eth1 --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-network \"${sat_validation_network}\" --foreman-proxy-dhcp-netmask \"${sat_validation_netmask}\" --foreman-proxy-dhcp-gateway \"${sat_validation_gateway}\" --foreman-proxy-dhcp-range \"${sat_validation_range}\" --foreman-proxy-dhcp-nameservers \"${sat_validation_dns}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --register-with-insights true" >/dev/null 2>&1; then
+            if timeout 5 ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" "foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" --foreman-initial-location \"${SAT_LOC:-CORE}\" --foreman-initial-admin-username \"${ADMIN_USER:-admin}\" --foreman-initial-admin-password ${admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface eth1 --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse \"${sat_validation_reverse}\" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface eth1 --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-network \"${sat_validation_network}\" --foreman-proxy-dhcp-netmask \"${sat_validation_netmask}\" --foreman-proxy-dhcp-gateway \"${sat_validation_gateway}\" --foreman-proxy-dhcp-range \"${sat_validation_range}\" --foreman-proxy-dhcp-nameservers \"${sat_validation_dns}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --register-with-insights" >/dev/null 2>&1; then
                 print_success "  Satellite installed and running (iteration $((retry_count+1))/${max_retries})"
                 break
             fi
@@ -6739,6 +6870,16 @@ hammer compute-resource info --name \"Libvirt_Prod_Server\" | head -n 10 || echo
         local sat_dhcp_range="${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}"
         local sat_dhcp_nameservers="${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP:-10.168.128.1}}"
         local sat_initial_admin_pass="${SAT_INITIAL_ADMIN_PASS:-${ADMIN_PASS:-}}"
+        local sat_org_q=""
+        local sat_loc_q=""
+        local sat_admin_user_q=""
+        local sat_admin_pass_q=""
+        local sat_iface_q=""
+        local sat_dns_reverse_q=""
+        local sat_dhcp_gw_q=""
+        local sat_dhcp_nameservers_q=""
+        local sat_dhcp_range_q=""
+        local sat_target_ip_q=""
         local installer_ok=0
         local provisioning_ok=0
 
@@ -6751,7 +6892,19 @@ hammer compute-resource info --name \"Libvirt_Prod_Server\" | head -n 10 || echo
             return 0
         fi
 
-        installer_cmd="foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_ORG}\" --foreman-initial-location \"${SAT_LOC}\" --foreman-initial-admin-username \"${ADMIN_USER}\" --foreman-initial-admin-password \"${sat_initial_admin_pass}\" --foreman-proxy-dns true --foreman-proxy-dns-interface \"${SAT_FIREWALLD_INTERFACE:-eth1}\" --foreman-proxy-dns-zone \"${sat_dns_zone}\" --foreman-proxy-dns-reverse \"${sat_dns_reverse_zone}\" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface \"${SAT_FIREWALLD_INTERFACE:-eth1}\" --foreman-proxy-dhcp-gateway \"${SAT_PROVISIONING_GW:-10.168.0.1}\" --foreman-proxy-dhcp-nameservers \"${sat_dhcp_nameservers}\" --foreman-proxy-dhcp-range \"${sat_dhcp_range}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername \"${SAT_IP:-10.168.128.1}\" --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-puppet false --enable-foreman-plugin-puppet false --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights true"
+        printf -v sat_org_q '%q' "${SAT_ORG}"
+        printf -v sat_loc_q '%q' "${SAT_LOC}"
+        printf -v sat_admin_user_q '%q' "${ADMIN_USER}"
+        printf -v sat_admin_pass_q '%q' "${sat_initial_admin_pass}"
+        printf -v sat_iface_q '%q' "${SAT_FIREWALLD_INTERFACE:-eth1}"
+        printf -v sat_dns_reverse_q '%q' "${sat_dns_reverse_zone}"
+        printf -v sat_dhcp_gw_q '%q' "${SAT_PROVISIONING_GW:-10.168.0.1}"
+        printf -v sat_dhcp_nameservers_q '%q' "${sat_dhcp_nameservers}"
+        printf -v sat_dhcp_range_q '%q' "${sat_dhcp_range}"
+        printf -v sat_target_ip_q '%q' "${SAT_IP:-10.168.128.1}"
+
+
+        installer_cmd="export TERM=\"\${TERM:-dumb}\"; foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization ${sat_org_q} --foreman-initial-location ${sat_loc_q} --foreman-initial-admin-username ${sat_admin_user_q} --foreman-initial-admin-password ${sat_admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface ${sat_iface_q} --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse ${sat_dns_reverse_q} --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface ${sat_iface_q} --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-gateway ${sat_dhcp_gw_q} --foreman-proxy-dhcp-nameservers ${sat_dhcp_nameservers_q} --foreman-proxy-dhcp-range ${sat_dhcp_range_q} --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername ${sat_target_ip_q} --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --register-with-insights"
         libvirt_prereq_cmd="dnf -y install --nogpgcheck libvirt-client >/dev/null 2>&1 || satellite-maintain packages install libvirt-client >/dev/null 2>&1 || true; su foreman -s /bin/bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -b 4096 -N \"\" -f ~/.ssh/id_rsa'; su foreman -s /bin/bash -c 'virsh -c ${sat_libvirt_url} list' || { echo \"WARN: foreman->libvirt connectivity test failed for ${sat_libvirt_url}\"; echo \"Foreman public key (copy to libvirt host authorized_keys):\"; su foreman -s /bin/bash -c 'cat ~/.ssh/id_rsa.pub' || true; true; }"
 
         print_step "Satellite post-CaC pass: running satellite-installer --scenario satellite with RHIS options"
@@ -6866,6 +7019,7 @@ hammer compute-resource info --name \"Libvirt_Prod_Server\" | head -n 10 || echo
         return 0
     }
 
+    # ---- Preflight remediation / diagnostics helpers ------------------------
     # -------------------------------------------------------------------------
     # assert_satellite_server_repos_available
     # -------------------------------------------------------------------------
@@ -7081,7 +7235,7 @@ hammer compute-resource info --name \"Libvirt_Prod_Server\" | head -n 10 || echo
         #   3) rhc connect --activation-key <key> --organization <org>
         #   4) dnf install -y rhc-worker-playbook
         # Then continue with RHSM repo enablement assertions.
-        local sat_shell='dnf upgrade -y --skip-broken --allowerasing --best || true; dnf install -y sos rhc || true; if [ -n "{{ cdn_organization_id | default("") }}" ] && [ -n "{{ cdn_sat_activation_key | default("") }}" ]; then rhc connect --activation-key "{{ cdn_sat_activation_key }}" --organization "{{ cdn_organization_id }}" || true; fi; dnf install -y rhc-worker-playbook || true; if ! subscription-manager identity >/dev/null 2>&1; then if [ -n "{{ cdn_organization_id | default("") }}" ] && [ -n "{{ cdn_sat_activation_key | default("") }}" ]; then subscription-manager register --org="{{ cdn_organization_id }}" --activationkey="{{ cdn_sat_activation_key }}" --force || true; else subscription-manager register --username="{{ rh_user | default("") }}" --password="{{ rh_pass | default("") }}" --force || true; fi; fi; subscription-manager attach --auto >/dev/null 2>&1 || true; subscription-manager refresh >/dev/null 2>&1 || true; subscription-manager repos --disable="*" >/dev/null 2>&1 || true; subscription-manager repos --enable="rhel-9-for-x86_64-baseos-rpms" --enable="rhel-9-for-x86_64-appstream-rpms" --enable="satellite-6.18-for-rhel-9-x86_64-rpms" --enable="satellite-maintenance-6.18-for-rhel-9-x86_64-rpms" >/dev/null 2>&1 || true; subscription-manager repos --list >/dev/null 2>&1 || true'
+        local sat_shell='if command -v foreman-maintain >/dev/null 2>&1; then foreman-maintain packages unlock >/dev/null 2>&1 || true; fi; dnf upgrade -y --skip-broken --allowerasing --best || true; dnf install -y sos rhc || true; if [ -n "{{ cdn_organization_id | default("") }}" ] && [ -n "{{ cdn_sat_activation_key | default("") }}" ]; then rhc connect --activation-key "{{ cdn_sat_activation_key }}" --organization "{{ cdn_organization_id }}" || true; fi; dnf install -y rhc-worker-playbook || true; if ! subscription-manager identity >/dev/null 2>&1; then if [ -n "{{ cdn_organization_id | default("") }}" ] && [ -n "{{ cdn_sat_activation_key | default("") }}" ]; then subscription-manager register --org="{{ cdn_organization_id }}" --activationkey="{{ cdn_sat_activation_key }}" --force || true; else subscription-manager register --username="{{ rh_user | default("") }}" --password="{{ rh_pass | default("") }}" --force || true; fi; fi; subscription-manager attach --auto >/dev/null 2>&1 || true; subscription-manager refresh >/dev/null 2>&1 || true; subscription-manager repos --disable="*" >/dev/null 2>&1 || true; subscription-manager repos --enable="rhel-9-for-x86_64-baseos-rpms" --enable="rhel-9-for-x86_64-appstream-rpms" --enable="satellite-6.18-for-rhel-9-x86_64-rpms" --enable="satellite-maintenance-6.18-for-rhel-9-x86_64-rpms" >/dev/null 2>&1 || true; subscription-manager repos --list >/dev/null 2>&1 || true'
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
 
         # Build a local evars string that extends the enclosing scope's evars with
@@ -7477,6 +7631,7 @@ hammer compute-resource info --name \"Libvirt_Prod_Server\" | head -n 10 || echo
         ensure_core_role_packages_on_managed_nodes "idm:scenario_satellite" || true
     fi
 
+    # ---- Component phase execution ------------------------------------------
     # ── 1. IdM — must be ready first (Satellite/AAP enroll against it) ─────────
     if [ "${run_idm}" -eq 1 ]; then
     if ! ensure_container_running_with_retry; then
@@ -9439,7 +9594,6 @@ generate_satellite_618_kickstart() {
         1 1 "Satellite" \
         "rhel-9-for-x86_64-baseos-rpms" \
         "rhel-9-for-x86_64-appstream-rpms" \
-        "rh-common-for-rhel-9-x86_64-rpms" \
         "satellite-6.18-for-rhel-9-x86_64-rpms" \
         "satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"
     ks_nogpg_policy="${RHIS_KS_NOGPG_POLICY}"
@@ -9663,6 +9817,9 @@ else
 
 # 4. Satellite package installation
 ks_log "Phase 4: Install satellite package"
+if command -v foreman-maintain >/dev/null 2>&1; then
+    foreman-maintain packages unlock || true
+fi
 dnf install -y --nogpgcheck satellite
 if ! rpm -q satellite >/dev/null 2>&1; then
     echo "ERROR: Satellite package installation verification failed (rpm -q satellite)."
@@ -9672,9 +9829,10 @@ fi
 # 5. Satellite Installer
 ks_log "Phase 5: Run satellite-installer"
 foreman-maintain packages unlock || true
-satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-username "${ADMIN_USER}" --foreman-initial-admin-password "${ADMIN_PASS}" --foreman-proxy-dns true --foreman-proxy-dns-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dns-zone "${SAT_DNS_ZONE:-${DOMAIN}}" --foreman-proxy-dns-reverse "${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dhcp-gateway "${SAT_PROVISIONING_GW:-10.168.0.1}" --foreman-proxy-dhcp-nameservers "${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP}}" --foreman-proxy-dhcp-range "${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername "${SAT_IP}" --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-puppet false --enable-foreman-plugin-puppet false --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-image-builder --enable-foreman-proxy-plugin-image-builder --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights true
+satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-username "${ADMIN_USER}" --foreman-initial-admin-password "${ADMIN_PASS}" --foreman-proxy-dns true --foreman-proxy-dns-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dns-zone "${SAT_DNS_ZONE:-${DOMAIN}}" --foreman-proxy-dns-reverse "${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface "${SAT_FIREWALLD_INTERFACE:-eth1}" --foreman-proxy-dhcp-gateway "${SAT_PROVISIONING_GW:-10.168.0.1}" --foreman-proxy-dhcp-nameservers "${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP}}" --foreman-proxy-dhcp-range "${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername "${SAT_IP}" --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-puppet false --no-enable-foreman-plugin-puppet --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights
 
-# 5.1 Post-Satellite Installation: Lifecycle Management & Provisioning Configuration
+
+# 5.1# 5.1 Post-Satellite Installation: Lifecycle Management & Provisioning Configuration
 echo "=== SATELLITE LIFECYCLE & PROVISIONING CONFIGURATION ==="
 
 # Wait for Foreman API to be fully ready
@@ -9694,12 +9852,13 @@ sleep 3
 
 # Configure Hammer CLI globally for root and all admin users
 install -d -m 0700 /root/.hammer /etc/skel/.hammer
+install -d -m 0700 /root/.hammer/log
 cat > /root/.hammer/cli_config.yml <<HAMMER_CONFIG
 :foreman:
     :host: 'https://localhost'
     :username: '${ADMIN_USER}'
     :password: '${ADMIN_PASS}'
-:log_dir: '/var/log/foreman'
+:log_dir: '/root/.hammer/log'
 :log_level: 'error'
 HAMMER_CONFIG
 
@@ -9715,11 +9874,40 @@ for _admin_user in \
         if [ "${_admin_user}" = "/root" ]; then
                 continue
         fi
-        install -d -m 0700 "${_admin_user}/.hammer" || true
-        install -m 0600 /root/.hammer/cli_config.yml "${_admin_user}/.hammer/cli_config.yml" || true
+        install -d -m 0700 "${_admin_user}/.hammer" "${_admin_user}/.hammer/log" || true
+        cat > "${_admin_user}/.hammer/cli_config.yml" <<HAMMER_CONFIG_USER
+:foreman:
+    :host: 'https://localhost'
+    :username: '${ADMIN_USER}'
+    :password: '${ADMIN_PASS}'
+:log_dir: '${_admin_user}/.hammer/log'
+:log_level: 'error'
+HAMMER_CONFIG_USER
+        chmod 0600 "${_admin_user}/.hammer/cli_config.yml" || true
         owner_name="$(basename "${_admin_user}")"
         chown -R "${owner_name}:${owner_name}" "${_admin_user}/.hammer" >/dev/null 2>&1 || true
 done
+
+# Grant all wheel-group users a valid Satellite admin role so they can run
+# hammer commands without sudo. Role names differ by Satellite version.
+echo "Granting Satellite administrative role to wheel-group users..."
+_rhis_sat_role=""
+for _role in "System Administrator" "Administrator" "Organization Administrator" "Organization Admin" "Manager"; do
+    if hammer role info --name "${_role}" >/dev/null 2>&1; then
+        _rhis_sat_role="${_role}"
+        break
+    fi
+done
+
+if [ -n "${_rhis_sat_role}" ]; then
+    getent group wheel | awk -F: '{print $4}' | tr ',' '\n' | sed '/^$/d' | while read -r _wuser; do
+        hammer user add-role --login "${_wuser}" --role "${_rhis_sat_role}" >/dev/null 2>&1 \
+            && echo "  Granted ${_rhis_sat_role} to ${_wuser}" \
+            || echo "  ℹ ${_rhis_sat_role} already assigned (or user not found) for ${_wuser}"
+    done
+else
+    echo "  ⚠ No known admin role name found on this Satellite; skipping automatic hammer role assignment."
+fi
 
 # --- 5.1.1 Create Lifecycle Environments for RHEL 10 ---
 echo "Creating RHEL 10 lifecycle environments..."
@@ -9934,6 +10122,26 @@ echo "  ✓ DNS/DHCP/TFTP: All enabled via foreman-proxy on eth1"
 dnf install -y --nogpgcheck python3-pip sshpass
 python3 -m pip install --upgrade pip setuptools wheel || true
 python3 -m pip install ansible-cmdb || true
+
+# Install RHIS Python and Ansible Galaxy requirements on the Satellite host
+_rhis_req_txt="${RHIS_DIR:-/rhis}/container/requirements.txt"
+_rhis_req_yml="${RHIS_DIR:-/rhis}/container/requirements.yml"
+
+if [ -f "${_rhis_req_txt}" ]; then
+    echo "Installing Python requirements from ${_rhis_req_txt}..."
+    python3 -m pip install --upgrade -r "${_rhis_req_txt}" || \
+        echo "  ⚠ Some Python requirements failed to install; check versions for this Python runtime."
+else
+    echo "  ⚠ requirements.txt not found at ${_rhis_req_txt}; skipping Python requirements install."
+fi
+
+if [ -f "${_rhis_req_yml}" ]; then
+    echo "Installing Ansible collections from ${_rhis_req_yml}..."
+    ansible-galaxy collection install -r "${_rhis_req_yml}" --force 2>&1 || \
+        echo "  ⚠ Some Ansible collections failed to install; install manually: ansible-galaxy collection install -r ${_rhis_req_yml}"
+else
+    echo "  ⚠ requirements.yml not found at ${_rhis_req_yml}; skipping Ansible collection install."
+fi
 
 mkdir -p /etc/ansible /var/lib/rhis-cmdb/facts /var/www/rhis-cmdb
 
@@ -12987,7 +13195,7 @@ ensure_installer_host_ansible_collections() {
 }
 
 # Robust pip package installation with fallback strategy:
-# 1. Try: pip install --upgrade --ignore-installed --user <package>
+# 1. Try: pip install --upgrade --user <package>
 # 2. Fallback 1: Try installing base package without version
 # 3. Fallback 2: Try: dnf install -y --skip-broken --allowerasing --best
 # 4. Fallback 3: dnf with base package without version
@@ -13004,23 +13212,23 @@ install_package_with_fallback() {
         return 0
     fi
 
-    # Step 1: Try pip install --upgrade --ignore-installed --user
+    # Step 1: Try pip install --upgrade --user
     if [ "${use_pip}" -eq 1 ] && command -v pip3 >/dev/null 2>&1; then
-        if timeout ${timeout_sec} pip3 install --upgrade --ignore-installed --user "${pkg_spec}" >/dev/null 2>&1; then
+        if timeout ${timeout_sec} pip3 install --upgrade --user "${pkg_spec}" >/dev/null 2>&1; then
             print_step "✓ Installed (pip): ${pkg_spec}"
             return 0
         fi
 
         # Fallback 1: Try base package without version via pip
         if [ "${pkg_base}" != "${pkg_spec}" ]; then
-            if timeout ${timeout_sec} pip3 install --upgrade --ignore-installed --user "${pkg_base}" >/dev/null 2>&1; then
+            if timeout ${timeout_sec} pip3 install --upgrade --user "${pkg_base}" >/dev/null 2>&1; then
                 print_step "✓ Installed (pip base): ${pkg_base}"
                 return 0
             fi
         fi
 
         # Fallback 2: Try via sudo python3 -m pip
-        if timeout ${timeout_sec} sudo python3 -m pip install --upgrade --ignore-installed --user "${pkg_spec}" >/dev/null 2>&1; then
+        if timeout ${timeout_sec} sudo python3 -m pip install --upgrade --user "${pkg_spec}" >/dev/null 2>&1; then
             print_step "✓ Installed (sudo pip): ${pkg_spec}"
             return 0
         fi

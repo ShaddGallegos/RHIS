@@ -302,8 +302,10 @@ persisted in encrypted `~/.ansible/conf/env.yml`):
 - Optional: Only required if you want to pre-stage a manifest for automatic import
 - The manifest import is skipped silently if no file is found — not an error condition
 - For air-gapped deployments, this is the recommended way to pre-load entitlements
+
 ---
 ---
+
 ## 9. IdM-specific values
 
 ### Required / prompted
