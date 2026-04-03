@@ -1,0 +1,13 @@
+---
+# .ansible-lint — project-wide rules for RHIS
+#
+# skip_list suppresses rules that would require renaming intentional public-
+# interface variables.  The satellite_url / satellite_username / satellite_password
+# variables in role defaults intentionally match the redhat.satellite collection
+# parameter names; prefixing them with the role name would break all task files.
+
+skip_list:
+  - var-naming[no-role-prefix]
+
+warn_list:
+  - run-once[task]   # run_once is intentional in satellite main pre-tasks

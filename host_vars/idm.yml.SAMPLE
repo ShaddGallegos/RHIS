@@ -1,0 +1,39 @@
+# idm.yml — SAMPLE host_vars for the IdM (Red Hat Identity Management) VM
+# Copy to host_vars/idm.yml and fill in real values.
+# ---
+
+ansible_user: "{{ admin_user | default('admin') }}"
+ansible_become: true
+ansible_password: "{{ global_admin_password | default('') }}"
+
+# IdM realm and domain are derived from the global DOMAIN / REALM values set
+# during provisioning.  Override here if they differ per host.
+# idm_realm:   "EXAMPLE.COM"
+# idm_domain:  "example.com"
+
+# Optional role-driven defaults for RHIS bootstrap identities and policy.
+# The generated host_vars/idm.yml will include concrete values using these names.
+# idm_admins_group: "rhis-admins"
+# idm_content_managers_group: "content-managers"
+# idm_automation_engineers_group: "automation-engineers"
+# idm_system_services_group: "system-services"
+#
+# idm_user_groups:
+#   - name: "{{ idm_admins_group }}"
+#     user_list: ["rhis-operator"]
+#
+# idm_users:
+#   - login: satellite-svc
+#     random: true
+#   - login: aap-svc
+#     random: true
+#   - login: rhis-operator
+#     password: "{{ global_admin_password }}"
+#
+# idm_password_policies:
+#   - group_name: global_policy
+#     minlife: "0"
+#     maxlife: "365"
+#     minclasses: "3"
+#     minlength: "12"
+#     history: "6"

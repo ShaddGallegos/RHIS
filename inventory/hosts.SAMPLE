@@ -1,0 +1,64 @@
+# RHIS Ansible Inventory — Jinja-style template
+# This template is auto-rendered by run_rhis_install_sequence.sh into
+# inventory/hosts using values from ~/.ansible/conf/env.yml and runtime host data.
+#
+# The rhis-provisioner container mounts this directory at:
+#   /rhis/vars/external_inventory/
+# Playbooks reference the inventory as:
+#   --inventory /rhis/vars/external_inventory/hosts
+#
+# Group names must match what rhis-builder playbooks expect:
+#   [ansibledev]        the KVM host / controller running this script
+#   [libvirt]           same host when using the libvirt platform
+#   [installer]         same as ansibledev for most deployments
+#   [scenario_satellite] the Satellite VM
+#   [sat_primary]       alias expected by rhis-builder-satellite
+#   [aap]               the AAP VM
+#   [aap_hosts]         alias expected by rhis-builder-aap
+#   [platform_installer] alias expected by rhis-builder-aap
+#   [idm]               the IdM VM
+#   [idm_primary]       alias expected by rhis-builder-idm
+
+# Template placeholders rendered automatically:
+#   {{CONTROLLER_HOST}} {{HOST_INT_IP}} {{INSTALLER_USER}}
+#   {{SAT_HOSTNAME}} {{SAT_IP}} {{AAP_HOSTNAME}} {{AAP_IP}}
+#   {{IDM_HOSTNAME}} {{IDM_IP}} {{ADMIN_USER}}
+
+# ─── Controller / KVM host ────────────────────────────────────────────────────
+[ansibledev]
+{{CONTROLLER_HOST}}
+
+[libvirt]
+{{CONTROLLER_HOST}}
+
+[installer]
+{{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
+
+# ─── Managed nodes ────────────────────────────────────────────────────────────
+[scenario_satellite]
+{{SAT_HOSTNAME}} ansible_host={{SAT_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
+
+[sat_primary:children]
+scenario_satellite
+
+[aap]
+{{AAP_HOSTNAME}} ansible_host={{AAP_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
+
+[aap_hosts:children]
+aap
+
+[platform_installer:children]
+aap
+
+[idm]
+{{IDM_HOSTNAME}} ansible_host={{IDM_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
+
+[idm_primary:children]
+idm
+
+# ─── Group vars shared across all managed nodes ───────────────────────────────
+[all:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+# global_admin_password is referenced by host_vars templates; set it in your
+# Ansible vault (see ~/.ansible/conf/env.yml) rather than in plain text here.
+# global_admin_password: "changeme"

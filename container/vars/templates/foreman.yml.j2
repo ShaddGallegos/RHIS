@@ -1,0 +1,4 @@
+:foreman:
+  :host: "{{ satellite_server_url | default('https://' ~ (ansible_fqdn | default(inventory_hostname))) }}"
+  :username: "{{ satellite_username | default(admin_user | default('admin')) }}"
+  :password: "{{ satellite_password | default(sat_admin_pass | default(global_admin_password | default(''))) }}"
