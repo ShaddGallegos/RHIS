@@ -23,13 +23,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible-core ansible ansible-lint yamllint
 
-      - name: Ansible syntax-check (rhis_sat_config)
+      - name: Ansible syntax-check (minirhis_sat_config)
         run: |
-          ansible-playbook --syntax-check reports/syntax_check_rhis_sat_config.yml -i localhost,
+          ansible-playbook --syntax-check reports/syntax_check_minirhis_sat_config.yml -i localhost,
 
-      - name: Ansible syntax-check (rhis_builder_satellite)
+      - name: Ansible syntax-check (minirhis_builder_satellite)
         run: |
-          ansible-playbook --syntax-check reports/syntax_check_rhis_builder_satellite.yml -i localhost,
+          ansible-playbook --syntax-check reports/syntax_check_minirhis_builder_satellite.yml -i localhost,
 
       - name: Run ansible-lint on roles
         run: |

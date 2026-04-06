@@ -11,23 +11,23 @@ ansible_password: "{{ global_admin_password | default('') }}"
 # idm_realm:   "EXAMPLE.COM"
 # idm_domain:  "example.com"
 
-# Optional role-driven defaults for RHIS bootstrap identities and policy.
+# Optional role-driven defaults for MINIRHIS bootstrap identities and policy.
 # The generated host_vars/idm.yml will include concrete values using these names.
-# idm_admins_group: "rhis-admins"
+# idm_admins_group: "minirhis-admins"
 # idm_content_managers_group: "content-managers"
 # idm_automation_engineers_group: "automation-engineers"
 # idm_system_services_group: "system-services"
 #
 # idm_user_groups:
 #   - name: "{{ idm_admins_group }}"
-#     user_list: ["rhis-operator"]
+#     user_list: ["minirhis-operator"]
 #
 # idm_users:
 #   - login: satellite-svc
 #     random: true
 #   - login: aap-svc
 #     random: true
-#   - login: rhis-operator
+#   - login: minirhis-operator
 #     password: "{{ global_admin_password }}"
 #
 # idm_password_policies:

@@ -21,26 +21,26 @@ ANSIBLE_ENV_DIR="${ANSIBLE_ENV_DIR:-$HOME/.ansible/conf}"
 ANSIBLE_ENV_FILE="${ANSIBLE_ENV_FILE:-$ANSIBLE_ENV_DIR/env.yml}"
 ANSIBLE_VAULT_PASS_FILE="${ANSIBLE_VAULT_PASS_FILE:-$HOME/.ansible/conf/.vaultpass.txt}"
 
-RHIS_ANSIBLE_CFG_BASENAME="${RHIS_ANSIBLE_CFG_BASENAME:-rhis-ansible.cfg}"
-RHIS_ANSIBLE_CFG_VAULT_HOST="${RHIS_ANSIBLE_CFG_VAULT_HOST:-$ANSIBLE_ENV_DIR/${RHIS_ANSIBLE_CFG_BASENAME}}"
-RHIS_ANSIBLE_CFG_VAULT_CONTAINER="${RHIS_ANSIBLE_CFG_VAULT_CONTAINER:-/rhis/vars/vault/${RHIS_ANSIBLE_CFG_BASENAME}}"
-RHIS_ANSIBLE_CFG_RUNTIME_BASENAME="${RHIS_ANSIBLE_CFG_RUNTIME_BASENAME:-rhis-ansible.runtime.cfg}"
-RHIS_ANSIBLE_CFG_HOST="${RHIS_ANSIBLE_CFG_HOST:-$ANSIBLE_ENV_DIR/${RHIS_ANSIBLE_CFG_RUNTIME_BASENAME}}"
-RHIS_ANSIBLE_CFG_CONTAINER="${RHIS_ANSIBLE_CFG_CONTAINER:-/rhis/vars/vault/${RHIS_ANSIBLE_CFG_RUNTIME_BASENAME}}"
-RHIS_ANSIBLE_FACT_CACHE_BASENAME="${RHIS_ANSIBLE_FACT_CACHE_BASENAME:-facts-cache}"
-RHIS_ANSIBLE_FACT_CACHE_HOST="${RHIS_ANSIBLE_FACT_CACHE_HOST:-$ANSIBLE_ENV_DIR/${RHIS_ANSIBLE_FACT_CACHE_BASENAME}}"
-RHIS_ANSIBLE_FACT_CACHE_CONTAINER="${RHIS_ANSIBLE_FACT_CACHE_CONTAINER:-/rhis/vars/vault/${RHIS_ANSIBLE_FACT_CACHE_BASENAME}}"
-RHIS_ANSIBLE_FORKS="${RHIS_ANSIBLE_FORKS:-15}"
-RHIS_ANSIBLE_TIMEOUT="${RHIS_ANSIBLE_TIMEOUT:-30}"
-RHIS_ANSIBLE_FACT_CACHE_TIMEOUT="${RHIS_ANSIBLE_FACT_CACHE_TIMEOUT:-86400}"
+MINIRHIS_ANSIBLE_CFG_BASENAME="${MINIRHIS_ANSIBLE_CFG_BASENAME:-minirhis-ansible.cfg}"
+MINIRHIS_ANSIBLE_CFG_VAULT_HOST="${MINIRHIS_ANSIBLE_CFG_VAULT_HOST:-$ANSIBLE_ENV_DIR/${MINIRHIS_ANSIBLE_CFG_BASENAME}}"
+MINIRHIS_ANSIBLE_CFG_VAULT_CONTAINER="${MINIRHIS_ANSIBLE_CFG_VAULT_CONTAINER:-/minirhis/vars/vault/${MINIRHIS_ANSIBLE_CFG_BASENAME}}"
+MINIRHIS_ANSIBLE_CFG_RUNTIME_BASENAME="${MINIRHIS_ANSIBLE_CFG_RUNTIME_BASENAME:-minirhis-ansible.runtime.cfg}"
+MINIRHIS_ANSIBLE_CFG_HOST="${MINIRHIS_ANSIBLE_CFG_HOST:-$ANSIBLE_ENV_DIR/${MINIRHIS_ANSIBLE_CFG_RUNTIME_BASENAME}}"
+MINIRHIS_ANSIBLE_CFG_CONTAINER="${MINIRHIS_ANSIBLE_CFG_CONTAINER:-/minirhis/vars/vault/${MINIRHIS_ANSIBLE_CFG_RUNTIME_BASENAME}}"
+MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME="${MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME:-facts-cache}"
+MINIRHIS_ANSIBLE_FACT_CACHE_HOST="${MINIRHIS_ANSIBLE_FACT_CACHE_HOST:-$ANSIBLE_ENV_DIR/${MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME}}"
+MINIRHIS_ANSIBLE_FACT_CACHE_CONTAINER="${MINIRHIS_ANSIBLE_FACT_CACHE_CONTAINER:-/minirhis/vars/vault/${MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME}}"
+MINIRHIS_ANSIBLE_FORKS="${MINIRHIS_ANSIBLE_FORKS:-15}"
+MINIRHIS_ANSIBLE_TIMEOUT="${MINIRHIS_ANSIBLE_TIMEOUT:-30}"
+MINIRHIS_ANSIBLE_FACT_CACHE_TIMEOUT="${MINIRHIS_ANSIBLE_FACT_CACHE_TIMEOUT:-86400}"
 
-RHIS_CONTAINER_IMAGE="${RHIS_CONTAINER_IMAGE:-quay.io/parmstro/rhis-provisioner-9-2.5}"
-RHIS_CONTAINER_NAME="${RHIS_CONTAINER_NAME:-rhis-provisioner}"
-RHIS_INVENTORY_DIR="${RHIS_INVENTORY_DIR:-$SCRIPT_DIR/container/vars/external_inventory}"
-RHIS_INVENTORY_FILE="${RHIS_INVENTORY_FILE:-$RHIS_INVENTORY_DIR/hosts.yml}"
-RHIS_CONTAINER_INVENTORY_FILE="${RHIS_CONTAINER_INVENTORY_FILE:-/rhis/vars/external_inventory/$(basename "${RHIS_INVENTORY_FILE}")}"
-RHIS_HOST_VARS_DIR="${RHIS_HOST_VARS_DIR:-$SCRIPT_DIR/host_vars}"
-RHIS_EXECUTION_MODE="${RHIS_EXECUTION_MODE:-container}"
+MINIRHIS_CONTAINER_IMAGE="${MINIRHIS_CONTAINER_IMAGE:-quay.io/parmstro/minirhis-provisioner-9-2.5}"
+MINIRHIS_CONTAINER_NAME="${MINIRHIS_CONTAINER_NAME:-minirhis-provisioner}"
+MINIRHIS_INVENTORY_DIR="${MINIRHIS_INVENTORY_DIR:-$SCRIPT_DIR/container/vars/external_inventory}"
+MINIRHIS_INVENTORY_FILE="${MINIRHIS_INVENTORY_FILE:-$MINIRHIS_INVENTORY_DIR/hosts.yml}"
+MINIRHIS_CONTAINER_INVENTORY_FILE="${MINIRHIS_CONTAINER_INVENTORY_FILE:-/minirhis/vars/external_inventory/$(basename "${MINIRHIS_INVENTORY_FILE}")}"
+MINIRHIS_HOST_VARS_DIR="${MINIRHIS_HOST_VARS_DIR:-$SCRIPT_DIR/host_vars}"
+MINIRHIS_EXECUTION_MODE="${MINIRHIS_EXECUTION_MODE:-container}"
 
 PRESEED_ENV_FILE="${PRESEED_ENV_FILE:-$SCRIPT_DIR/.env}"
 RH_TOKEN_URL="${RH_TOKEN_URL:-https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token}"
@@ -49,8 +49,8 @@ RH9_ISO_URL="${RH9_ISO_URL:-}"
 RH_OSINFO="${RH_OSINFO:-linux2024}"
 
 # Optional local role fallback controls.
-RHIS_LOCAL_ROLE_FALLBACK="${RHIS_LOCAL_ROLE_FALLBACK:-1}"
-RHIS_LOCAL_ROLE_WORKDIR="${RHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
+MINIRHIS_LOCAL_ROLE_FALLBACK="${MINIRHIS_LOCAL_ROLE_FALLBACK:-1}"
+MINIRHIS_LOCAL_ROLE_WORKDIR="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
 
 CLI_MENU_CHOICE=""
 CLI_NONINTERACTIVE=""
@@ -61,6 +61,8 @@ CLI_DEMOKILL=""
 CLI_RECONFIGURE=""
 CLI_AAP_INVENTORY_TEMPLATE=""
 CLI_AAP_INVENTORY_GROWTH_TEMPLATE=""
+CLI_ENTERPRISE=""
+CLI_STANDALONE=""
 CLI_CONTAINER_CONFIG_ONLY=""
 CLI_ATTACH_CONSOLES=""
 CLI_STATUS=""
@@ -72,9 +74,7 @@ CLI_MENUTEST=""
 CLI_SATELLITE=""
 CLI_IDM=""
 CLI_AAP=""
-CLI_RHIS=""
-CLI_CAC=""
-CLI_CAC_SCOPE=""
+CLI_MINIRHIS=""
 CLI_LIBVIRT=""
 CLI_BAREMETAL=""
 CLI_AWS=""
@@ -87,75 +87,75 @@ CLI_VMWARE=""
 CLI_LOCAL=""
 CLI_CONTAINER=""
 MENU_CHOICE_CONSUMED=0
-RHIS_TEST_MODE="${RHIS_TEST_MODE:-0}"
-RHIS_MENU_TEST_MODE="${RHIS_MENU_TEST_MODE:-0}"
-RHIS_DASHBOARD_SINGLE_SHOT="${RHIS_DASHBOARD_SINGLE_SHOT:-0}"
-RHIS_TEST_WARNING_COUNT=0
-RHIS_TEST_FAILURE_COUNT=0
-RHIS_TEST_WARNING_FILE="${RHIS_TEST_WARNING_FILE:-/tmp/rhis-test-warnings-$$.log}"
-declare -a RHIS_TEST_RESULTS=()
-_RHIS_TEST_STEP=0
-_RHIS_TEST_TOTAL=0
+MINIRHIS_TEST_MODE="${MINIRHIS_TEST_MODE:-0}"
+MINIRHIS_MENU_TEST_MODE="${MINIRHIS_MENU_TEST_MODE:-0}"
+MINIRHIS_DASHBOARD_SINGLE_SHOT="${MINIRHIS_DASHBOARD_SINGLE_SHOT:-0}"
+MINIRHIS_TEST_WARNING_COUNT=0
+MINIRHIS_TEST_FAILURE_COUNT=0
+MINIRHIS_TEST_WARNING_FILE="${MINIRHIS_TEST_WARNING_FILE:-/tmp/minirhis-test-warnings-$$.log}"
+declare -a MINIRHIS_TEST_RESULTS=()
+_MINIRHIS_TEST_STEP=0
+_MINIRHIS_TEST_TOTAL=0
 # Auto-run config-as-code sequence after container-only deployment (menu option 2).
 # Set to 0/false/no/off to disable.
-RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY="${RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY:-1}"
+MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY="${MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY:-1}"
 # Retry only failed config-as-code phases once (IdM/Satellite/AAP).
 # Set to 0/false/no/off to disable.
-RHIS_RETRY_FAILED_PHASES_ONCE="${RHIS_RETRY_FAILED_PHASES_ONCE:-1}"
+MINIRHIS_RETRY_FAILED_PHASES_ONCE="${MINIRHIS_RETRY_FAILED_PHASES_ONCE:-1}"
 # Apply/verify runtime playbook hotfixes inside provisioner container before phase runs.
-RHIS_ENABLE_CONTAINER_HOTFIXES="${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"
+MINIRHIS_ENABLE_CONTAINER_HOTFIXES="${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"
 # Fail fast if hotfix verification cannot be confirmed.
-RHIS_ENFORCE_CONTAINER_HOTFIXES="${RHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"
+MINIRHIS_ENFORCE_CONTAINER_HOTFIXES="${MINIRHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"
 # Internal SSH readiness wait for config-as-code preflight
-RHIS_INTERNAL_SSH_WAIT_TIMEOUT="${RHIS_INTERNAL_SSH_WAIT_TIMEOUT:-1800}"
-RHIS_INTERNAL_SSH_WAIT_INTERVAL="${RHIS_INTERNAL_SSH_WAIT_INTERVAL:-10}"
-RHIS_POST_VM_SETTLE_GRACE="${RHIS_POST_VM_SETTLE_GRACE:-650}"
-RHIS_IDM_START_DELAY="${RHIS_IDM_START_DELAY:-240}"
-RHIS_INTERNAL_SSH_WARN_GRACE="${RHIS_INTERNAL_SSH_WARN_GRACE:-600}"
-RHIS_INTERNAL_SSH_LOG_EVERY="${RHIS_INTERNAL_SSH_LOG_EVERY:-60}"
-# Inventory transport selection for managed nodes.
-# 0 (default): use internal RHIS IPs (10.168.x.x) for Ansible connectivity.
-# 1: prefer externally discovered eth0/NAT addresses (192.168.122.x) when available.
-RHIS_MANAGED_SSH_OVER_ETH0="${RHIS_MANAGED_SSH_OVER_ETH0:-0}"
+MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT="${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT:-1800}"
+MINIRHIS_INTERNAL_SSH_WAIT_INTERVAL="${MINIRHIS_INTERNAL_SSH_WAIT_INTERVAL:-10}"
+MINIRHIS_POST_VM_SETTLE_GRACE="${MINIRHIS_POST_VM_SETTLE_GRACE:-650}"
+MINIRHIS_INTERNAL_SSH_WARN_GRACE="${MINIRHIS_INTERNAL_SSH_WARN_GRACE:-600}"
+MINIRHIS_INTERNAL_SSH_LOG_EVERY="${MINIRHIS_INTERNAL_SSH_LOG_EVERY:-60}"
+# Global transport policy for managed nodes.
+# MINIRHIS enforces internal SSH reachability over 10.168.0.0/16 for all stack modes
+# (standalone node workflows and full minirhis stack).
+MINIRHIS_MANAGED_SSH_OVER_ETH0="0"
 # IdM web UI readiness check after IdM configuration phase.
-RHIS_IDM_WEB_UI_TIMEOUT="${RHIS_IDM_WEB_UI_TIMEOUT:-900}"
-RHIS_IDM_WEB_UI_INTERVAL="${RHIS_IDM_WEB_UI_INTERVAL:-15}"
+MINIRHIS_IDM_WEB_UI_TIMEOUT="${MINIRHIS_IDM_WEB_UI_TIMEOUT:-900}"
+MINIRHIS_IDM_WEB_UI_INTERVAL="${MINIRHIS_IDM_WEB_UI_INTERVAL:-15}"
 # Post-install healthcheck/repair controls.
-RHIS_ENABLE_POST_HEALTHCHECK="${RHIS_ENABLE_POST_HEALTHCHECK:-1}"
-RHIS_HEALTHCHECK_AUTOFIX="${RHIS_HEALTHCHECK_AUTOFIX:-1}"
-RHIS_HEALTHCHECK_RERUN_COMPONENT="${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"
+MINIRHIS_ENABLE_POST_HEALTHCHECK="${MINIRHIS_ENABLE_POST_HEALTHCHECK:-1}"
+MINIRHIS_HEALTHCHECK_AUTOFIX="${MINIRHIS_HEALTHCHECK_AUTOFIX:-1}"
+MINIRHIS_HEALTHCHECK_RERUN_COMPONENT="${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"
 # Satellite app-level sanity retry controls (hammer/API checks).
-RHIS_SAT_HEALTHCHECK_RETRIES="${RHIS_SAT_HEALTHCHECK_RETRIES:-5}"
-RHIS_SAT_HEALTHCHECK_INTERVAL="${RHIS_SAT_HEALTHCHECK_INTERVAL:-15}"
+MINIRHIS_SAT_HEALTHCHECK_RETRIES="${MINIRHIS_SAT_HEALTHCHECK_RETRIES:-5}"
+MINIRHIS_SAT_HEALTHCHECK_INTERVAL="${MINIRHIS_SAT_HEALTHCHECK_INTERVAL:-15}"
 RHC_AUTO_CONNECT="${RHC_AUTO_CONNECT:-1}"
 # If enabled, fail the run when root-to-root SSH mesh cannot be fully established.
 # Default keeps root mesh best-effort while admin mesh remains mandatory.
-RHIS_REQUIRE_ROOT_SSH_MESH="${RHIS_REQUIRE_ROOT_SSH_MESH:-0}"
+MINIRHIS_REQUIRE_ROOT_SSH_MESH="${MINIRHIS_REQUIRE_ROOT_SSH_MESH:-0}"
 # Optional pre-flight ad-hoc probes/upgrades before phase playbooks.
 # Default OFF to avoid noisy lockout-prone retries on fresh installs.
-RHIS_ENABLE_PRECHECK_ADHOC="${RHIS_ENABLE_PRECHECK_ADHOC:-0}"
+MINIRHIS_ENABLE_PRECHECK_ADHOC="${MINIRHIS_ENABLE_PRECHECK_ADHOC:-0}"
 # Guard to ensure the full prompt wizard runs at most once per process.
-RHIS_PROMPTS_COMPLETED="${RHIS_PROMPTS_COMPLETED:-0}"
+MINIRHIS_PROMPTS_COMPLETED="${MINIRHIS_PROMPTS_COMPLETED:-0}"
 # Defer heavy component installation/configuration out of kickstart %post and
-# execute it post-boot through run_rhis_config_as_code.
+# execute it post-boot through run_minirhis_config_as_code.
 # Keeps role-specific kickstart provisioning (CPU/RAM/disk/network/hostname)
 # while avoiding fragile install-time network constraints.
-RHIS_DEFER_COMPONENT_INSTALL="${RHIS_DEFER_COMPONENT_INSTALL:-1}"
+MINIRHIS_DEFER_COMPONENT_INSTALL="${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}"
 # After base Satellite CaC run succeeds, execute an explicit post-configuration
 # pass (lifecycle/content views/activation keys/provisioning/network domains).
-RHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC="${RHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC:-1}"
+MINIRHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC="${MINIRHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC:-1}"
 # Run a dedicated Satellite provisioning pass after scenario install to ensure
 # KVM/libvirt compute resources/profiles/media/templates/network/hostgroups are
 # configured for both image-based and kickstart-based provisioning workflows.
-RHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO="${RHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO:-1}"
+MINIRHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO="${MINIRHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO:-1}"
 
 # Automation Hub + AAP bundle pre-flight HTTP-serve variables
 HUB_TOKEN="${HUB_TOKEN:-}"
-# Automation Hub API token used for [galaxy_server.*] in rhis-ansible.cfg.
+# Automation Hub API token used for [galaxy_server.*] in minirhis-ansible.cfg.
 # If unset, HUB_TOKEN is used as fallback.
 VAULT_CONSOLE_REDHAT_TOKEN="${VAULT_CONSOLE_REDHAT_TOKEN:-}"
 HOST_INT_IP="${HOST_INT_IP:-192.168.122.1}"
 AAP_BUNDLE_URL="${AAP_BUNDLE_URL:-}"
+AAP_BUNDLE_EFFECTIVE_URL="${AAP_BUNDLE_EFFECTIVE_URL:-}"
 AAP_BUNDLE_DIR="${AAP_BUNDLE_DIR:-${VM_DIR}/aap-bundle}"
 AAP_HTTP_PID=""
 AAP_HTTP_LOG="${AAP_HTTP_LOG:-/tmp/aap-http-server-$(date +%s).log}"
@@ -164,15 +164,16 @@ STAGED_VAULT_PASS_BASENAME="${STAGED_VAULT_PASS_BASENAME:-.vaultpass.container}"
 AAP_ADMIN_PASS="${AAP_ADMIN_PASS:-}"
 SAT_ADMIN_PASS="${SAT_ADMIN_PASS:-}"
 # Optional override for the very first Satellite installer admin password.
-# When unset, RHIS uses ADMIN_PASS consistently across install and post-config flows.
+# When unset, MINIRHIS uses ADMIN_PASS consistently across install and post-config flows.
 SAT_INITIAL_ADMIN_PASS="${SAT_INITIAL_ADMIN_PASS:-}"
 AAP_DEPLOYMENT_TYPE="${AAP_DEPLOYMENT_TYPE:-container}"
+AAP_TOPOLOGY="${AAP_TOPOLOGY:-standalone}"
 SATELLITE_VALIDATE_CERTS="${SATELLITE_VALIDATE_CERTS:-false}"
 SAT_USE_NON_IDM_CERTS="${SAT_USE_NON_IDM_CERTS:-}"
-# AAP is always containerized in RHIS flows.
+# AAP is always containerized in MINIRHIS flows.
 # AAP installer inventory template selection.
-# These templates are rendered into /root/aap-setup/inventory and
-# /root/aap-setup/inventory-growth inside the AAP VM during kickstart %post.
+# These templates are rendered into /home/admin/aap-setup/inventory and
+# /home/admin/aap-setup/inventory-growth inside the AAP VM during kickstart %post.
 AAP_INVENTORY_TEMPLATE_DIR="${AAP_INVENTORY_TEMPLATE_DIR:-$SCRIPT_DIR/inventory/aap}"
 AAP_INVENTORY_TEMPLATE="${AAP_INVENTORY_TEMPLATE:-}"
 AAP_INVENTORY_GROWTH_TEMPLATE="${AAP_INVENTORY_GROWTH_TEMPLATE:-}"
@@ -208,8 +209,8 @@ IDM_ALIAS="${IDM_ALIAS:-idm}"
 SAT_ORG="${SAT_ORG:-REDHAT}"
 SAT_LOC="${SAT_LOC:-CORE}"
 SAT_COMPUTE_PLATFORM="${SAT_COMPUTE_PLATFORM:-libvirt}"
-SAT_COMPUTE_RESOURCE_NAME="${SAT_COMPUTE_RESOURCE_NAME:-RHIS_Compute}"
-SAT_COMPUTE_PROFILE_NAME="${SAT_COMPUTE_PROFILE_NAME:-RHIS_Standard}"
+SAT_COMPUTE_RESOURCE_NAME="${SAT_COMPUTE_RESOURCE_NAME:-MINIRHIS_Compute}"
+SAT_COMPUTE_PROFILE_NAME="${SAT_COMPUTE_PROFILE_NAME:-MINIRHIS_Standard}"
 SAT_COMPUTE_URL="${SAT_COMPUTE_URL:-}"
 SAT_COMPUTE_USERNAME="${SAT_COMPUTE_USERNAME:-}"
 SAT_COMPUTE_PASSWORD="${SAT_COMPUTE_PASSWORD:-}"
@@ -252,20 +253,20 @@ SAT_DNS_ZONE="${SAT_DNS_ZONE:-${DOMAIN:-}}"
 SAT_DNS_REVERSE_ZONE="${SAT_DNS_REVERSE_ZONE:-}"
 # Enforce Satellite UI/services on internal 10.168.0.0/16 address space.
 # Set to 0 only for exceptional troubleshooting scenarios.
-RHIS_ENFORCE_SAT_INTERNAL_NETWORK="${RHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}"
+MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK="${MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}"
 SAT_FIREWALLD_SERVICES_JSON='["ssh","http","https"]'
-IDM_REPOSITORY_IDS_JSON='["rhel-10-for-x86_64-baseos-rpms","rhel-10-for-x86_64-appstream-rpms"]'
+IDM_REPOSITORY_IDS_JSON='["rhel-10-for-x86_64-baseos-rpms","rhel-10-for-x86_64-appstream-rpms","idm-for-rhel-10-x86_64-rpms"]'
 # Required Satellite server repositories.  Your RHSM account MUST expose all
 # IDs below before run_config_as_code() reaches the Satellite phase.
 # See assert_satellite_server_repos_available() for the pre-flight guard.
 SAT_REPOSITORY_IDS_JSON='["rhel-9-for-x86_64-baseos-rpms","rhel-9-for-x86_64-appstream-rpms","satellite-6.18-for-rhel-9-x86_64-rpms","satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"]'
 DEPLOYMENT_SCOPE="${DEPLOYMENT_SCOPE:-local}"
-RHIS_TARGET_PLATFORM="${RHIS_TARGET_PLATFORM:-libvirt}"
-SAT_TARGET_PLATFORM="${SAT_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM}}"
-AAP_TARGET_PLATFORM="${AAP_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM}}"
-IDM_TARGET_PLATFORM="${IDM_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM}}"
-RHIS_INSTALL_PRODUCT="${RHIS_INSTALL_PRODUCT:-}"
-RHIS_PLATFORM_FAMILY="${RHIS_PLATFORM_FAMILY:-virtual}"
+MINIRHIS_TARGET_PLATFORM="${MINIRHIS_TARGET_PLATFORM:-libvirt}"
+SAT_TARGET_PLATFORM="${SAT_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM}}"
+AAP_TARGET_PLATFORM="${AAP_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM}}"
+IDM_TARGET_PLATFORM="${IDM_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM}}"
+MINIRHIS_INSTALL_PRODUCT="${MINIRHIS_INSTALL_PRODUCT:-}"
+MINIRHIS_PLATFORM_FAMILY="${MINIRHIS_PLATFORM_FAMILY:-virtual}"
 
 LIBVIRT_URI="${LIBVIRT_URI:-qemu:///system}"
 LIBVIRT_STORAGE_POOL="${LIBVIRT_STORAGE_POOL:-default}"
@@ -322,34 +323,34 @@ VM_DISK_PERF_MODE="${VM_DISK_PERF_MODE:-fast}"
 AAP_FW_RULE_ADDED=""
 
 # SSH callback orchestration for AAP post-boot setup
-AAP_SSH_KEY_DIR="${AAP_SSH_KEY_DIR:-${HOME}/.ssh/rhis-aap}"
+AAP_SSH_KEY_DIR="${AAP_SSH_KEY_DIR:-${HOME}/.ssh/minirhis-aap}"
 AAP_SSH_PRIVATE_KEY="${AAP_SSH_KEY_DIR}/id_rsa"
 AAP_SSH_PUBLIC_KEY="${AAP_SSH_KEY_DIR}/id_rsa.pub"
 AAP_SETUP_LOG_LOCAL="${AAP_SETUP_LOG_LOCAL:-/tmp/aap-setup-$(date +%s).log}"
-RHIS_VM_MONITOR_SESSION="${RHIS_VM_MONITOR_SESSION:-rhis-vm-consoles}"
-RHIS_VM_MONITOR_PID_FILE="${RHIS_VM_MONITOR_PID_FILE:-/tmp/rhis-vm-console-pids-${USER}}"
-RHIS_VM_WATCHDOG_PID=""
+MINIRHIS_VM_MONITOR_SESSION="${MINIRHIS_VM_MONITOR_SESSION:-minirhis-vm-consoles}"
+MINIRHIS_VM_MONITOR_PID_FILE="${MINIRHIS_VM_MONITOR_PID_FILE:-/tmp/minirhis-vm-console-pids-${USER}}"
+MINIRHIS_VM_WATCHDOG_PID=""
 # VM console monitor noise filter controls
 # 1 = suppress expected reboot chatter (e.g., journald SIGTERM during reboot)
-RHIS_VM_MONITOR_FILTER_NOISE="${RHIS_VM_MONITOR_FILTER_NOISE:-1}"
+MINIRHIS_VM_MONITOR_FILTER_NOISE="${MINIRHIS_VM_MONITOR_FILTER_NOISE:-1}"
 # rc.local bootstrap controls
 # 1 = ensure /etc/rc.d/rc.local is executable during kickstart/bootstrap
-RHIS_TEMP_ENABLE_RC_LOCAL_EXEC="${RHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}"
+MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC="${MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}"
 # 1 = revert /etc/rc.d/rc.local to non-executable after full install workflow
-RHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL="${RHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL:-1}"
+MINIRHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL="${MINIRHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL:-1}"
 # Guardrail: disable AAP SSH callback probing unless explicitly enabled by the
 # VM provisioning/callback workflow path.
 AAP_SSH_CALLBACK_ENABLED="${AAP_SSH_CALLBACK_ENABLED:-0}"
-# Dedicated persistent installer-host key used by RHIS mesh operations.
-# Keeps RHIS traffic isolated from the operator's default ~/.ssh/id_rsa identity.
-RHIS_INSTALLER_SSH_KEY_DIR="${RHIS_INSTALLER_SSH_KEY_DIR:-${HOME}/.ssh/rhis-installer}"
-RHIS_INSTALLER_SSH_PRIVATE_KEY="${RHIS_INSTALLER_SSH_KEY_DIR}/id_rsa"
-RHIS_INSTALLER_SSH_PUBLIC_KEY="${RHIS_INSTALLER_SSH_KEY_DIR}/id_rsa.pub"
-# Container-side mount path for the RHIS installer SSH key (read-only).
-RHIS_INSTALLER_SSH_KEY_CONTAINER_DIR="/rhis/vars/ssh"
-RHIS_INSTALLER_SSH_KEY_CONTAINER_PATH="${RHIS_INSTALLER_SSH_KEY_CONTAINER_DIR}/id_rsa"
-# If enabled, prune/reseed known_hosts entries for RHIS node IPs/hostnames each run.
-RHIS_REFRESH_KNOWN_HOSTS="${RHIS_REFRESH_KNOWN_HOSTS:-1}"
+# Dedicated persistent installer-host key used by MINIRHIS mesh operations.
+# Keeps MINIRHIS traffic isolated from the operator's default ~/.ssh/id_rsa identity.
+MINIRHIS_INSTALLER_SSH_KEY_DIR="${MINIRHIS_INSTALLER_SSH_KEY_DIR:-${HOME}/.ssh/minirhis-installer}"
+MINIRHIS_INSTALLER_SSH_PRIVATE_KEY="${MINIRHIS_INSTALLER_SSH_KEY_DIR}/id_rsa"
+MINIRHIS_INSTALLER_SSH_PUBLIC_KEY="${MINIRHIS_INSTALLER_SSH_KEY_DIR}/id_rsa.pub"
+# Container-side mount path for the MINIRHIS installer SSH key (read-only).
+MINIRHIS_INSTALLER_SSH_KEY_CONTAINER_DIR="/minirhis/vars/ssh"
+MINIRHIS_INSTALLER_SSH_KEY_CONTAINER_PATH="${MINIRHIS_INSTALLER_SSH_KEY_CONTAINER_DIR}/id_rsa"
+# If enabled, prune/reseed known_hosts entries for MINIRHIS node IPs/hostnames each run.
+MINIRHIS_REFRESH_KNOWN_HOSTS="${MINIRHIS_REFRESH_KNOWN_HOSTS:-1}"
 # Fail fast when SSH port is reachable but key auth repeatedly fails.
 # 18 attempts * 10s = ~3 minutes (after SSH becomes reachable).
 AAP_SSH_KEY_FAIL_FAST_ATTEMPTS="${AAP_SSH_KEY_FAIL_FAST_ATTEMPTS:-18}"
@@ -358,7 +359,7 @@ AAP_SSH_WAIT_TIMEOUT="${AAP_SSH_WAIT_TIMEOUT:-5400}"
 AAP_SSH_WAIT_INTERVAL="${AAP_SSH_WAIT_INTERVAL:-10}"
 AAP_SSH_PROGRESS_EVERY="${AAP_SSH_PROGRESS_EVERY:-30}"
 # If there is no observed callback-stage progress for this long, fail fast.
-AAP_SSH_NO_PROGRESS_TIMEOUT="${AAP_SSH_NO_PROGRESS_TIMEOUT:-900}"
+AAP_SSH_NO_PROGRESS_TIMEOUT="${AAP_SSH_NO_PROGRESS_TIMEOUT:-5400}"
 
 # ─── Core logging and retry controls ──────────────────────────────────────────
 sanitize_log_message() {
@@ -371,13 +372,13 @@ sanitize_log_message() {
 }
 
 # Retries count and interval for provisioner container restart attempts.
-RHIS_CONTAINER_RESTART_RETRIES="${RHIS_CONTAINER_RESTART_RETRIES:-2}"
-RHIS_CONTAINER_RESTART_INTERVAL="${RHIS_CONTAINER_RESTART_INTERVAL:-10}"
+MINIRHIS_CONTAINER_RESTART_RETRIES="${MINIRHIS_CONTAINER_RESTART_RETRIES:-2}"
+MINIRHIS_CONTAINER_RESTART_INTERVAL="${MINIRHIS_CONTAINER_RESTART_INTERVAL:-10}"
 # DEMOKILL console behavior controls
 # 1 = compact one-line progress messages for DEMOKILL
-RHIS_DEMOKILL_COMPACT="${RHIS_DEMOKILL_COMPACT:-1}"
+MINIRHIS_DEMOKILL_COMPACT="${MINIRHIS_DEMOKILL_COMPACT:-1}"
 # 1 = run terminal reset after DEMOKILL (enabled by default)
-RHIS_DEMOKILL_RESET_TERMINAL="${RHIS_DEMOKILL_RESET_TERMINAL:-1}"
+MINIRHIS_DEMOKILL_RESET_TERMINAL="${MINIRHIS_DEMOKILL_RESET_TERMINAL:-1}"
 
 print_step() {
     local msg
@@ -394,9 +395,9 @@ print_success() {
 print_warning() {
     local msg
     msg="$(sanitize_log_message "$*")"
-    if is_enabled "${RHIS_TEST_MODE:-0}"; then
-        RHIS_TEST_WARNING_COUNT=$((RHIS_TEST_WARNING_COUNT + 1))
-        printf '%s\n' "${msg}" >> "${RHIS_TEST_WARNING_FILE}"
+    if is_enabled "${MINIRHIS_TEST_MODE:-0}"; then
+        MINIRHIS_TEST_WARNING_COUNT=$((MINIRHIS_TEST_WARNING_COUNT + 1))
+        printf '%s\n' "${msg}" >> "${MINIRHIS_TEST_WARNING_FILE}"
     fi
     echo -e "${YELLOW}[WARNING]${NC} ${msg}"
 }
@@ -409,24 +410,24 @@ print_phase() {
     echo -e "${CYAN}[PHASE ${index}/${total}]${NC} ${BOLD}${label}${NC}"
 }
 
-ensure_rhis_installer_ssh_key() {
-    mkdir -p "${RHIS_INSTALLER_SSH_KEY_DIR}" >/dev/null 2>&1 || true
-    chmod 700 "${RHIS_INSTALLER_SSH_KEY_DIR}" >/dev/null 2>&1 || true
+ensure_minirhis_installer_ssh_key() {
+    mkdir -p "${MINIRHIS_INSTALLER_SSH_KEY_DIR}" >/dev/null 2>&1 || true
+    chmod 700 "${MINIRHIS_INSTALLER_SSH_KEY_DIR}" >/dev/null 2>&1 || true
 
-    if [ ! -f "${RHIS_INSTALLER_SSH_PRIVATE_KEY}" ]; then
-        ssh-keygen -q -t rsa -b 4096 -N "" -f "${RHIS_INSTALLER_SSH_PRIVATE_KEY}" -C "rhis-installer-host" >/dev/null 2>&1 || return 1
+    if [ ! -f "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}" ]; then
+        ssh-keygen -q -t rsa -b 4096 -N "" -f "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}" -C "minirhis-installer-host" >/dev/null 2>&1 || return 1
     fi
 
-    chmod 600 "${RHIS_INSTALLER_SSH_PRIVATE_KEY}" >/dev/null 2>&1 || true
-    chmod 644 "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" >/dev/null 2>&1 || true
+    chmod 600 "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}" >/dev/null 2>&1 || true
+    chmod 644 "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" >/dev/null 2>&1 || true
     return 0
 }
 
-refresh_rhis_known_hosts() {
+refresh_minirhis_known_hosts() {
     local host
-    local -a rhis_hosts
+    local -a minirhis_hosts
 
-    if ! is_enabled "${RHIS_REFRESH_KNOWN_HOSTS:-1}"; then
+    if ! is_enabled "${MINIRHIS_REFRESH_KNOWN_HOSTS:-1}"; then
         return 0
     fi
 
@@ -434,19 +435,19 @@ refresh_rhis_known_hosts() {
     touch "${HOME}/.ssh/known_hosts" >/dev/null 2>&1 || true
     chmod 600 "${HOME}/.ssh/known_hosts" >/dev/null 2>&1 || true
 
-    rhis_hosts=(
+    minirhis_hosts=(
         "${SAT_IP:-}" "${AAP_IP:-}" "${IDM_IP:-}"
         "${SAT_HOSTNAME:-}" "${AAP_HOSTNAME:-}" "${IDM_HOSTNAME:-}"
     )
 
-    for host in "${rhis_hosts[@]}"; do
+    for host in "${minirhis_hosts[@]}"; do
         [ -n "${host}" ] || continue
         ssh-keygen -R "${host}" -f "${HOME}/.ssh/known_hosts" >/dev/null 2>&1 || true
         ssh-keyscan -H -T 3 "${host}" >> "${HOME}/.ssh/known_hosts" 2>/dev/null || true
     done
 }
 
-# Remove stale SSH trust entries for rebuilt RHIS nodes before provisioning.
+# Remove stale SSH trust entries for rebuilt MINIRHIS nodes before provisioning.
 # This clears host key fingerprints from known_hosts and prunes matching
 # hostname/IP comment lines from the local authorized_keys file.
 prune_local_ssh_trust_for_component() {
@@ -520,19 +521,19 @@ prune_local_ssh_trust_for_component() {
     return 0
 }
 
-init_rhis_run_logging() {
+init_minirhis_run_logging() {
     local run_ts target_dir log_file
 
     # Idempotent guard for re-entry.
-    if [ "${RHIS_LOG_STDIO_REDIRECTED:-0}" = "1" ]; then
+    if [ "${MINIRHIS_LOG_STDIO_REDIRECTED:-0}" = "1" ]; then
         return 0
     fi
 
-    target_dir="${RHIS_RUN_LOG_DIR:-/var/log/RHIS}"
+    target_dir="${MINIRHIS_RUN_LOG_DIR:-/var/log/MINIRHIS}"
     run_ts="$(date +%Y%m%d-%H%M%S)"
     log_file="${target_dir}/install_${run_ts}.log"
 
-    # Ensure /var/log/RHIS exists; requires elevated permissions on most systems.
+    # Ensure /var/log/MINIRHIS exists; requires elevated permissions on most systems.
     if [ ! -d "${target_dir}" ]; then
         if ! sudo mkdir -p "${target_dir}" 2>/dev/null; then
             print_warning "Could not create ${target_dir}; run logging disabled for this invocation."
@@ -553,34 +554,34 @@ init_rhis_run_logging() {
     sudo chown "${USER}:${USER}" "${log_file}" >/dev/null 2>&1 || true
     sudo chmod 0644 "${log_file}" >/dev/null 2>&1 || true
 
-    RHIS_RUN_LOG_FILE="${log_file}"
-    export RHIS_RUN_LOG_FILE
-    export RHIS_LOG_STDIO_REDIRECTED=1
+    MINIRHIS_RUN_LOG_FILE="${log_file}"
+    export MINIRHIS_RUN_LOG_FILE
+    export MINIRHIS_LOG_STDIO_REDIRECTED=1
 
     # Mirror all script output to console and a per-run logfile.
-    exec > >(tee -a "${RHIS_RUN_LOG_FILE}") 2>&1
+    exec > >(tee -a "${MINIRHIS_RUN_LOG_FILE}") 2>&1
 
-    ln -sfn "${RHIS_RUN_LOG_FILE}" "${target_dir}/latest.log" >/dev/null 2>&1 || true
-    print_step "RHIS run logging enabled: ${RHIS_RUN_LOG_FILE}"
+    ln -sfn "${MINIRHIS_RUN_LOG_FILE}" "${target_dir}/latest.log" >/dev/null 2>&1 || true
+    print_step "MINIRHIS run logging enabled: ${MINIRHIS_RUN_LOG_FILE}"
 
-    prune_rhis_run_logs || true
+    prune_minirhis_run_logs || true
 }
 
-prune_rhis_run_logs() {
+prune_minirhis_run_logs() {
     local target_dir retention_days
 
-    target_dir="${RHIS_RUN_LOG_DIR:-/var/log/RHIS}"
-    retention_days="${RHIS_RUN_LOG_RETENTION_DAYS:-20}"
+    target_dir="${MINIRHIS_RUN_LOG_DIR:-/var/log/MINIRHIS}"
+    retention_days="${MINIRHIS_RUN_LOG_RETENTION_DAYS:-20}"
 
     case "${retention_days}" in
         ''|*[!0-9]*)
-            print_warning "Invalid RHIS_RUN_LOG_RETENTION_DAYS='${retention_days}'; skipping log pruning."
+            print_warning "Invalid MINIRHIS_RUN_LOG_RETENTION_DAYS='${retention_days}'; skipping log pruning."
             return 0
             ;;
     esac
 
     [ "${retention_days}" -ge 0 ] || {
-        print_warning "RHIS_RUN_LOG_RETENTION_DAYS must be >= 0; skipping log pruning."
+        print_warning "MINIRHIS_RUN_LOG_RETENTION_DAYS must be >= 0; skipping log pruning."
         return 0
     }
 
@@ -591,7 +592,7 @@ prune_rhis_run_logs() {
             rm -f "${old_log}" >/dev/null 2>&1 || sudo rm -f "${old_log}" >/dev/null 2>&1 || true
         done
 
-    print_step "Pruned RHIS run logs older than ${retention_days} day(s) in ${target_dir}."
+    print_step "Pruned MINIRHIS run logs older than ${retention_days} day(s) in ${target_dir}."
     return 0
 }
 
@@ -601,22 +602,26 @@ Usage: $(basename "$0") [options]
 
 Options:
   --non-interactive        Run without prompts; required values must be preseeded
-        --menu-choice <0-6>      Preselect a menu option (1 = RHIS Full Stack, 4 = Prompts Only)
+        --menu-choice <0-6>      Preselect a menu option (1 = MINIRHIS Full Stack, 4 = Prompts Only)
   --env-file <path>        Load preseed variables from a custom env file
   --inventory <template>   Pin AAP inventory template; skips interactive submenu
   --inventory-growth <tpl> Pin AAP inventory-growth template; skips interactive submenu
+    --enterprise             Force AAP enterprise template selection (inventory.j2)
+    --standalone             Force AAP standalone template selection (inventory-growth.j2)
                            Interactive (no --non-interactive): a guided submenu with
                            About pages is presented when template values are unset.
                            --DEMO always forces DEMO-inventory.j2 and skips the submenu.
+                                                     --enterprise and --standalone are mutually exclusive and
+                                                     cannot be combined with --DEMO.
     --container-config-only  Start full-stack flow (auto-provision if needed, then IdM -> Satellite -> AAP)
     --local                  Prefer local ${USER} repo execution for reruns/fallbacks (uses container/roles)
-    --container              Prefer rhis_provisioner execution context (default)
-    --rhis                   Run full stack workflow (IdM -> Satellite -> AAP)
+    --container              Prefer minirhis_provisioner execution context (default)
+    --minirhis                   Run full stack workflow (IdM -> Satellite -> AAP)
     --satellite              Run Satellite 6.18-only workflow (standalone submenu)
     --idm                    Run IdM 5.0-only workflow (standalone submenu)
     --aap                    Run AAP 2.6-only workflow (standalone submenu)
 
-    Platform Selection (use with --rhis/--satellite/--idm/--aap or --menu-choice 4; default: --libvirt)
+    Platform Selection (use with --minirhis/--satellite/--idm/--aap or --menu-choice 4; default: --libvirt)
     --libvirt                Target libvirt/KVM (local virtualization, default)
     --baremetal              Target bare metal (planned)
     --aws                    Target AWS cloud (planned)
@@ -632,26 +637,27 @@ Options:
   --reconfigure            Prompt for all env values and update env.yml
     --menutest              Interactive menu walkthrough (no provisioning/actions)
   --test[=fast|full]       Run a curated non-interactive test sweep and print a summary
-    --DEMO                   Use minimal PoC/demo VM specs and kickstarts
+    --DEMO                   Use reduced per-node VM specs/kickstarts for MiniRHIS 3-node stack
+                             (1 IdM + 1 Satellite + 1 AAP server)
     --DEMOKILL               Destroy demo VMs/files/temp locks and exit (CLI-only)
     --validate [--menu-choice N]  Pre-flight check: required vars, tools, storage, memory,
                                                      SSH keys, network/FQDN format, CDN and DNS reachability.
                                                      Use together with --env-file to validate a headless env file.
     --generate-env [path]    Write a headless env-file template to <path> (default:
-                                                     ./rhis-headless.env.template). Copy and fill in values,
+                                                     ./minirhis-headless.env.template). Copy and fill in values,
                                                      then run with: --non-interactive --env-file <path> --menu-choice N
-    (env) RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0  Disable auto config after menu option 2
-  (env) RHIS_RETRY_FAILED_PHASES_ONCE=0       Disable automatic retry of failed phases
-    (env) RHIS_ENABLE_CONTAINER_HOTFIXES=0      Disable runtime role hotfix patching in container
-    (env) RHIS_ENFORCE_CONTAINER_HOTFIXES=0     Do not fail when hotfix verification cannot be confirmed
-    (env) RHIS_MANAGED_SSH_OVER_ETH0=1          Prefer external/NAT (eth0) addresses for managed-node Ansible SSH
-    (env) RHIS_ENABLE_POST_HEALTHCHECK=0        Disable post-install healthchecks (IdM/Satellite/AAP)
-    (env) RHIS_HEALTHCHECK_AUTOFIX=0            Disable automatic healthcheck remediation attempts
-    (env) RHIS_HEALTHCHECK_RERUN_COMPONENT=0    Disable targeted component rerun after healthcheck failure
-    (env) RHIS_SAT_HEALTHCHECK_RETRIES=N        Satellite hammer/API retry attempts after service restart (default: 5)
-    (env) RHIS_SAT_HEALTHCHECK_INTERVAL=SEC     Seconds between Satellite hammer/API retries (default: 15)
-    (env) RHIS_REFRESH_KNOWN_HOSTS=0            Do not refresh RHIS node host keys in ~/.ssh/known_hosts
-    (env) RHIS_INSTALLER_SSH_KEY_DIR=<path>     Override dedicated persistent RHIS installer SSH key directory
+    (env) MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0  Disable auto config after menu option 2
+  (env) MINIRHIS_RETRY_FAILED_PHASES_ONCE=0       Disable automatic retry of failed phases
+    (env) MINIRHIS_ENABLE_CONTAINER_HOTFIXES=0      Disable runtime role hotfix patching in container
+    (env) MINIRHIS_ENFORCE_CONTAINER_HOTFIXES=0     Do not fail when hotfix verification cannot be confirmed
+    (env) MINIRHIS_MANAGED_SSH_OVER_ETH0=1          Deprecated/ignored: MINIRHIS enforces managed-node SSH over 10.168.x.x
+    (env) MINIRHIS_ENABLE_POST_HEALTHCHECK=0        Disable post-install healthchecks (IdM/Satellite/AAP)
+    (env) MINIRHIS_HEALTHCHECK_AUTOFIX=0            Disable automatic healthcheck remediation attempts
+    (env) MINIRHIS_HEALTHCHECK_RERUN_COMPONENT=0    Disable targeted component rerun after healthcheck failure
+    (env) MINIRHIS_SAT_HEALTHCHECK_RETRIES=N        Satellite hammer/API retry attempts after service restart (default: 5)
+    (env) MINIRHIS_SAT_HEALTHCHECK_INTERVAL=SEC     Seconds between Satellite hammer/API retries (default: 15)
+    (env) MINIRHIS_REFRESH_KNOWN_HOSTS=0            Do not refresh MINIRHIS node host keys in ~/.ssh/known_hosts
+    (env) MINIRHIS_INSTALLER_SSH_KEY_DIR=<path>     Override dedicated persistent MINIRHIS installer SSH key directory
     (env) RHC_AUTO_CONNECT=0                    Disable automatic rhc connect in guest kickstarts
   --help                   Show this help message
 EOF
@@ -707,7 +713,7 @@ write_file_if_changed() {
     local owner="${4:-}"
     local dest_dir
 
-    RHIS_LAST_WRITE_CHANGED=0
+    MINIRHIS_LAST_WRITE_CHANGED=0
 
     [ -f "$src" ] || {
         print_warning "write_file_if_changed: source file not found: $src"
@@ -740,7 +746,7 @@ write_file_if_changed() {
     fi
 
     rm -f "$src"
-    RHIS_LAST_WRITE_CHANGED=1
+    MINIRHIS_LAST_WRITE_CHANGED=1
     print_success "Generated file updated: $dest"
     return 0
 }
@@ -814,13 +820,13 @@ print_kickstart_effective_values() {
 
 kickstart_nogpg_policy_block() {
     cat <<'EOF'
-# RHIS policy: disable package signature checks for all dnf/yum repo operations.
+# MINIRHIS policy: disable package signature checks for all dnf/yum repo operations.
 mkdir -p /etc/dnf
 if [ -f /etc/dnf/dnf.conf ]; then
     if ! grep -q '^gpgcheck=0$' /etc/dnf/dnf.conf; then
         cat >> /etc/dnf/dnf.conf <<'EOF_DNF_GPG'
 
-# RHIS override: disable GPG checks
+# MINIRHIS override: disable GPG checks
 gpgcheck=0
 repo_gpgcheck=0
 localpkg_gpgcheck=0
@@ -837,7 +843,7 @@ kickstart_ssh_baseline_block() {
 ks_log "Phase 1.1: Configure SSH baseline"
 mkdir -p /etc/ssh/sshd_config.d
 mkdir -p /etc/ssh/ssh_config.d
-cat > /etc/ssh/sshd_config.d/99-rhis-root.conf <<'EOF_SSHD'
+cat > /etc/ssh/sshd_config.d/99-minirhis-root.conf <<'EOF_SSHD'
 PermitRootLogin yes
 PasswordAuthentication yes
 PubkeyAuthentication yes
@@ -845,7 +851,7 @@ X11Forwarding yes
 UseDNS no
 EOF_SSHD
 
-cat > /etc/ssh/ssh_config.d/99-rhis-client.conf <<'EOF_SSH'
+cat > /etc/ssh/ssh_config.d/99-minirhis-client.conf <<'EOF_SSH'
 Host *
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
@@ -863,7 +869,7 @@ fi
 
 # Reduce rc.local generator noise during repeated bootstrap/reboot cycles.
 # Keep this temporary; host workflow will revert to non-executable at the end.
-if [ "${RHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}" = "1" ]; then
+if [ "${MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}" = "1" ]; then
     if [ ! -f /etc/rc.d/rc.local ]; then
         cat > /etc/rc.d/rc.local <<'EOF_RCLOCAL'
 #!/bin/bash
@@ -891,8 +897,8 @@ for grp in libvirt qemu kvm wheel foreman; do
 done
 usermod -aG libvirt,qemu,kvm,wheel,foreman "$target_user" || true
 sed -i -E 's/^#?[[:space:]]*%wheel[[:space:]]+ALL=\(ALL\)[[:space:]]+ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || true
-printf '%s\n' "$target_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-rhis-nopasswd
-chmod 0440 /etc/sudoers.d/90-rhis-nopasswd
+printf '%s\n' "$target_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-minirhis-nopasswd
+chmod 0440 /etc/sudoers.d/90-minirhis-nopasswd
 visudo -cf /etc/sudoers >/dev/null 2>&1 || true
 EOF
 }
@@ -978,19 +984,19 @@ curl -s -o /dev/null -w "%{http_code} connect=%{time_connect}s total=%{time_tota
 
 # If %post chroot has no real interfaces/default route, try running RHSM calls
 # in PID 1 network namespace (installer environment) while keeping target root.
-RHIS_SM_REGISTER_CMD="subscription-manager register"
+MINIRHIS_SM_REGISTER_CMD="subscription-manager register"
 if ! ip -4 -br addr show | awk '{print $1}' | grep -qvE '^(lo)$' || ! ip route show | grep -q '^default'; then
     if command -v nsenter >/dev/null 2>&1 && [ -r /proc/1/ns/net ]; then
         ks_log "RHSM prereq: enabling nsenter network namespace fallback for subscription-manager"
-        RHIS_SM_REGISTER_CMD="nsenter -t 1 -n subscription-manager register"
+        MINIRHIS_SM_REGISTER_CMD="nsenter -t 1 -n subscription-manager register"
     else
         ks_log "RHSM prereq: nsenter unavailable; continuing without netns fallback"
     fi
 fi
 
-rhis_sm_register() {
+minirhis_sm_register() {
     # shellcheck disable=SC2086
-    eval "${RHIS_SM_REGISTER_CMD} $*"
+    eval "${MINIRHIS_SM_REGISTER_CMD} $*"
 }
 register_rhsm() {
     local try
@@ -1004,13 +1010,13 @@ EOF
         # Primary: username/password (SCA-compatible — no subscription attachment required)
         if [ -n "${RH_USER:-}" ] && [ -n "${RH_PASS:-}" ]; then
             ks_log "  Method 1: username/password registration..."
-            _sm_out=$(rhis_sm_register --username="${RH_USER}" --password="${RH_PASS}" --force 2>&1) && _sm_rc=0 || _sm_rc=$?
+            _sm_out=$(minirhis_sm_register --username="${RH_USER}" --password="${RH_PASS}" --force 2>&1) && _sm_rc=0 || _sm_rc=$?
             while IFS= read -r _l; do ks_log "    sm: ${_l}"; done <<< "${_sm_out}"
             if [ "${_sm_rc}" -eq 0 ]; then return 0; fi
             subscription-manager clean >/dev/null 2>&1 || true
             if [ -n "${CDN_ORGANIZATION_ID:-}" ]; then
                 ks_log "  Method 2: username/password with org ${CDN_ORGANIZATION_ID}..."
-                _sm_out=$(rhis_sm_register --username="${RH_USER}" --password="${RH_PASS}" --org="${CDN_ORGANIZATION_ID}" --force 2>&1) && _sm_rc=0 || _sm_rc=$?
+                _sm_out=$(minirhis_sm_register --username="${RH_USER}" --password="${RH_PASS}" --org="${CDN_ORGANIZATION_ID}" --force 2>&1) && _sm_rc=0 || _sm_rc=$?
                 while IFS= read -r _l; do ks_log "    sm: ${_l}"; done <<< "${_sm_out}"
                 if [ "${_sm_rc}" -eq 0 ]; then return 0; fi
                 subscription-manager clean >/dev/null 2>&1 || true
@@ -1019,7 +1025,7 @@ EOF
         # Fallback: activation key
         if [ -n "${CDN_ORGANIZATION_ID:-}" ] && [ -n "${CDN_SAT_ACTIVATION_KEY:-}" ]; then
             ks_log "  Method 3: activation-key for org ${CDN_ORGANIZATION_ID}..."
-            _sm_out=$(rhis_sm_register --org="${CDN_ORGANIZATION_ID}" --activationkey="${CDN_SAT_ACTIVATION_KEY}" --force 2>&1) && _sm_rc=0 || _sm_rc=$?
+            _sm_out=$(minirhis_sm_register --org="${CDN_ORGANIZATION_ID}" --activationkey="${CDN_SAT_ACTIVATION_KEY}" --force 2>&1) && _sm_rc=0 || _sm_rc=$?
             while IFS= read -r _l; do ks_log "    sm: ${_l}"; done <<< "${_sm_out}"
             if [ "${_sm_rc}" -eq 0 ]; then return 0; fi
             subscription-manager clean >/dev/null 2>&1 || true
@@ -1028,7 +1034,7 @@ EOF
     else
         cat <<'EOF'
         echo "  Attempting username/password registration (no org)..."
-        _sm_out=$(rhis_sm_register --username="${RH_USER}" --password="${RH_PASS}" --auto-attach --force 2>&1) && _sm_rc=0 || _sm_rc=$?
+        _sm_out=$(minirhis_sm_register --username="${RH_USER}" --password="${RH_PASS}" --auto-attach --force 2>&1) && _sm_rc=0 || _sm_rc=$?
         while IFS= read -r _l; do ks_log "    sm: ${_l}"; done <<< "${_sm_out}"
         if [ "${_sm_rc}" -eq 0 ]; then return 0; fi
 EOF
@@ -1109,7 +1115,7 @@ kickstart_repo_enable_verify_block() {
     printf '%s\n' 'dnf makecache --refresh || true'
     printf '\n'
 
-    printf '%s\n' 'for repo in \\'
+    printf '%s\n' 'for repo in \'
     for ((i=0; i<${#repos[@]}; i++)); do
         if [ "$i" -lt $(( ${#repos[@]} - 1 )) ]; then
             printf '    %s \\\n' "${repos[$i]}"
@@ -1125,7 +1131,7 @@ kickstart_repo_enable_verify_block() {
     printf '%s\n' '    fi'
     printf '%s\n' 'done'
     printf 'echo "INFO: %s enabled repositories after registration:"\n' "$role_label"
-    printf '%s\n' "subscription-manager repos --list-enabled 2>/dev/null | awk -F': *' '/Repo ID:/ {print \"  - \" \\$2}' || true"
+    printf '%s\n' "subscription-manager repos --list-enabled 2>/dev/null | sed -n 's/^Repo ID:[[:space:]]*/  - /p' || true"
     printf '%s\n' 'dnf repolist || true'
 }
 
@@ -1162,7 +1168,7 @@ EOF
 
 kickstart_runtime_exports_block() {
     local bootstrap_keys_block="$1"
-    local installer_user_q admin_user_q admin_pass_q rh_user_q rh_pass_q domain_q host_int_ip_q defer_component_install_q rhis_temp_rc_local_q
+    local installer_user_q admin_user_q admin_pass_q rh_user_q rh_pass_q domain_q host_int_ip_q defer_component_install_q minirhis_temp_rc_local_q
     local cdn_org_q cdn_sat_key_q rhc_org_q rhc_key_q
 
     # Inside the kickstart %post the "installer user" is the remote admin account
@@ -1175,15 +1181,15 @@ kickstart_runtime_exports_block() {
     rh_pass_q="$(printf '%q' "${RH_PASS}")"
     domain_q="$(printf '%q' "${DOMAIN:-}")"
     host_int_ip_q="$(printf '%q' "${HOST_INT_IP:-192.168.122.1}")"
-    defer_component_install_q="$(printf '%q' "${RHIS_DEFER_COMPONENT_INSTALL:-1}")"
-    rhis_temp_rc_local_q="$(printf '%q' "${RHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}")"
+    defer_component_install_q="$(printf '%q' "${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}")"
+    minirhis_temp_rc_local_q="$(printf '%q' "${MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}")"
     cdn_org_q="$(printf '%q' "${CDN_ORGANIZATION_ID:-}")"
     cdn_sat_key_q="$(printf '%q' "${CDN_SAT_ACTIVATION_KEY:-}")"
     rhc_org_q="$(printf '%q' "${RHC_ORGANIZATION_ID:-${CDN_ORGANIZATION_ID:-}}")"
     rhc_key_q="$(printf '%q' "${RHC_ACTIVATION_KEY:-${CDN_SAT_ACTIVATION_KEY:-}}")"
 
     cat <<EOF
-# RHIS runtime values injected at kickstart generation time
+# MINIRHIS runtime values injected at kickstart generation time
 ADMIN_USER=${admin_user_q}
 ADMIN_PASS=${admin_pass_q}
 INSTALLER_USER=${installer_user_q}
@@ -1195,13 +1201,13 @@ CDN_ORGANIZATION_ID=${cdn_org_q}
 CDN_SAT_ACTIVATION_KEY=${cdn_sat_key_q}
 RHC_ORGANIZATION_ID=${rhc_org_q}
 RHC_ACTIVATION_KEY=${rhc_key_q}
-RHIS_DEFER_COMPONENT_INSTALL=${defer_component_install_q}
-RHIS_TEMP_ENABLE_RC_LOCAL_EXEC=${rhis_temp_rc_local_q}
-bootstrap_ssh_keys="\$(cat <<'RHIS_BOOTSTRAP_KEYS'
+MINIRHIS_DEFER_COMPONENT_INSTALL=${defer_component_install_q}
+MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC=${minirhis_temp_rc_local_q}
+bootstrap_ssh_keys="\$(cat <<'MINIRHIS_BOOTSTRAP_KEYS'
 ${bootstrap_keys_block}
-RHIS_BOOTSTRAP_KEYS
+MINIRHIS_BOOTSTRAP_KEYS
 )"
-export ADMIN_USER ADMIN_PASS INSTALLER_USER RH_USER RH_PASS DOMAIN HOST_INT_IP CDN_ORGANIZATION_ID CDN_SAT_ACTIVATION_KEY RHC_ORGANIZATION_ID RHC_ACTIVATION_KEY RHIS_DEFER_COMPONENT_INSTALL RHIS_TEMP_ENABLE_RC_LOCAL_EXEC bootstrap_ssh_keys
+export ADMIN_USER ADMIN_PASS INSTALLER_USER RH_USER RH_PASS DOMAIN HOST_INT_IP CDN_ORGANIZATION_ID CDN_SAT_ACTIVATION_KEY RHC_ORGANIZATION_ID RHC_ACTIVATION_KEY MINIRHIS_DEFER_COMPONENT_INSTALL MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC bootstrap_ssh_keys
 EOF
 }
 
@@ -1230,11 +1236,9 @@ mac-address=${ext_mac}
 
 [ipv4]
 method=auto
-# DHCP-provided DNS (virbr0 dnsmasq → host resolvers) + public resolver fallback.
-# The isolated internal bridge (10.168.x.x) does NOT serve DNS — excluded.
-dns=1.1.1.1;8.8.8.8;
-dns-search=${DOMAIN:-};
-dns-options=rotate;timeout:1;attempts:1;
+# DHCP primary with explicit resolver fallback for early bootstrap tasks.
+dns=10.168.0.1;1.1.1.1;8.8.8.8;
+dns-options=rotate;
 ignore-auto-dns=false
 
 [ipv6]
@@ -1265,7 +1269,7 @@ EOF_NM_ETH1
 
 chmod 600 /etc/NetworkManager/system-connections/eth0.nmconnection /etc/NetworkManager/system-connections/eth1.nmconnection
 
-cat > /etc/NetworkManager/conf.d/10-rhis-no-auto-default.conf <<'EOF_NM_MAIN'
+cat > /etc/NetworkManager/conf.d/10-minirhis-no-auto-default.conf <<'EOF_NM_MAIN'
 [main]
 no-auto-default=${ext_mac},${int_mac}
 EOF_NM_MAIN
@@ -1280,48 +1284,36 @@ if [ ! -s /etc/resolv.conf ]; then
     printf 'nameserver 8.8.8.8\nnameserver 1.1.1.1\n' > /etc/resolv.conf || true
 fi
 
-# First-boot DNS finalisation: runs after NM is active so nmcli succeeds.
-# Domain and resolvers are embedded at kickstart-generation time (outer heredoc
-# expansion); only eth0 (external/internet NIC) is modified.
-cat > /usr/local/bin/rhis-set-dns.sh <<'EOF_RHIS_SET_DNS'
+# Dynamic DNS fallback: prefer gateways of the first two ethernet devices
+# This helps when device ordering varies; it will set the active connection's
+# IPv4 DNS list to GW1 GW2 8.8.8.8 1.1.1.1 and add search domain.
+cat > /usr/local/bin/minirhis-set-dns.sh <<'EOF_MINIRHIS_SET_DNS'
 #!/bin/bash
-# rhis-set-dns: configure eth0 DNS on first boot (NM must be running).
 set -euo pipefail
-GW1=\$(nmcli -g IP4.GATEWAY device show eth0 2>/dev/null | tr -d '[:space:]' || true)
-CON_NAME=\$(nmcli -g connection.id connection show eth0 2>/dev/null || true)
-DNS_LIST="8.8.8.8 1.1.1.1"
-[ -n "\${GW1:-}" ] && DNS_LIST="\${GW1} \${DNS_LIST}"
-DNS_SEARCH="${DOMAIN:-}"
-[ -z "\${CON_NAME:-}" ] && exit 0
-nmcli connection modify "\${CON_NAME}" \
-    ipv4.dns "\${DNS_LIST}" \
-    ipv4.dns-search "\${DNS_SEARCH}" \
-    ipv4.dns-options "rotate,timeout:1,attempts:1" \
-    ipv4.ignore-auto-dns yes || true
-nmcli connection up "\${CON_NAME}" || true
-EOF_RHIS_SET_DNS
+ETH_DEVS=(\$(nmcli -t -f DEVICE,TYPE device | grep ethernet | cut -d: -f1 | head -n2))
+GW1=""
+GW2=""
+if [ -n "\${ETH_DEVS[0]:-}" ]; then
+    GW1=\$(nmcli -g IP4.GATEWAY device show "\${ETH_DEVS[0]}" 2>/dev/null || true)
+fi
+if [ -n "\${ETH_DEVS[1]:-}" ]; then
+    GW2=\$(nmcli -g IP4.GATEWAY device show "\${ETH_DEVS[1]}" 2>/dev/null || true)
+fi
+CON_NAME=\$(nmcli -t -f NAME connection show --active | head -n1)
+DNS_LIST=""
+[ -n "\$GW1" ] && DNS_LIST="\$GW1"
+[ -n "\$GW2" ] && DNS_LIST="\$DNS_LIST \$GW2"
+DNS_LIST="\$DNS_LIST 8.8.8.8 1.1.1.1"
+# Use configured DOMAIN if available, fall back to example.com
+DNS_SEARCH="\${DOMAIN:-example.com}"
+if [ -n "\$CON_NAME" ]; then
+    nmcli connection modify "\$CON_NAME" ipv4.dns "\$DNS_LIST" ipv4.dns-search "\$DNS_SEARCH" ipv4.dns-options "rotate,timeout:1,attempts:1" ipv4.ignore-auto-dns yes || true
+    nmcli connection up "\$CON_NAME" || true
+fi
+EOF_MINIRHIS_SET_DNS
 
-chmod 0755 /usr/local/bin/rhis-set-dns.sh || true
-
-# Install as a one-shot first-boot service; %post runs in a chroot where
-# NM is not active, so we defer execution to systemd on first real boot.
-cat > /etc/systemd/system/rhis-set-dns.service <<'EOF_RHIS_SVC'
-[Unit]
-Description=RHIS DNS Bootstrap (first boot)
-After=network-online.target
-Wants=network-online.target
-ConditionPathExists=/usr/local/bin/rhis-set-dns.sh
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/rhis-set-dns.sh
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-EOF_RHIS_SVC
-
-systemctl enable rhis-set-dns.service || true
+chmod 0755 /usr/local/bin/minirhis-set-dns.sh || true
+/usr/local/bin/minirhis-set-dns.sh || true
 EOF
 }
 
@@ -1423,7 +1415,7 @@ kickstart_creator_baseline_block() {
     local node_ip="$3"
 
     cat <<EOF
-# RHIS creator baseline (shared across all kickstarted nodes)
+# MINIRHIS creator baseline (shared across all kickstarted nodes)
 # Ensures common tooling/services expected by creator/bootstrap automation.
 dnf install -y --nogpgcheck sudo openssh-clients rsync jq ansible-core || true
 systemctl enable --now chronyd || true
@@ -1452,149 +1444,27 @@ for _user in "${ADMIN_USER:-}" "${INSTALLER_USER:-}"; do
     install -d -m 0700 -o "$_user" -g "$_user" "$target_home/.ansible/tmp"
     install -d -m 0755 -o "$_user" -g "$_user" "$target_home/.ansible/collections"
     install -d -m 0755 -o "$_user" -g "$_user" "$target_home/.ansible/roles"
-    cat > "$target_home/.ansible.cfg" <<'RHIS_ANSIBLE_CFG'
+    cat > "$target_home/.ansible.cfg" <<'MINIRHIS_ANSIBLE_CFG'
 [defaults]
 local_tmp = ~/.ansible/tmp
 remote_tmp = ~/.ansible/tmp
 host_key_checking = False
 retry_files_enabled = False
-RHIS_ANSIBLE_CFG
+MINIRHIS_ANSIBLE_CFG
     chown "$_user:$_user" "$target_home/.ansible.cfg"
     chmod 0644 "$target_home/.ansible.cfg"
 done
 
-install -d -m 0755 /etc/rhis /var/lib/rhis /var/lib/rhis/creator
-cat > /etc/rhis/creator.env <<'RHIS_CREATOR_ENV'
-RHIS_CREATOR_MANAGED=1
-RHIS_ROLE=${role_name}
-RHIS_HOSTNAME=${node_hostname}
-RHIS_IP=${node_ip}
-RHIS_BOOTSTRAP_SOURCE=kickstart
-RHIS_BOOTSTRAP_VERSION=1
-RHIS_CREATOR_ENV
-chmod 0644 /etc/rhis/creator.env || true
-EOF
-}
-
-kickstart_services_directive_block() {
-    cat <<'EOF'
-services --enabled="NetworkManager,sshd,chronyd,qemu-guest-agent,tuned"
-EOF
-}
-
-kickstart_preflight_block() {
-    local role_name="$1"
-    local node_hostname="$2"
-    local ext_mac="$3"
-    local int_mac="$4"
-
-    cat <<EOF
-%pre --log=/tmp/ks-pre.log
-set -euxo pipefail
-
-echo "===== RHIS PRECHECK START ====="
-date
-cat /proc/cmdline || true
-lsblk || true
-ip link show || true
-ip route show || true
-nmcli device status || true
-
-cat > /tmp/rhis-preflight.env <<'RHIS_PREFLIGHT_ENV'
-RHIS_ROLE=${role_name}
-RHIS_HOSTNAME=${node_hostname}
-RHIS_EXT_MAC=${ext_mac}
-RHIS_INT_MAC=${int_mac}
-RHIS_PREFLIGHT_VERSION=1
-RHIS_PREFLIGHT_ENV
-
-for dev in eth0 eth1; do
-    ip link show "\$dev" >/dev/null 2>&1 || {
-        echo "ERROR: expected installer NIC \$dev is missing"
-        exit 1
-    }
-done
-
-echo "===== RHIS PRECHECK COMPLETE ====="
-%end
-EOF
-}
-
-kickstart_installer_log_capture_block() {
-    local role_name="$1"
-
-    cat <<EOF
-%post --nochroot --log=/mnt/sysimage/root/ks-post-nochroot.log
-set -euxo pipefail
-
-target_root=""
-for root_candidate in /mnt/sysimage /mnt/sysroot; do
-    if [ -d "\$root_candidate" ]; then
-        target_root="\$root_candidate"
-        break
-    fi
-done
-
-[ -n "\$target_root" ] || exit 0
-
-install_dir="\$target_root/var/log/rhis/install"
-mkdir -p "\$install_dir"
-
-for src in /tmp/ks-pre.log /tmp/anaconda.log /tmp/program.log /tmp/storage.log /tmp/packaging.log /tmp/syslog /tmp/rhis-preflight.env; do
-    [ -f "\$src" ] || continue
-    cp -f "\$src" "\$install_dir/\$(basename "\$src")"
-done
-
-cat > "\$install_dir/installer-capture.env" <<'RHIS_INSTALL_CAPTURE'
-RHIS_ROLE=${role_name}
-RHIS_INSTALL_CAPTURE=1
-RHIS_INSTALL_CAPTURE
-%end
-EOF
-}
-
-kickstart_post_install_baseline_block() {
-    local role_name="$1"
-    local node_hostname="$2"
-    local node_ip="$3"
-
-    cat <<EOF
-# RHIS persistent logging and readiness markers
-install -d -m 0755 /var/log/rhis/install /var/lib/rhis/state /var/log/journal /etc/systemd/journald.conf.d
-cat > /etc/systemd/journald.conf.d/99-rhis-persistent.conf <<'RHIS_JOURNALD'
-[Journal]
-Storage=persistent
-SystemMaxUse=512M
-RHIS_JOURNALD
-systemctl restart systemd-journald || true
-cp -f /root/ks-post.log /var/log/rhis/install/ks-post.log || true
-cp -f /root/ks-post-nochroot.log /var/log/rhis/install/ks-post-nochroot.log || true
-
-rhis_mark_state() {
-    local phase="\${1:-unknown}"
-    cat > /var/lib/rhis/state/kickstart-status.env <<'RHIS_STATUS'
-RHIS_ROLE=${role_name}
-RHIS_HOSTNAME=${node_hostname}
-RHIS_IP=${node_ip}
-RHIS_PHASE=\${phase}
-RHIS_UPDATED_AT=\$(date -Is 2>/dev/null || date)
-RHIS_STATUS
-    printf '%s\n' "\$phase" > /var/lib/rhis/state/kickstart.phase
-}
-
-rhis_mark_state "kickstart-post-started"
-systemctl enable NetworkManager sshd chronyd qemu-guest-agent tuned || true
-EOF
-}
-
-kickstart_ready_marker_block() {
-    local role_name="$1"
-
-    cat <<EOF
-rhis_mark_state "kickstart-post-complete"
-touch /var/log/rhis/install/${role_name}.kickstart-complete
-cp -f /root/ks-post.log /var/log/rhis/install/ks-post.log || true
-cp -f /root/ks-post-nochroot.log /var/log/rhis/install/ks-post-nochroot.log || true
+install -d -m 0755 /etc/minirhis /var/lib/minirhis /var/lib/minirhis/creator
+cat > /etc/minirhis/creator.env <<'MINIRHIS_CREATOR_ENV'
+MINIRHIS_CREATOR_MANAGED=1
+MINIRHIS_ROLE=${role_name}
+MINIRHIS_HOSTNAME=${node_hostname}
+MINIRHIS_IP=${node_ip}
+MINIRHIS_BOOTSTRAP_SOURCE=kickstart
+MINIRHIS_BOOTSTRAP_VERSION=1
+MINIRHIS_CREATOR_ENV
+chmod 0644 /etc/minirhis/creator.env || true
 EOF
 }
 
@@ -1606,20 +1476,20 @@ kickstart_perf_network_snapshot_block() {
 systemctl enable --now qemu-guest-agent || true
 systemctl enable --now tuned || true
 tuned-adm profile virtual-guest || true
-cat > /etc/sysctl.d/99-rhis-performance.conf <<'EOF_RHIS_PERF'
+cat > /etc/sysctl.d/99-minirhis-performance.conf <<'EOF_MINIRHIS_PERF'
 vm.swappiness = 10
 ${extra_sysctl_lines}
-EOF_RHIS_PERF
-sysctl -p /etc/sysctl.d/99-rhis-performance.conf || true
+EOF_MINIRHIS_PERF
+sysctl -p /etc/sysctl.d/99-minirhis-performance.conf || true
 
 # Network verification snapshot (for ks-post.log troubleshooting)
-echo "===== RHIS NETWORK SNAPSHOT ====="
+echo "===== MINIRHIS NETWORK SNAPSHOT ====="
 date
 ip -4 addr show eth0 || true
 ip -4 addr show eth1 || true
 ip route show || true
 nmcli -f NAME,DEVICE,TYPE,STATE connection show || true
-echo "===== END RHIS NETWORK SNAPSHOT ====="
+echo "===== END MINIRHIS NETWORK SNAPSHOT ====="
 EOF
 }
 
@@ -1638,20 +1508,15 @@ prepare_kickstart_shared_blocks() {
     shift 11
     local -a repos=("$@")
 
-    RHIS_KS_NOGPG_POLICY="$(kickstart_nogpg_policy_block)"
-    RHIS_KS_SSH_BASELINE="$(kickstart_ssh_baseline_block)"
-    RHIS_KS_USER_SUDO_BOOTSTRAP="$(kickstart_user_sudo_bootstrap_block "${role_name}")"
-    RHIS_KS_RHSM_REGISTER="$(kickstart_rhsm_register_block "${include_org_id}")"
-    RHIS_KS_RHC_CONNECT="$(kickstart_rhc_connect_block)"
-    RHIS_KS_REPO_ENABLE_VERIFY="$(kickstart_repo_enable_verify_block "${repo_role_label}" "${repos[@]}")"
-    RHIS_KS_NM_DUAL_NIC="$(kickstart_networkmanager_dual_nic_block "${ext_mac}" "${int_mac}" "${int_ip}" "${int_prefix}" "${int_gw}")"
-    RHIS_KS_TRUST_BOOTSTRAP_KEYS="$(kickstart_trust_bootstrap_keys_block "${trust_bootstrap_keys_flag}")"
-    RHIS_KS_CREATOR_BASELINE="$(kickstart_creator_baseline_block "${role_name}" "${node_hostname}" "${node_ip}")"
-    RHIS_KS_SERVICES_DIRECTIVE="$(kickstart_services_directive_block)"
-    RHIS_KS_PREFLIGHT="$(kickstart_preflight_block "${role_name}" "${node_hostname}" "${ext_mac}" "${int_mac}")"
-    RHIS_KS_INSTALLER_LOG_CAPTURE="$(kickstart_installer_log_capture_block "${role_name}")"
-    RHIS_KS_POST_INSTALL_BASELINE="$(kickstart_post_install_baseline_block "${role_name}" "${node_hostname}" "${node_ip}")"
-    RHIS_KS_READY_MARKER="$(kickstart_ready_marker_block "${role_name}")"
+    MINIRHIS_KS_NOGPG_POLICY="$(kickstart_nogpg_policy_block)"
+    MINIRHIS_KS_SSH_BASELINE="$(kickstart_ssh_baseline_block)"
+    MINIRHIS_KS_USER_SUDO_BOOTSTRAP="$(kickstart_user_sudo_bootstrap_block "${role_name}")"
+    MINIRHIS_KS_RHSM_REGISTER="$(kickstart_rhsm_register_block "${include_org_id}")"
+    MINIRHIS_KS_RHC_CONNECT="$(kickstart_rhc_connect_block)"
+    MINIRHIS_KS_REPO_ENABLE_VERIFY="$(kickstart_repo_enable_verify_block "${repo_role_label}" "${repos[@]}")"
+    MINIRHIS_KS_NM_DUAL_NIC="$(kickstart_networkmanager_dual_nic_block "${ext_mac}" "${int_mac}" "${int_ip}" "${int_prefix}" "${int_gw}")"
+    MINIRHIS_KS_TRUST_BOOTSTRAP_KEYS="$(kickstart_trust_bootstrap_keys_block "${trust_bootstrap_keys_flag}")"
+    MINIRHIS_KS_CREATOR_BASELINE="$(kickstart_creator_baseline_block "${role_name}" "${node_hostname}" "${node_ip}")"
 }
 
 print_runtime_configuration() {
@@ -1678,37 +1543,37 @@ print_runtime_configuration() {
     echo "  AAP_INVENTORY_GROWTH_TEMPLATE=${AAP_INVENTORY_GROWTH_TEMPLATE:-'(unset)'}"
     echo "  AAP_PG_DATABASE=${AAP_PG_DATABASE:-'(unset)'}"
     echo "  AAP_SSH_KEY_DIR=${AAP_SSH_KEY_DIR:-'(unset)'}"
-    echo "  RHIS_EXECUTION_MODE=${RHIS_EXECUTION_MODE:-container}"
-    echo "  RHIS_ANSIBLE_CFG_VAULT_HOST=${RHIS_ANSIBLE_CFG_VAULT_HOST}"
-    echo "  RHIS_ANSIBLE_CFG_HOST=${RHIS_ANSIBLE_CFG_HOST}"
-    echo "  RHIS_ANSIBLE_FACT_CACHE_HOST=${RHIS_ANSIBLE_FACT_CACHE_HOST}"
+    echo "  MINIRHIS_EXECUTION_MODE=${MINIRHIS_EXECUTION_MODE:-container}"
+    echo "  MINIRHIS_ANSIBLE_CFG_VAULT_HOST=${MINIRHIS_ANSIBLE_CFG_VAULT_HOST}"
+    echo "  MINIRHIS_ANSIBLE_CFG_HOST=${MINIRHIS_ANSIBLE_CFG_HOST}"
+    echo "  MINIRHIS_ANSIBLE_FACT_CACHE_HOST=${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}"
     echo "  AAP_ANSIBLE_LOG=${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}"
-    echo "  RHIS_RETRY_FAILED_PHASES_ONCE=${RHIS_RETRY_FAILED_PHASES_ONCE:-1}"
-    echo "  RHIS_ENABLE_CONTAINER_HOTFIXES=${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"
-    echo "  RHIS_ENFORCE_CONTAINER_HOTFIXES=${RHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"
-    echo "  RHIS_MANAGED_SSH_OVER_ETH0=${RHIS_MANAGED_SSH_OVER_ETH0:-0}"
-    echo "  RHIS_IDM_WEB_UI_TIMEOUT=${RHIS_IDM_WEB_UI_TIMEOUT:-900}"
-    echo "  RHIS_IDM_WEB_UI_INTERVAL=${RHIS_IDM_WEB_UI_INTERVAL:-15}"
-    echo "  RHIS_ENABLE_POST_HEALTHCHECK=${RHIS_ENABLE_POST_HEALTHCHECK:-1}"
-    echo "  RHIS_HEALTHCHECK_AUTOFIX=${RHIS_HEALTHCHECK_AUTOFIX:-1}"
-    echo "  RHIS_HEALTHCHECK_RERUN_COMPONENT=${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"
-    echo "  RHIS_SAT_HEALTHCHECK_RETRIES=${RHIS_SAT_HEALTHCHECK_RETRIES:-5}"
-    echo "  RHIS_SAT_HEALTHCHECK_INTERVAL=${RHIS_SAT_HEALTHCHECK_INTERVAL:-15}"
-    echo "  RHIS_REQUIRE_ROOT_SSH_MESH=${RHIS_REQUIRE_ROOT_SSH_MESH:-0}"
-    echo "  RHIS_REFRESH_KNOWN_HOSTS=${RHIS_REFRESH_KNOWN_HOSTS:-1}"
-    echo "  RHIS_INSTALLER_SSH_KEY_DIR=${RHIS_INSTALLER_SSH_KEY_DIR:-'(unset)'}"
-    echo "  RHIS_ENABLE_PRECHECK_ADHOC=${RHIS_ENABLE_PRECHECK_ADHOC:-0}"
+    echo "  MINIRHIS_RETRY_FAILED_PHASES_ONCE=${MINIRHIS_RETRY_FAILED_PHASES_ONCE:-1}"
+    echo "  MINIRHIS_ENABLE_CONTAINER_HOTFIXES=${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"
+    echo "  MINIRHIS_ENFORCE_CONTAINER_HOTFIXES=${MINIRHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"
+    echo "  MINIRHIS_MANAGED_SSH_OVER_ETH0=${MINIRHIS_MANAGED_SSH_OVER_ETH0:-0}"
+    echo "  MINIRHIS_IDM_WEB_UI_TIMEOUT=${MINIRHIS_IDM_WEB_UI_TIMEOUT:-900}"
+    echo "  MINIRHIS_IDM_WEB_UI_INTERVAL=${MINIRHIS_IDM_WEB_UI_INTERVAL:-15}"
+    echo "  MINIRHIS_ENABLE_POST_HEALTHCHECK=${MINIRHIS_ENABLE_POST_HEALTHCHECK:-1}"
+    echo "  MINIRHIS_HEALTHCHECK_AUTOFIX=${MINIRHIS_HEALTHCHECK_AUTOFIX:-1}"
+    echo "  MINIRHIS_HEALTHCHECK_RERUN_COMPONENT=${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"
+    echo "  MINIRHIS_SAT_HEALTHCHECK_RETRIES=${MINIRHIS_SAT_HEALTHCHECK_RETRIES:-5}"
+    echo "  MINIRHIS_SAT_HEALTHCHECK_INTERVAL=${MINIRHIS_SAT_HEALTHCHECK_INTERVAL:-15}"
+    echo "  MINIRHIS_REQUIRE_ROOT_SSH_MESH=${MINIRHIS_REQUIRE_ROOT_SSH_MESH:-0}"
+    echo "  MINIRHIS_REFRESH_KNOWN_HOSTS=${MINIRHIS_REFRESH_KNOWN_HOSTS:-1}"
+    echo "  MINIRHIS_INSTALLER_SSH_KEY_DIR=${MINIRHIS_INSTALLER_SSH_KEY_DIR:-'(unset)'}"
+    echo "  MINIRHIS_ENABLE_PRECHECK_ADHOC=${MINIRHIS_ENABLE_PRECHECK_ADHOC:-0}"
     echo "  RHC_AUTO_CONNECT=${RHC_AUTO_CONNECT:-1}"
     echo "  NETWORKS_ACTIVE=SAT(${SAT_IP:-10.168.128.1}/${SAT_NETMASK:-255.255.0.0} gw:${SAT_GW:-10.168.0.1}) AAP(${AAP_IP:-10.168.128.2}/${AAP_NETMASK:-255.255.0.0} gw:${AAP_GW:-10.168.0.1}) IDM(${IDM_IP:-10.168.128.3}/${IDM_NETMASK:-255.255.0.0} gw:${IDM_GW:-10.168.0.1})"
 }
 
-generate_rhis_ansible_cfg() {
+generate_minirhis_ansible_cfg() {
     local tmp_cfg
     local tmp_cfg_runtime
     local tmp_cfg_encrypted
 
-    mkdir -p "${ANSIBLE_ENV_DIR}" "${RHIS_ANSIBLE_FACT_CACHE_HOST}" || return 1
-    chmod 700 "${ANSIBLE_ENV_DIR}" "${RHIS_ANSIBLE_FACT_CACHE_HOST}" 2>/dev/null || true
+    mkdir -p "${ANSIBLE_ENV_DIR}" "${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}" || return 1
+    chmod 700 "${ANSIBLE_ENV_DIR}" "${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}" 2>/dev/null || true
     ensure_ansible_vault || return 1
     ensure_vault_password_file || return 1
 
@@ -1716,30 +1581,30 @@ generate_rhis_ansible_cfg() {
     # This token is used for Automation Hub galaxy server auth entries.
     local ah_token="${VAULT_CONSOLE_REDHAT_TOKEN:-${HUB_TOKEN:-}}"
 
-    tmp_cfg="$(mktemp "${ANSIBLE_ENV_DIR}/.rhis-ansible.cfg.XXXXXX")" || return 1
+    tmp_cfg="$(mktemp "${ANSIBLE_ENV_DIR}/.minirhis-ansible.cfg.XXXXXX")" || return 1
 
     cat > "${tmp_cfg}" <<EOF
 [defaults]
-inventory = ${RHIS_CONTAINER_INVENTORY_FILE}
+inventory = ${MINIRHIS_CONTAINER_INVENTORY_FILE}
 host_key_checking = False
 retry_files_enabled = False
 interpreter_python = auto_silent
 remote_tmp = /var/tmp
-forks = ${RHIS_ANSIBLE_FORKS}
-timeout = ${RHIS_ANSIBLE_TIMEOUT}
+forks = ${MINIRHIS_ANSIBLE_FORKS}
+timeout = ${MINIRHIS_ANSIBLE_TIMEOUT}
 gathering = smart
 fact_caching = jsonfile
-fact_caching_connection = ${RHIS_ANSIBLE_FACT_CACHE_CONTAINER}
-fact_caching_timeout = ${RHIS_ANSIBLE_FACT_CACHE_TIMEOUT}
+fact_caching_connection = ${MINIRHIS_ANSIBLE_FACT_CACHE_CONTAINER}
+fact_caching_timeout = ${MINIRHIS_ANSIBLE_FACT_CACHE_TIMEOUT}
 callbacks_enabled = ansible.posix.profile_tasks,ansible.posix.timer
 bin_ansible_callbacks = True
-log_path = /rhis/vars/vault/${AAP_ANSIBLE_LOG_BASENAME}
+log_path = /minirhis/vars/vault/${AAP_ANSIBLE_LOG_BASENAME}
 nocows = 1
 inject_facts_as_vars = True
 
 [ssh_connection]
 pipelining = True
-ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ${RHIS_INSTALLER_SSH_KEY_CONTAINER_PATH}
+ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ${MINIRHIS_INSTALLER_SSH_KEY_CONTAINER_PATH}
 control_path_dir = /tmp/.ansible-cp
 retries = 3
 
@@ -1765,7 +1630,7 @@ EOF
     chmod 600 "${tmp_cfg}" 2>/dev/null || true
     # write_file_if_changed removes source temp on success, but we still need
     # tmp_cfg for vault comparison/encryption below, so write via a copy.
-    tmp_cfg_runtime="$(mktemp "${ANSIBLE_ENV_DIR}/.rhis-ansible.runtime.XXXXXX")" || {
+    tmp_cfg_runtime="$(mktemp "${ANSIBLE_ENV_DIR}/.minirhis-ansible.runtime.XXXXXX")" || {
         rm -f "${tmp_cfg}"
         return 1
     }
@@ -1774,15 +1639,15 @@ EOF
         return 1
     }
     sed -i \
-        -e "s|^inventory = .*|inventory = ${RHIS_INVENTORY_FILE}|" \
-        -e "s|^fact_caching_connection = .*|fact_caching_connection = ${RHIS_ANSIBLE_FACT_CACHE_HOST}|" \
+        -e "s|^inventory = .*|inventory = ${MINIRHIS_INVENTORY_FILE}|" \
+        -e "s|^fact_caching_connection = .*|fact_caching_connection = ${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}|" \
         -e "s|^log_path = .*|log_path = ${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}|" \
-        -e "s|^ssh_args = .*|ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ${RHIS_INSTALLER_SSH_PRIVATE_KEY}|" \
+        -e "s|^ssh_args = .*|ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}|" \
         "${tmp_cfg_runtime}" || {
         rm -f "${tmp_cfg}" "${tmp_cfg_runtime}"
         return 1
     }
-    write_file_if_changed "${tmp_cfg_runtime}" "${RHIS_ANSIBLE_CFG_HOST}" 0600 || {
+    write_file_if_changed "${tmp_cfg_runtime}" "${MINIRHIS_ANSIBLE_CFG_HOST}" 0600 || {
         rm -f "${tmp_cfg}"
         return 1
     }
@@ -1794,7 +1659,7 @@ EOF
         return 0
     fi
 
-    tmp_cfg_encrypted="$(mktemp "${ANSIBLE_ENV_DIR}/.rhis-ansible.cfg.vault.XXXXXX")" || {
+    tmp_cfg_encrypted="$(mktemp "${ANSIBLE_ENV_DIR}/.minirhis-ansible.cfg.vault.XXXXXX")" || {
         rm -f "${tmp_cfg}"
         return 1
     }
@@ -1807,7 +1672,7 @@ EOF
         return 1
     }
     chmod 600 "${tmp_cfg_encrypted}" 2>/dev/null || true
-    mv -f "${tmp_cfg_encrypted}" "${RHIS_ANSIBLE_CFG_VAULT_HOST}" || {
+    mv -f "${tmp_cfg_encrypted}" "${MINIRHIS_ANSIBLE_CFG_VAULT_HOST}" || {
         rm -f "${tmp_cfg}" "${tmp_cfg_encrypted}"
         return 1
     }
@@ -1818,7 +1683,7 @@ EOF
 }
 
 # Keep local developer ansible.cfg in container/roles aligned with the same
-# runtime defaults used for RHIS provisioner runs, including galaxy endpoints
+# runtime defaults used for MINIRHIS provisioner runs, including galaxy endpoints
 # and token source (vault_console_redhat_token/HUB_TOKEN).
 generate_local_roles_ansible_cfg() {
     local tmp_cfg
@@ -1831,11 +1696,11 @@ generate_local_roles_ansible_cfg() {
     local local_log_path
 
     local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
-    local_inventory_name="$(basename "${RHIS_INVENTORY_FILE}")"
+    local_inventory_name="$(basename "${MINIRHIS_INVENTORY_FILE}")"
     local_inventory="${SCRIPT_DIR}/container/roles/inventory/${local_inventory_name}"
-    local_roles_path="${SCRIPT_DIR}/container/roles/rhis-builder-satellite/roles:${SCRIPT_DIR}/container/roles/rhis-builder-idm/roles:${SCRIPT_DIR}/container/roles/rhis-builder-aap/roles"
+    local_roles_path="${SCRIPT_DIR}/container/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/roles"
     local_ssh_key="~/.ssh/id_rsa"
-    local_fact_cache="${HOME}/.ansible/conf/${RHIS_ANSIBLE_FACT_CACHE_BASENAME}"
+    local_fact_cache="${HOME}/.ansible/conf/${MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME}"
     local_log_path="${HOME}/.ansible/conf/${AAP_ANSIBLE_LOG_BASENAME}"
     mkdir -p "${SCRIPT_DIR}/container/roles" "${local_fact_cache}" "${ANSIBLE_ENV_DIR}" || return 1
 
@@ -1851,12 +1716,12 @@ stdout_callback = ansible.builtin.default
 result_format = yaml
 interpreter_python = auto_silent
 remote_tmp = /var/tmp
-forks = ${RHIS_ANSIBLE_FORKS}
-timeout = ${RHIS_ANSIBLE_TIMEOUT}
+forks = ${MINIRHIS_ANSIBLE_FORKS}
+timeout = ${MINIRHIS_ANSIBLE_TIMEOUT}
 gathering = smart
 fact_caching = jsonfile
 fact_caching_connection = ${local_fact_cache}
-fact_caching_timeout = ${RHIS_ANSIBLE_FACT_CACHE_TIMEOUT}
+fact_caching_timeout = ${MINIRHIS_ANSIBLE_FACT_CACHE_TIMEOUT}
 callbacks_enabled = ansible.posix.profile_tasks,ansible.posix.timer
 bin_ansible_callbacks = True
 log_path = ${local_log_path}
@@ -1920,7 +1785,7 @@ sync_runtime_values_to_ansible_vault() {
 # ─── Test suite helpers ─────────────────────────────────────────────────────
 
     # Render a 14-char filled/empty progress bar using block characters.
-    _rhis_test_bar() {
+    _minirhis_test_bar() {
         local n="$1" total="$2" width=14
         local bar="" fill i
         [ "${total}" -le 0 ] && { printf '░░░░░░░░░░░░░░'; return; }
@@ -1932,13 +1797,13 @@ sync_runtime_values_to_ansible_vault() {
     }
 
     # One-line "why we test this" shown in the per-test step header.
-    _rhis_test_why() {
+    _minirhis_test_why() {
         case "$1" in
             *"Ansible config"*)    printf '%s' "Verifies pipelining, forks, fact-cache, and log path before the container ever starts." ;;
             *"Generate inventory") printf '%s' "Builds the hosts file that defines every group (sat_primary, aap_hosts, idm_primary) for playbooks." ;;
             *"host_vars"*)         printf '%s' "Creates per-node connection details (IP, ansible_host, user) read by playbooks at run time." ;;
             *"inventory model"*)   printf '%s' "Validates the chosen AAP topology resolves to a real template before kickstart writes it." ;;
-            *"Container Deploy"*)  printf '%s' "Starts rhis-provisioner — the sole execution engine for all config-as-code phases." ;;
+            *"Container Deploy"*)  printf '%s' "Starts minirhis-provisioner — the sole execution engine for all config-as-code phases." ;;
             *"OEMDRV"*)            printf '%s' "Exercises kickstart + ISO build pipeline (genisoimage/xorriso) without a live Satellite." ;;
             *"Dashboard"*)         printf '%s' "Renders the runtime monitor and exercises the ansible-provisioner.log tail path." ;;
             *"Local Install"*)     printf '%s' "Verifies the local npm/Node.js toolchain or confirms fall-through to container deployment." ;;
@@ -1949,7 +1814,7 @@ sync_runtime_values_to_ansible_vault() {
     }
 
     # One-line "what a passing result means for you" shown in the summary.
-    _rhis_test_impact() {
+    _minirhis_test_impact() {
         case "$1" in
             *"Ansible config"*)    printf '%s' "Provisioner inherits correct tuning — missing config causes silent container failures." ;;
             *"Generate inventory") printf '%s' "All platform VMs (IdM / Satellite / AAP) are reachable by group name from every playbook." ;;
@@ -1966,55 +1831,55 @@ sync_runtime_values_to_ansible_vault() {
     }
 
     # Print the numbered per-test step header and increment the step counter.
-    _rhis_test_step_header() {
+    _minirhis_test_step_header() {
         local label="$1" why
-        _RHIS_TEST_STEP=$((_RHIS_TEST_STEP + 1))
-        why="$(_rhis_test_why "${label}")"
+        _MINIRHIS_TEST_STEP=$((_MINIRHIS_TEST_STEP + 1))
+        why="$(_minirhis_test_why "${label}")"
         echo ""
-        printf "${CYAN}  ┌─ [%d/%d]  ${BOLD}%s${NC}\n" "${_RHIS_TEST_STEP}" "${_RHIS_TEST_TOTAL}" "${label}"
+        printf "${CYAN}  ┌─ [%d/%d]  ${BOLD}%s${NC}\n" "${_MINIRHIS_TEST_STEP}" "${_MINIRHIS_TEST_TOTAL}" "${label}"
         printf "${DIM}  │   %s${NC}\n" "${why}"
         printf "${CYAN}  └──────────────────────────────────────────────────────────────${NC}\n"
     }
 
     # ─── Core test machinery ────────────────────────────────────────────────────
 
-    rhis_test_record_result() {
+    minirhis_test_record_result() {
         local label="$1"
         local status="$2"
         local details="${3:-}"
-        RHIS_TEST_RESULTS+=("${label}|${status}|${details}")
+        MINIRHIS_TEST_RESULTS+=("${label}|${status}|${details}")
         if [ "$status" = "fail" ]; then
-            RHIS_TEST_FAILURE_COUNT=$((RHIS_TEST_FAILURE_COUNT + 1))
+            MINIRHIS_TEST_FAILURE_COUNT=$((MINIRHIS_TEST_FAILURE_COUNT + 1))
         fi
     }
 
-    rhis_test_run_case() {
+    minirhis_test_run_case() {
         local label="$1"
         shift
-        _rhis_test_step_header "${label}"
+        _minirhis_test_step_header "${label}"
         if "$@"; then
             printf "${GREEN}  ✔  ${BOLD}%s${NC}${GREEN}  [ PASS ]${NC}\n" "${label}"
-            rhis_test_record_result "${label}" "success"
+            minirhis_test_record_result "${label}" "success"
         else
             printf "${RED}  ✘  ${BOLD}%s${NC}${RED}  [ FAIL ]${NC}\n" "${label}"
-            rhis_test_record_result "${label}" "fail" \
+            minirhis_test_record_result "${label}" "fail" \
                 "See ${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}, ${AAP_HTTP_LOG}, and option 8 dashboard."
         fi
     }
 
-    rhis_test_print_summary() {
+    minirhis_test_print_summary() {
         local item label status details impact
         local total_count passed_count skipped_count
         local overall_status demo_display pass_bar fail_bar
 
         passed_count=0; skipped_count=0
-        for item in "${RHIS_TEST_RESULTS[@]}"; do
+        for item in "${MINIRHIS_TEST_RESULTS[@]}"; do
             IFS='|' read -r label status details <<< "${item}"
             [ "${status}" = "success" ] && passed_count=$((passed_count + 1))
             [ "${status}" = "skipped" ] && skipped_count=$((skipped_count + 1))
         done
-        total_count="${#RHIS_TEST_RESULTS[@]}"
-        overall_status="PASS"; [ "${RHIS_TEST_FAILURE_COUNT}" -eq 0 ] || overall_status="FAIL"
+        total_count="${#MINIRHIS_TEST_RESULTS[@]}"
+        overall_status="PASS"; [ "${MINIRHIS_TEST_FAILURE_COUNT}" -eq 0 ] || overall_status="FAIL"
         demo_display="OFF";    [ "${DEMO_MODE:-0}" = "1" ] && demo_display="ON"
 
         echo ""
@@ -2026,15 +1891,15 @@ sync_runtime_values_to_ansible_vault() {
             "${CLI_TEST_PROFILE:-full}" "${demo_display}"
         printf "  ${BOLD}Host${NC}     : %-18s   ${BOLD}Date${NC}  : %s\n" \
             "$(hostname -s 2>/dev/null)" "$(date '+%Y-%m-%d %H:%M:%S')"
-        printf "  ${BOLD}Config${NC}   : %s\n" "${RHIS_ANSIBLE_CFG_HOST}"
+        printf "  ${BOLD}Config${NC}   : %s\n" "${MINIRHIS_ANSIBLE_CFG_HOST}"
         printf "  ${BOLD}Log${NC}      : %s\n" "${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}"
         echo ""
         printf "${CYAN}  ───────────────────────────────────────────────────────────────${NC}\n"
         echo ""
 
-        for item in "${RHIS_TEST_RESULTS[@]}"; do
+        for item in "${MINIRHIS_TEST_RESULTS[@]}"; do
             IFS='|' read -r label status details <<< "${item}"
-            impact="$(_rhis_test_impact "${label}")"
+            impact="$(_minirhis_test_impact "${label}")"
             case "${status}" in
                 success)
                     printf "${GREEN}  ✔  ${BOLD}%s${NC}${GREEN}   [ PASS ]${NC}\n" "${label}"
@@ -2057,29 +1922,29 @@ sync_runtime_values_to_ansible_vault() {
 
         printf "${CYAN}  ───────────────────────────────────────────────────────────────${NC}\n"
         echo ""
-        pass_bar="$(_rhis_test_bar "${passed_count}"              "${total_count}")"
-        fail_bar="$(_rhis_test_bar "${RHIS_TEST_FAILURE_COUNT}"   "${total_count}")"
+        pass_bar="$(_minirhis_test_bar "${passed_count}"              "${total_count}")"
+        fail_bar="$(_minirhis_test_bar "${MINIRHIS_TEST_FAILURE_COUNT}"   "${total_count}")"
         printf "  ${GREEN}Passed   :  %d / %d   ${BOLD}%s${NC}\n" \
             "${passed_count}" "${total_count}" "${pass_bar}"
         printf "  ${RED}Failed   :  %d / %d   ${BOLD}%s${NC}\n" \
-            "${RHIS_TEST_FAILURE_COUNT}" "${total_count}" "${fail_bar}"
+            "${MINIRHIS_TEST_FAILURE_COUNT}" "${total_count}" "${fail_bar}"
         printf "  ${YELLOW}Skipped  :  %-3d${NC}\n" "${skipped_count}"
-        printf "  ${YELLOW}Warnings :  %-3d${NC}\n" "${RHIS_TEST_WARNING_COUNT}"
+        printf "  ${YELLOW}Warnings :  %-3d${NC}\n" "${MINIRHIS_TEST_WARNING_COUNT}"
 
-        if [ -s "${RHIS_TEST_WARNING_FILE}" ]; then
+        if [ -s "${MINIRHIS_TEST_WARNING_FILE}" ]; then
             echo ""
             printf "${YELLOW}  ⚠  Warnings collected during this run:${NC}\n"
             while IFS= read -r wline; do
                 printf "  ${YELLOW}  · %s${NC}\n" "${wline}"
-            done < <(tail -n 20 "${RHIS_TEST_WARNING_FILE}")
+            done < <(tail -n 20 "${MINIRHIS_TEST_WARNING_FILE}")
         fi
 
         echo ""
         printf "${CYAN}  ───────────────────────────────────────────────────────────────${NC}\n"
         echo ""
-        if [ "${RHIS_TEST_FAILURE_COUNT}" -eq 0 ]; then
+        if [ "${MINIRHIS_TEST_FAILURE_COUNT}" -eq 0 ]; then
             printf "${BOLD}${GREEN}════════════════════════════════════════════════════════════════${NC}\n"
-            printf "${BOLD}${GREEN}  ✔  ALL SYSTEMS GO — Your RHIS stack is ready to build.${NC}\n"
+            printf "${BOLD}${GREEN}  ✔  ALL SYSTEMS GO — Your MINIRHIS stack is ready to build.${NC}\n"
             printf "${BOLD}${GREEN}════════════════════════════════════════════════════════════════${NC}\n"
             echo ""
             return 0
@@ -2093,22 +1958,22 @@ sync_runtime_values_to_ansible_vault() {
         return 1
     }
 
-    rhis_run_test_suite() {
-        RHIS_TEST_MODE=1
+    minirhis_run_test_suite() {
+        MINIRHIS_TEST_MODE=1
         NONINTERACTIVE=1
         RUN_ONCE=1
-        RHIS_TEST_RESULTS=()
-        RHIS_TEST_FAILURE_COUNT=0
-        RHIS_TEST_WARNING_COUNT=0
-        _RHIS_TEST_STEP=0
-        : > "${RHIS_TEST_WARNING_FILE}"
+        MINIRHIS_TEST_RESULTS=()
+        MINIRHIS_TEST_FAILURE_COUNT=0
+        MINIRHIS_TEST_WARNING_COUNT=0
+        _MINIRHIS_TEST_STEP=0
+        : > "${MINIRHIS_TEST_WARNING_FILE}"
 
         local demo_display="OFF"
         [ "${DEMO_MODE:-0}" = "1" ] && demo_display="ON"
 
         echo ""
         printf "${BOLD}${CYAN}════════════════════════════════════════════════════════════════${NC}\n"
-        printf "${BOLD}${CYAN}   RHIS Integration Test Suite  ·  Curated Validation Run${NC}\n"
+        printf "${BOLD}${CYAN}   MINIRHIS Integration Test Suite  ·  Curated Validation Run${NC}\n"
         printf "${BOLD}${CYAN}════════════════════════════════════════════════════════════════${NC}\n"
         printf "   Profile : %-12s  Demo : %-6s  Host : %s\n" \
             "${CLI_TEST_PROFILE:-full}" "${demo_display}" "$(hostname -s 2>/dev/null)"
@@ -2120,60 +1985,60 @@ sync_runtime_values_to_ansible_vault() {
         echo ""
 
         if [ "${CLI_TEST_PROFILE:-full}" = "fast" ]; then
-            _RHIS_TEST_TOTAL=7
-            rhis_test_run_case "Generate RHIS Ansible config"            generate_rhis_ansible_cfg
-            rhis_test_run_case "Generate inventory"                      generate_rhis_inventory
-            rhis_test_run_case "Generate host_vars"                      generate_rhis_host_vars
-            rhis_test_run_case "AAP installer inventory model selection"  select_aap_inventory_templates
-            rhis_test_run_case "Container Deployment"                    install_container
-            rhis_test_run_case "Generate OEMDRV Kickstarts"              generate_oemdrv_kickstarts_only
-            _rhis_test_step_header "Live Status Dashboard snapshot"
-            RHIS_DASHBOARD_SINGLE_SHOT=1
+            _MINIRHIS_TEST_TOTAL=7
+            minirhis_test_run_case "Generate MINIRHIS Ansible config"            generate_minirhis_ansible_cfg
+            minirhis_test_run_case "Generate inventory"                      generate_minirhis_inventory
+            minirhis_test_run_case "Generate host_vars"                      generate_minirhis_host_vars
+            minirhis_test_run_case "AAP installer inventory model selection"  select_aap_inventory_templates
+            minirhis_test_run_case "Container Deployment"                    install_container
+            minirhis_test_run_case "Generate OEMDRV Kickstarts"              generate_oemdrv_kickstarts_only
+            _minirhis_test_step_header "Live Status Dashboard snapshot"
+            MINIRHIS_DASHBOARD_SINGLE_SHOT=1
             if show_live_status_dashboard; then
                 printf "${GREEN}  ✔  ${BOLD}Live Status Dashboard snapshot${NC}${GREEN}  [ PASS ]${NC}\n"
-                rhis_test_record_result "Live Status Dashboard snapshot" "success" \
+                minirhis_test_record_result "Live Status Dashboard snapshot" "success" \
                     "Rendered single-shot dashboard snapshot."
             else
                 printf "${RED}  ✘  ${BOLD}Live Status Dashboard snapshot${NC}${RED}  [ FAIL ]${NC}\n"
-                rhis_test_record_result "Live Status Dashboard snapshot" "fail" \
+                minirhis_test_record_result "Live Status Dashboard snapshot" "fail" \
                     "Dashboard snapshot could not be rendered."
             fi
-            RHIS_DASHBOARD_SINGLE_SHOT=0
-            rhis_test_print_summary
+            MINIRHIS_DASHBOARD_SINGLE_SHOT=0
+            minirhis_test_print_summary
             return $?
         fi
 
-        _RHIS_TEST_TOTAL=7
-        rhis_test_run_case "AAP installer inventory model selection"  select_aap_inventory_templates
-        rhis_test_run_case "1) Local App Mode (legacy/optional)"     install_local
-        rhis_test_run_case "2) Container Deployment"                 install_container
-        rhis_test_run_case "3) Setup Virt-Manager Only"              setup_virt_manager
+        _MINIRHIS_TEST_TOTAL=7
+        minirhis_test_run_case "AAP installer inventory model selection"  select_aap_inventory_templates
+        minirhis_test_run_case "1) Local App Mode (legacy/optional)"     install_local
+        minirhis_test_run_case "2) Container Deployment"                 install_container
+        minirhis_test_run_case "3) Setup Virt-Manager Only"              setup_virt_manager
         echo ""
         printf "${YELLOW}  ⊘  ${BOLD}4) Full Setup (Local + Virt-Manager)${NC}${YELLOW}   [ SKIP ]${NC}\n"
         printf "${DIM}       ↳  Covered by items 1 + 3 — avoids duplicate heavy provisioning.${NC}\n"
-        rhis_test_record_result "4) Full Setup (Local + Virt-Manager)" "skipped" \
+        minirhis_test_record_result "4) Full Setup (Local + Virt-Manager)" "skipped" \
             "Covered by test items 1 + 3 to avoid duplicate heavy provisioning."
         echo ""
         printf "${YELLOW}  ⊘  ${BOLD}5) Full Setup (Container + Virt-Manager)${NC}${YELLOW}   [ SKIP ]${NC}\n"
         printf "${DIM}       ↳  Covered by items 2 + 3 — avoids duplicate heavy provisioning.${NC}\n"
-        rhis_test_record_result "5) Full Setup (Container + Virt-Manager)" "skipped" \
+        minirhis_test_record_result "5) Full Setup (Container + Virt-Manager)" "skipped" \
             "Covered by test items 2 + 3 to avoid duplicate heavy provisioning."
         echo ""
-        rhis_test_run_case "6) Generate All OEMDRV Kickstarts"  generate_oemdrv_kickstarts_only
-        rhis_test_run_case "7) Container Config-Only"           run_container_config_only
-        _rhis_test_step_header "8) Live Status Dashboard"
-        RHIS_DASHBOARD_SINGLE_SHOT=1
+        minirhis_test_run_case "6) Generate All OEMDRV Kickstarts"  generate_oemdrv_kickstarts_only
+        minirhis_test_run_case "7) Container Config-Only"           run_container_config_only
+        _minirhis_test_step_header "8) Live Status Dashboard"
+        MINIRHIS_DASHBOARD_SINGLE_SHOT=1
         if show_live_status_dashboard; then
             printf "${GREEN}  ✔  ${BOLD}8) Live Status Dashboard${NC}${GREEN}  [ PASS ]${NC}\n"
-            rhis_test_record_result "8) Live Status Dashboard" "success" \
+            minirhis_test_record_result "8) Live Status Dashboard" "success" \
                 "Rendered single-shot dashboard snapshot."
         else
             printf "${RED}  ✘  ${BOLD}8) Live Status Dashboard${NC}${RED}  [ FAIL ]${NC}\n"
-            rhis_test_record_result "8) Live Status Dashboard" "fail" \
+            minirhis_test_record_result "8) Live Status Dashboard" "fail" \
                 "Dashboard snapshot could not be rendered."
         fi
-        RHIS_DASHBOARD_SINGLE_SHOT=0
-        rhis_test_print_summary
+        MINIRHIS_DASHBOARD_SINGLE_SHOT=0
+        minirhis_test_print_summary
     }
 parse_args() {
     while [ "$#" -gt 0 ]; do
@@ -2215,6 +2080,12 @@ parse_args() {
                 }
                 CLI_AAP_INVENTORY_GROWTH_TEMPLATE="$1"
                 ;;
+            --enterprise)
+                CLI_ENTERPRISE="1"
+                ;;
+            --standalone)
+                CLI_STANDALONE="1"
+                ;;
             --container-config-only)
                 CLI_CONTAINER_CONFIG_ONLY="1"
                 RUN_ONCE=1
@@ -2231,28 +2102,8 @@ parse_args() {
                 CLI_AAP="1"
                 RUN_ONCE=1
                 ;;
-            --cac|--config-as-code|--cac-all)
-                CLI_CAC="1"
-                CLI_CAC_SCOPE="all"
-                RUN_ONCE=1
-                ;;
-            --cac-idm)
-                CLI_CAC="1"
-                CLI_CAC_SCOPE="idm"
-                RUN_ONCE=1
-                ;;
-            --cac-satellite)
-                CLI_CAC="1"
-                CLI_CAC_SCOPE="satellite"
-                RUN_ONCE=1
-                ;;
-            --cac-aap)
-                CLI_CAC="1"
-                CLI_CAC_SCOPE="aap"
-                RUN_ONCE=1
-                ;;
-            --rhis)
-                CLI_RHIS="1"
+            --minirhis)
+                CLI_MINIRHIS="1"
                 RUN_ONCE=1
                 ;;
             --libvirt)
@@ -2350,7 +2201,7 @@ parse_args() {
                     shift
                     CLI_GENERATE_ENV="$1"
                 else
-                    CLI_GENERATE_ENV="${SCRIPT_DIR}/rhis-headless.env.template"
+                    CLI_GENERATE_ENV="${SCRIPT_DIR}/minirhis-headless.env.template"
                 fi
                 RUN_ONCE=1
                 ;;
@@ -2365,6 +2216,16 @@ parse_args() {
 }
 
 apply_cli_overrides() {
+    if [ -n "${CLI_ENTERPRISE:-}" ] && [ -n "${CLI_STANDALONE:-}" ]; then
+        print_warning "--enterprise and --standalone cannot be used together."
+        exit 1
+    fi
+
+    if [ -n "${CLI_DEMO:-}" ] && { [ -n "${CLI_ENTERPRISE:-}" ] || [ -n "${CLI_STANDALONE:-}" ]; }; then
+        print_warning "--DEMO cannot be combined with --enterprise or --standalone."
+        exit 1
+    fi
+
     if [ -n "$CLI_NONINTERACTIVE" ]; then
         NONINTERACTIVE="$CLI_NONINTERACTIVE"
     fi
@@ -2375,6 +2236,7 @@ apply_cli_overrides() {
 
     if [ -n "$CLI_DEMO" ]; then
         DEMO_MODE="$CLI_DEMO"
+        AAP_TOPOLOGY="standalone"
     fi
 
     if [ -n "$CLI_DEMOKILL" ]; then
@@ -2387,10 +2249,30 @@ apply_cli_overrides() {
 
     if [ -n "$CLI_AAP_INVENTORY_TEMPLATE" ]; then
         AAP_INVENTORY_TEMPLATE="$CLI_AAP_INVENTORY_TEMPLATE"
+        case "$(basename "${AAP_INVENTORY_TEMPLATE}")" in
+            inventory.j2|inventory)
+                AAP_TOPOLOGY="enterprise"
+                ;;
+            *)
+                AAP_TOPOLOGY="standalone"
+                ;;
+        esac
     fi
 
     if [ -n "$CLI_AAP_INVENTORY_GROWTH_TEMPLATE" ]; then
         AAP_INVENTORY_GROWTH_TEMPLATE="$CLI_AAP_INVENTORY_GROWTH_TEMPLATE"
+    fi
+
+    if [ -n "${CLI_ENTERPRISE:-}" ]; then
+        AAP_INVENTORY_TEMPLATE="inventory.j2"
+        AAP_INVENTORY_GROWTH_TEMPLATE="inventory-growth.j2"
+        AAP_TOPOLOGY="enterprise"
+    fi
+
+    if [ -n "${CLI_STANDALONE:-}" ]; then
+        AAP_INVENTORY_TEMPLATE="inventory-growth.j2"
+        AAP_INVENTORY_GROWTH_TEMPLATE="inventory-growth.j2"
+        AAP_TOPOLOGY="standalone"
     fi
 
     if [ -n "$CLI_CONTAINER_CONFIG_ONLY" ]; then
@@ -2399,20 +2281,18 @@ apply_cli_overrides() {
 
     # Execution-mode preference (last one wins when both are provided).
     if [ -n "$CLI_LOCAL" ]; then
-        RHIS_EXECUTION_MODE="local"
-        RHIS_LOCAL_ROLE_FALLBACK=1
+        MINIRHIS_EXECUTION_MODE="local"
+        MINIRHIS_LOCAL_ROLE_FALLBACK=1
     fi
     if [ -n "$CLI_CONTAINER" ]; then
-        RHIS_EXECUTION_MODE="container"
+        MINIRHIS_EXECUTION_MODE="container"
     fi
 
     # Component shortcuts map directly to menu options.
     # If the caller explicitly asked for menu option 4 (Prompts Only), keep it.
     if [ "${CLI_MENU_CHOICE:-}" != "4" ]; then
-        # Precedence order (last one wins if multiple are provided): rhis -> satellite -> idm -> aap
-        # These shortcuts are intended to skip the menu system, not to suppress
-        # prompts.  Only an explicit --non-interactive should force headless mode.
-        if [ -n "$CLI_RHIS" ]; then
+        # Precedence order (last one wins if multiple are provided): minirhis -> satellite -> idm -> aap
+        if [ -n "$CLI_MINIRHIS" ]; then
             MENU_CHOICE="1"
         fi
         if [ -n "$CLI_SATELLITE" ]; then
@@ -2426,79 +2306,69 @@ apply_cli_overrides() {
         fi
     fi
 
-    # CaC-only mode: skip VM provisioning, go straight to config-as-code.
-    if [ -n "$CLI_CAC" ]; then
-        NONINTERACTIVE=1
-        # --local flag can accompany --cac* to run playbooks directly without container.
-        if [ -n "$CLI_LOCAL" ]; then
-            RHIS_EXECUTION_MODE="local"
-            RHIS_LOCAL_ROLE_FALLBACK=1
-        fi
-    fi
-
     # Platform flags set target platform for all components
     if [ -n "$CLI_LIBVIRT" ]; then
-        RHIS_TARGET_PLATFORM="libvirt"
+        MINIRHIS_TARGET_PLATFORM="libvirt"
         SAT_TARGET_PLATFORM="libvirt"
         AAP_TARGET_PLATFORM="libvirt"
         IDM_TARGET_PLATFORM="libvirt"
-        RHIS_PLATFORM_FAMILY="virtual"
+        MINIRHIS_PLATFORM_FAMILY="virtual"
     fi
     if [ -n "$CLI_BAREMETAL" ]; then
-        RHIS_TARGET_PLATFORM="baremetal"
+        MINIRHIS_TARGET_PLATFORM="baremetal"
         SAT_TARGET_PLATFORM="baremetal"
         AAP_TARGET_PLATFORM="baremetal"
         IDM_TARGET_PLATFORM="baremetal"
-        RHIS_PLATFORM_FAMILY="baremetal"
+        MINIRHIS_PLATFORM_FAMILY="baremetal"
     fi
     if [ -n "$CLI_AWS" ]; then
-        RHIS_TARGET_PLATFORM="aws"
+        MINIRHIS_TARGET_PLATFORM="aws"
         SAT_TARGET_PLATFORM="aws"
         AAP_TARGET_PLATFORM="aws"
         IDM_TARGET_PLATFORM="aws"
-        RHIS_PLATFORM_FAMILY="cloud"
+        MINIRHIS_PLATFORM_FAMILY="cloud"
     fi
     if [ -n "$CLI_AZURE" ]; then
-        RHIS_TARGET_PLATFORM="azure"
+        MINIRHIS_TARGET_PLATFORM="azure"
         SAT_TARGET_PLATFORM="azure"
         AAP_TARGET_PLATFORM="azure"
         IDM_TARGET_PLATFORM="azure"
-        RHIS_PLATFORM_FAMILY="cloud"
+        MINIRHIS_PLATFORM_FAMILY="cloud"
     fi
     if [ -n "$CLI_GCP" ]; then
-        RHIS_TARGET_PLATFORM="gcp"
+        MINIRHIS_TARGET_PLATFORM="gcp"
         SAT_TARGET_PLATFORM="gcp"
         AAP_TARGET_PLATFORM="gcp"
         IDM_TARGET_PLATFORM="gcp"
-        RHIS_PLATFORM_FAMILY="cloud"
+        MINIRHIS_PLATFORM_FAMILY="cloud"
     fi
     if [ -n "$CLI_NUTANIX" ]; then
-        RHIS_TARGET_PLATFORM="nutanix"
+        MINIRHIS_TARGET_PLATFORM="nutanix"
         SAT_TARGET_PLATFORM="nutanix"
         AAP_TARGET_PLATFORM="nutanix"
         IDM_TARGET_PLATFORM="nutanix"
-        RHIS_PLATFORM_FAMILY="virtual"
+        MINIRHIS_PLATFORM_FAMILY="virtual"
     fi
     if [ -n "$CLI_OPENSHIFT" ]; then
-        RHIS_TARGET_PLATFORM="openshift"
+        MINIRHIS_TARGET_PLATFORM="openshift"
         SAT_TARGET_PLATFORM="openshift"
         AAP_TARGET_PLATFORM="openshift"
         IDM_TARGET_PLATFORM="openshift"
-        RHIS_PLATFORM_FAMILY="cloud"
+        MINIRHIS_PLATFORM_FAMILY="cloud"
     fi
     if [ -n "$CLI_OPENSHIFT_VIRT" ]; then
-        RHIS_TARGET_PLATFORM="openshift-virt"
+        MINIRHIS_TARGET_PLATFORM="openshift-virt"
         SAT_TARGET_PLATFORM="openshift-virt"
         AAP_TARGET_PLATFORM="openshift-virt"
         IDM_TARGET_PLATFORM="openshift-virt"
-        RHIS_PLATFORM_FAMILY="virtual"
+        MINIRHIS_PLATFORM_FAMILY="virtual"
     fi
     if [ -n "$CLI_VMWARE" ]; then
-        RHIS_TARGET_PLATFORM="vmware"
+        MINIRHIS_TARGET_PLATFORM="vmware"
         SAT_TARGET_PLATFORM="vmware"
         AAP_TARGET_PLATFORM="vmware"
         IDM_TARGET_PLATFORM="vmware"
-        RHIS_PLATFORM_FAMILY="virtual"
+        MINIRHIS_PLATFORM_FAMILY="virtual"
     fi
 
     if [ -n "$CLI_ATTACH_CONSOLES" ]; then
@@ -2506,7 +2376,7 @@ apply_cli_overrides() {
     fi
 
     if [ -n "$CLI_TEST" ]; then
-        RHIS_TEST_MODE=1
+        MINIRHIS_TEST_MODE=1
         NONINTERACTIVE=1
         RUN_ONCE=1
     fi
@@ -2527,14 +2397,14 @@ apply_cli_overrides() {
     fi
 
     if [ -n "$CLI_MENUTEST" ]; then
-        RHIS_MENU_TEST_MODE=1
+        MINIRHIS_MENU_TEST_MODE=1
         NONINTERACTIVE=0
         RUN_ONCE=0
     fi
 
 
 is_menutest() {
-    is_enabled "${RHIS_MENU_TEST_MODE:-0}"
+    is_enabled "${MINIRHIS_MENU_TEST_MODE:-0}"
 }
     return 0
 }
@@ -2548,18 +2418,6 @@ is_noninteractive() {
             return 1
             ;;
     esac
-}
-
-should_launch_vm_console_monitors() {
-    if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
-        return 0
-    fi
-
-    if is_noninteractive; then
-        return 1
-    fi
-
-    return 0
 }
 
 is_demo() {
@@ -2714,9 +2572,20 @@ normalize_shared_env_vars() {
     AAP_IP="${AAP_IP:-10.168.128.2}"
     IDM_IP="${IDM_IP:-10.168.128.3}"
 
+    # Global MINIRHIS policy: all managed SSH traffic must use the internal network.
+    if is_enabled "${MINIRHIS_MANAGED_SSH_OVER_ETH0:-0}"; then
+        print_warning "MINIRHIS_MANAGED_SSH_OVER_ETH0 is deprecated and ignored; enforcing internal SSH over 10.168.x.x."
+    fi
+    MINIRHIS_MANAGED_SSH_OVER_ETH0="0"
+
+    # Guardrails: MINIRHIS node-to-node addresses must remain on the internal 10.168/16.
+    case "${SAT_IP}" in 10.168.*) ;; *) print_warning "SAT_IP='${SAT_IP}' is outside 10.168.x.x; resetting to 10.168.128.1."; SAT_IP="10.168.128.1" ;; esac
+    case "${AAP_IP}" in 10.168.*) ;; *) print_warning "AAP_IP='${AAP_IP}' is outside 10.168.x.x; resetting to 10.168.128.2."; AAP_IP="10.168.128.2" ;; esac
+    case "${IDM_IP}" in 10.168.*) ;; *) print_warning "IDM_IP='${IDM_IP}' is outside 10.168.x.x; resetting to 10.168.128.3."; IDM_IP="10.168.128.3" ;; esac
+
     SAT_ORG="${SAT_ORG:-REDHAT}"
     SAT_LOC="${SAT_LOC:-CORE}"
-    # Guardrail: RHIS supports only containerized AAP installs.
+    # Guardrail: MINIRHIS supports only containerized AAP installs.
     AAP_DEPLOYMENT_TYPE="container"
     INSTALLER_USER="${INSTALLER_USER:-${USER}}"
     SSHPASS_CMD="${SSHPASS_CMD:-sshpass}"
@@ -2800,6 +2669,12 @@ normalize_shared_env_vars() {
     SAT_PROVISIONING_SUBNET="${SAT_PROVISIONING_SUBNET:-10.168.0.0}"
     SAT_PROVISIONING_NETMASK="${SAT_PROVISIONING_NETMASK:-$NETMASK}"
     SAT_PROVISIONING_GW="${SAT_PROVISIONING_GW:-$INTERNAL_GW}"
+
+    # Keep Satellite service endpoints pinned to the internal MINIRHIS network.
+    if ! is_enabled "${MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}"; then
+        print_warning "MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK=0 is not supported for MINIRHIS stack coherence; forcing to 1."
+    fi
+    MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK="1"
     SAT_PROVISIONING_DHCP_START="${SAT_PROVISIONING_DHCP_START:-10.168.130.1}"
     SAT_PROVISIONING_DHCP_END="${SAT_PROVISIONING_DHCP_END:-10.168.255.254}"
     SAT_PROVISIONING_DNS_PRIMARY="${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP}}"
@@ -2896,6 +2771,11 @@ normalize_shared_env_vars() {
     SAT_GW="${SAT_GW:-$INTERNAL_GW}"
     AAP_GW="${AAP_GW:-$INTERNAL_GW}"
     IDM_GW="${IDM_GW:-$INTERNAL_GW}"
+
+    # Guardrails: gateways must remain on the MINIRHIS internal network.
+    case "${SAT_GW}" in 10.168.*) ;; *) print_warning "SAT_GW='${SAT_GW}' is outside 10.168.x.x; forcing INTERNAL_GW='${INTERNAL_GW}'."; SAT_GW="${INTERNAL_GW}" ;; esac
+    case "${AAP_GW}" in 10.168.*) ;; *) print_warning "AAP_GW='${AAP_GW}' is outside 10.168.x.x; forcing INTERNAL_GW='${INTERNAL_GW}'."; AAP_GW="${INTERNAL_GW}" ;; esac
+    case "${IDM_GW}" in 10.168.*) ;; *) print_warning "IDM_GW='${IDM_GW}' is outside 10.168.x.x; forcing INTERNAL_GW='${INTERNAL_GW}'."; IDM_GW="${INTERNAL_GW}" ;; esac
 }
 
 set_or_prompt() {
@@ -3091,10 +2971,10 @@ prompt_platform_choice() {
             local selected_platform
 
             selected_platform="$(normalize_platform_value "$2")"
-            RHIS_TARGET_PLATFORM="${selected_platform}"
+            MINIRHIS_TARGET_PLATFORM="${selected_platform}"
 
             case "${install_product}" in
-                rhis)
+                minirhis)
                     SAT_TARGET_PLATFORM="${selected_platform}"
                     AAP_TARGET_PLATFORM="${selected_platform}"
                     IDM_TARGET_PLATFORM="${selected_platform}"
@@ -3118,12 +2998,12 @@ prompt_platform_choice() {
 
         prompt_install_product_choice() {
             local var_name="$1"
-            local default_value="${2:-${RHIS_INSTALL_PRODUCT:-}}"
+            local default_value="${2:-${MINIRHIS_INSTALL_PRODUCT:-}}"
             local choice=""
             local selected=""
 
             if is_noninteractive; then
-                printf -v "$var_name" '%s' "${!var_name:-${default_value:-rhis}}"
+                printf -v "$var_name" '%s' "${!var_name:-${default_value:-minirhis}}"
                 return 0
             fi
 
@@ -3131,17 +3011,17 @@ prompt_platform_choice() {
                 print_minirhis_header
                 echo "Prompts-Only Product Selection"
                 echo ""
-                echo "  1) RHIS Full Stack"
+                echo "  1) MINIRHIS Full Stack"
                 echo "     - IdM -> Satellite -> AAP"
                 echo "  2) Satellite Only"
                 echo "  3) IdM Only"
                 echo "  4) AAP Only"
                 echo ""
-                read -r -p "  Choice [1-4, Enter=${default_value:-rhis}]: " choice
+                read -r -p "  Choice [1-4, Enter=${default_value:-minirhis}]: " choice
 
                 case "${choice}" in
-                    "") selected="${default_value:-rhis}" ;;
-                    1) selected="rhis" ;;
+                    "") selected="${default_value:-minirhis}" ;;
+                    1) selected="minirhis" ;;
                     2) selected="satellite" ;;
                     3) selected="idm" ;;
                     4) selected="aap" ;;
@@ -3547,12 +3427,12 @@ select_stack_sizing_profile() {
 
     print_minirhis_header
     echo "Sizing Profile"
-    echo "  RHIS Full Stack sizing profile"
+    echo "  MINIRHIS Full Stack sizing profile"
     echo ""
     echo "  1) SOE"
     echo "     - supported enterprise sizing"
     echo "  2) Demo / Education / PoC"
-    echo "     - smaller footprint"
+    echo "     - reduced hardware per node (IdM + Satellite + AAP remain separate servers)"
     echo ""
     read -r -p "Choose profile [1-2, default 1]: " _size_choice
 
@@ -3572,14 +3452,14 @@ select_stack_sizing_profile() {
 configure_platform_selection() {
     local selected=""
 
-    prompt_platform_choice selected "Select target platform for RHIS deployments" "${RHIS_TARGET_PLATFORM:-libvirt}" || return 1
-    RHIS_TARGET_PLATFORM="${selected}"
+    prompt_platform_choice selected "Select target platform for MINIRHIS deployments" "${MINIRHIS_TARGET_PLATFORM:-libvirt}" || return 1
+    MINIRHIS_TARGET_PLATFORM="${selected}"
     SAT_TARGET_PLATFORM="${selected}"
     AAP_TARGET_PLATFORM="${selected}"
     IDM_TARGET_PLATFORM="${selected}"
-    RHIS_PLATFORM_FAMILY="$(platform_family_for_provider "${selected}")"
+    MINIRHIS_PLATFORM_FAMILY="$(platform_family_for_provider "${selected}")"
 
-    print_success "Platform selection updated: RHIS=${RHIS_TARGET_PLATFORM}, Satellite=${SAT_TARGET_PLATFORM}, AAP=${AAP_TARGET_PLATFORM}, IdM=${IDM_TARGET_PLATFORM}"
+    print_success "Platform selection updated: MINIRHIS=${MINIRHIS_TARGET_PLATFORM}, Satellite=${SAT_TARGET_PLATFORM}, AAP=${AAP_TARGET_PLATFORM}, IdM=${IDM_TARGET_PLATFORM}"
     return 0
 }
 
@@ -3590,8 +3470,8 @@ prompt_config_execution_mode() {
     print_minirhis_header
     echo "Execution Target"
     echo ""
-    echo "  1) rhis_provisioner"
-    echo "     - run via the RHIS provisioner container"
+    echo "  1) minirhis_provisioner"
+    echo "     - run via the MINIRHIS provisioner container"
     echo "  2) local ${USER} repo"
     echo "     - run directly from this machine's roles"
     echo ""
@@ -3600,11 +3480,11 @@ prompt_config_execution_mode() {
     read -r -p "Enter choice [0-2]: " _exec_choice
     case "${_exec_choice}" in
         1)
-            RHIS_EXECUTION_MODE="container"
+            MINIRHIS_EXECUTION_MODE="container"
             return 0
             ;;
         2)
-            RHIS_EXECUTION_MODE="local"
+            MINIRHIS_EXECUTION_MODE="local"
             return 0
             ;;
         0|"")
@@ -3631,7 +3511,7 @@ show_configure_existing_submenu() {
         echo "     - run config-as-code for IdM only"
         echo "  3) Satellite"
         echo "     - run config-as-code for Satellite only"
-        echo "  4) RHIS Full Stack"
+        echo "  4) MINIRHIS Full Stack"
         echo "     - run config-as-code for all components"
         echo ""
         echo "  0) Back"
@@ -3644,10 +3524,10 @@ show_configure_existing_submenu() {
                     return 0
                 fi
                 prompt_config_execution_mode || continue
-                if [ "${RHIS_EXECUTION_MODE}" = "container" ]; then
+                if [ "${MINIRHIS_EXECUTION_MODE}" = "container" ]; then
                     install_container || return 1
                 fi
-                RHIS_COMPONENT_SCOPE="aap" run_rhis_config_as_code || { print_warning "AAP config-as-code failed"; return 1; }
+                MINIRHIS_COMPONENT_SCOPE="aap" run_minirhis_config_as_code || { print_warning "AAP config-as-code failed"; return 1; }
                 return 0
                 ;;
             2)
@@ -3656,10 +3536,10 @@ show_configure_existing_submenu() {
                     return 0
                 fi
                 prompt_config_execution_mode || continue
-                if [ "${RHIS_EXECUTION_MODE}" = "container" ]; then
+                if [ "${MINIRHIS_EXECUTION_MODE}" = "container" ]; then
                     install_container || return 1
                 fi
-                RHIS_COMPONENT_SCOPE="idm" run_rhis_config_as_code || { print_warning "IdM config-as-code failed"; return 1; }
+                MINIRHIS_COMPONENT_SCOPE="idm" run_minirhis_config_as_code || { print_warning "IdM config-as-code failed"; return 1; }
                 return 0
                 ;;
             3)
@@ -3668,22 +3548,22 @@ show_configure_existing_submenu() {
                     return 0
                 fi
                 prompt_config_execution_mode || continue
-                if [ "${RHIS_EXECUTION_MODE}" = "container" ]; then
+                if [ "${MINIRHIS_EXECUTION_MODE}" = "container" ]; then
                     install_container || return 1
                 fi
-                RHIS_COMPONENT_SCOPE="satellite" run_rhis_config_as_code || { print_warning "Satellite config-as-code failed"; return 1; }
+                MINIRHIS_COMPONENT_SCOPE="satellite" run_minirhis_config_as_code || { print_warning "Satellite config-as-code failed"; return 1; }
                 return 0
                 ;;
             4)
                 if is_menutest; then
-                    print_step "MENUTEST: simulated RHIS Full Stack config-as-code (no changes made)."
+                    print_step "MENUTEST: simulated MINIRHIS Full Stack config-as-code (no changes made)."
                     return 0
                 fi
                 prompt_config_execution_mode || continue
-                if [ "${RHIS_EXECUTION_MODE}" = "container" ]; then
-                    run_container_config_only || { print_warning "RHIS Full Stack config workflow failed"; return 1; }
+                if [ "${MINIRHIS_EXECUTION_MODE}" = "container" ]; then
+                    run_container_config_only || { print_warning "MINIRHIS Full Stack config workflow failed"; return 1; }
                 else
-                    run_rhis_config_as_code || { print_warning "RHIS Full Stack config workflow failed"; return 1; }
+                    run_minirhis_config_as_code || { print_warning "MINIRHIS Full Stack config workflow failed"; return 1; }
                 fi
                 return 0
                 ;;
@@ -3705,11 +3585,11 @@ show_standalone_components_submenu() {
     echo "  Local role content: ${SCRIPT_DIR}/container/roles"
     echo ""
     echo "  1) AAP 2.6 Only"
-    echo "     - role: rhis-builder-aap"
+    echo "     - role: minirhis-builder-aap"
     echo "  2) IdM 5.0 Only"
-    echo "     - role: rhis-builder-idm"
+    echo "     - role: minirhis-builder-idm"
     echo "  3) Satellite 6.18 Only"
-    echo "     - role: rhis-builder-satellite"
+    echo "     - role: minirhis-builder-satellite"
     echo ""
     echo "  0) Back"
     read -r -p "Enter choice [0-3]: " _subchoice
@@ -3875,7 +3755,7 @@ show_live_status_dashboard() {
     local vm state ip cmdb_status
     local sat_ip=""
     local ansible_log_host="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}"
-    local container_name="${RHIS_CONTAINER_NAME:-rhis-provisioner}"
+    local container_name="${MINIRHIS_CONTAINER_NAME:-minirhis-provisioner}"
     local container_state="stopped"
     local container_status_line=""
     local container_activity="idle"
@@ -3892,12 +3772,12 @@ show_live_status_dashboard() {
             phase_label="AAP VM INSTALL / BUNDLE DELIVERY"
         elif pgrep -af "virt-install|qemu-img create" >/dev/null 2>&1; then
             phase_label="VM PROVISIONING"
-        elif pgrep -af "run_rhis_install_sequence.sh" >/dev/null 2>&1; then
+        elif pgrep -af "run_minirhis_install_sequence.sh" >/dev/null 2>&1; then
             phase_label="SCRIPT RUNNING (BETWEEN PHASES)"
         fi
 
         echo "============================================================"
-        echo " RHIS Live Status Dashboard"
+        echo " MINIRHIS Live Status Dashboard"
         echo " Phase: ${phase_label}"
         echo " $(date '+%Y-%m-%d %H:%M:%S')"
         echo "============================================================"
@@ -3915,7 +3795,7 @@ show_live_status_dashboard() {
         echo ""
 
         echo "[Script / provisioning activity]"
-        pgrep -af "run_rhis_install_sequence.sh|python3 -m http.server 8080|ansible-playbook|virsh console|podman exec" 2>/dev/null || echo "(no matching activity processes found)"
+        pgrep -af "run_minirhis_install_sequence.sh|python3 -m http.server 8080|ansible-playbook|virsh console|podman exec" 2>/dev/null || echo "(no matching activity processes found)"
         echo ""
 
         echo "[Container status]"
@@ -3978,7 +3858,7 @@ show_live_status_dashboard() {
         fi
         echo ""
 
-        if is_enabled "${RHIS_DASHBOARD_SINGLE_SHOT:-0}"; then
+        if is_enabled "${MINIRHIS_DASHBOARD_SINGLE_SHOT:-0}"; then
             return 0
         fi
 
@@ -3995,117 +3875,36 @@ show_live_status_dashboard() {
 
 reattach_vm_consoles() {
     print_step "Reattaching VM console monitors for Satellite/AAP/IdM"
-    retrofit_rhis_vm_serial_consoles_if_missing || true
     launch_vm_console_monitors_auto || {
         print_warning "Could not reattach VM console monitors automatically."
         return 1
     }
 
     if command -v tmux >/dev/null 2>&1; then
-        print_step "If running headless, attach monitor session with: tmux attach -t ${RHIS_VM_MONITOR_SESSION}"
+        print_step "If running headless, attach monitor session with: tmux attach -t ${MINIRHIS_VM_MONITOR_SESSION}"
     fi
 
     print_success "VM console monitors reattached."
     return 0
 }
 
-retrofit_vm_serial_console_if_missing() {
-    local vm_name="$1"
-    local domstate=""
-    local attach_mode="--config"
-    local needs_serial=1
-    local needs_console=1
-    local xml_dump=""
-    local tmp_serial=""
-    local tmp_console=""
-
-    [ -n "${vm_name:-}" ] || return 0
-    if ! command -v virsh >/dev/null 2>&1; then
-        return 0
-    fi
-    if ! sudo virsh dominfo "${vm_name}" >/dev/null 2>&1; then
-        return 0
-    fi
-
-    xml_dump="$(sudo virsh dumpxml "${vm_name}" 2>/dev/null || true)"
-    [ -n "${xml_dump}" ] || return 0
-
-    if printf '%s\n' "${xml_dump}" | grep -Eq "<serial[[:space:]][^>]*type='pty'|<serial[[:space:]][^>]*type=\"pty\""; then
-        needs_serial=0
-    fi
-
-    if printf '%s\n' "${xml_dump}" | grep -Eq "<console[[:space:]][^>]*type='pty'|<console[[:space:]][^>]*type=\"pty\"" \
-        && printf '%s\n' "${xml_dump}" | grep -Eq "<target[[:space:]][^>]*type='serial'|<target[[:space:]][^>]*type=\"serial\""; then
-        needs_console=0
-    fi
-
-    if [ "${needs_serial}" -eq 0 ] && [ "${needs_console}" -eq 0 ]; then
-        return 0
-    fi
-
-    domstate="$(sudo virsh domstate "${vm_name}" 2>/dev/null | tr -d '[:space:]' || true)"
-    case "${domstate}" in
-        running|paused|inshutdown|blocked)
-            attach_mode="--config --live"
-            ;;
-        *)
-            attach_mode="--config"
-            ;;
-    esac
-
-    print_step "Retrofitting serial console devices on VM: ${vm_name}"
-
-    if [ "${needs_serial}" -eq 1 ]; then
-        tmp_serial="/tmp/rhis-${vm_name}-serial-$$.xml"
-        cat > "${tmp_serial}" <<'EOF'
-<serial type='pty'>
-  <target port='0'/>
-</serial>
-EOF
-        sudo virsh attach-device "${vm_name}" "${tmp_serial}" ${attach_mode} >/dev/null 2>&1 || \
-            print_warning "Could not attach serial device to ${vm_name} (continuing)."
-        rm -f "${tmp_serial}" >/dev/null 2>&1 || true
-    fi
-
-    if [ "${needs_console}" -eq 1 ]; then
-        tmp_console="/tmp/rhis-${vm_name}-console-$$.xml"
-        cat > "${tmp_console}" <<'EOF'
-<console type='pty'>
-  <target type='serial' port='0'/>
-</console>
-EOF
-        sudo virsh attach-device "${vm_name}" "${tmp_console}" ${attach_mode} >/dev/null 2>&1 || \
-            print_warning "Could not attach console device to ${vm_name} (continuing)."
-        rm -f "${tmp_console}" >/dev/null 2>&1 || true
-    fi
-}
-
-retrofit_rhis_vm_serial_consoles_if_missing() {
-    local vm
-    local -a vms=("satellite" "aap" "idm")
-
-    for vm in "${vms[@]}"; do
-        retrofit_vm_serial_console_if_missing "${vm}" || true
-    done
-}
-
 get_vm_console_label() {
     case "$1" in
-        satellite) printf '%s\n' "RHIS: Satellite" ;;
-        aap)        printf '%s\n' "RHIS: AAP" ;;
-        idm)        printf '%s\n' "RHIS: IdM" ;;
-        *)          printf '%s\n' "$1" ;;
+        satellite) printf '%s\n' "${SAT_HOSTNAME:-satellite}" ;;
+        aap)        printf '%s\n' "${AAP_HOSTNAME:-aap}" ;;
+        idm)           printf '%s\n' "${IDM_HOSTNAME:-idm}" ;;
+        *)             printf '%s\n' "$1" ;;
     esac
 }
 
 console_attach_cmd_for_vm() {
     local vm="$1"
-    if is_enabled "${RHIS_VM_MONITOR_FILTER_NOISE:-1}"; then
+    if is_enabled "${MINIRHIS_VM_MONITOR_FILTER_NOISE:-1}"; then
         cat <<EOF
-sudo virsh console --force ${vm} 2>&1 | stdbuf -oL awk '/systemd-rc-local-generator.*\/etc\/rc\\.d\/rc\\.local is not marked executable, skipping\\./{n++;next} /SELinux:  Converting [0-9]+ SID table entries\\.\\.\\./{n++;next} /SELinux:  policy capability /{n++;next} /systemd-journald\\[[0-9]+\\]: Received SIGTERM from PID 1 \\(systemd\\)\\./{n++;next} {print} END{if(n>0) printf("[monitor] filtered %d expected reboot-noise lines\\n", n) > "/dev/stderr"}'; true
+sudo virsh console ${vm} 2>&1 | stdbuf -oL awk '/systemd-rc-local-generator.*\/etc\/rc\\.d\/rc\\.local is not marked executable, skipping\\./{n++;next} /SELinux:  Converting [0-9]+ SID table entries\\.\\.\\./{n++;next} /SELinux:  policy capability /{n++;next} /systemd-journald\\[[0-9]+\\]: Received SIGTERM from PID 1 \\(systemd\\)\\./{n++;next} {print} END{if(n>0) printf("[monitor] filtered %d expected reboot-noise lines\\n", n) > "/dev/stderr"}'; true
 EOF
     else
-        printf 'sudo virsh console --force %s || true\n' "${vm}"
+        printf 'sudo virsh console %s || true\n' "${vm}"
     fi
 }
 
@@ -4123,7 +3922,7 @@ launch_single_vm_console_monitor_auto() {
     monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
 
     stop_vm_console_monitors >/dev/null 2>&1 || true
-    : > "${RHIS_VM_MONITOR_PID_FILE}"
+    : > "${MINIRHIS_VM_MONITOR_PID_FILE}"
 
     if ! command -v virsh >/dev/null 2>&1; then
         print_warning "virsh not found; skipping VM console monitor auto-launch."
@@ -4134,22 +3933,22 @@ launch_single_vm_console_monitor_auto() {
         if command -v gnome-terminal >/dev/null 2>&1; then
             gnome-terminal --title="${vm_label}" -- bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
             term_pid=$!
-            echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             launched=1
         elif command -v x-terminal-emulator >/dev/null 2>&1; then
             x-terminal-emulator -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
             term_pid=$!
-            echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             launched=1
         elif command -v konsole >/dev/null 2>&1; then
             konsole --title "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
             term_pid=$!
-            echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             launched=1
         elif command -v xterm >/dev/null 2>&1; then
             xterm -T "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
             term_pid=$!
-            echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             launched=1
         fi
     fi
@@ -4160,10 +3959,10 @@ launch_single_vm_console_monitor_auto() {
     fi
 
     if command -v tmux >/dev/null 2>&1; then
-        tmux has-session -t "$RHIS_VM_MONITOR_SESSION" 2>/dev/null && tmux kill-session -t "$RHIS_VM_MONITOR_SESSION"
-        tmux new-session -d -s "$RHIS_VM_MONITOR_SESSION" -n "$vm_label" "bash -lc '${monitor_cmd}'"
-        print_step "No GUI terminal detected. Started tmux console monitor session: $RHIS_VM_MONITOR_SESSION"
-        print_step "Attach anytime with: tmux attach -t $RHIS_VM_MONITOR_SESSION"
+        tmux has-session -t "$MINIRHIS_VM_MONITOR_SESSION" 2>/dev/null && tmux kill-session -t "$MINIRHIS_VM_MONITOR_SESSION"
+        tmux new-session -d -s "$MINIRHIS_VM_MONITOR_SESSION" -n "$vm_label" "bash -lc '${monitor_cmd}'"
+        print_step "No GUI terminal detected. Started tmux console monitor session: $MINIRHIS_VM_MONITOR_SESSION"
+        print_step "Attach anytime with: tmux attach -t $MINIRHIS_VM_MONITOR_SESSION"
         return 0
     fi
 
@@ -4180,7 +3979,7 @@ launch_vm_console_monitors_auto() {
     local console_attach_cmd
 
     stop_vm_console_monitors >/dev/null 2>&1 || true
-    : > "${RHIS_VM_MONITOR_PID_FILE}"
+    : > "${MINIRHIS_VM_MONITOR_PID_FILE}"
 
     if ! command -v virsh >/dev/null 2>&1; then
         print_warning "virsh not found; skipping VM console monitor auto-launch."
@@ -4196,7 +3995,7 @@ launch_vm_console_monitors_auto() {
                 monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
                 gnome-terminal --title="${vm_label}" -- bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
                 term_pid=$!
-                echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             done
             launched=1
         elif command -v x-terminal-emulator >/dev/null 2>&1; then
@@ -4206,7 +4005,7 @@ launch_vm_console_monitors_auto() {
                 monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
                 x-terminal-emulator -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
                 term_pid=$!
-                echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             done
             launched=1
         elif command -v konsole >/dev/null 2>&1; then
@@ -4216,7 +4015,7 @@ launch_vm_console_monitors_auto() {
                 monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
                 konsole --title "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
                 term_pid=$!
-                echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             done
             launched=1
         elif command -v xterm >/dev/null 2>&1; then
@@ -4226,7 +4025,7 @@ launch_vm_console_monitors_auto() {
                 monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
                 xterm -T "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
                 term_pid=$!
-                echo "$term_pid" >> "${RHIS_VM_MONITOR_PID_FILE}"
+                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
             done
             launched=1
         fi
@@ -4240,25 +4039,25 @@ launch_vm_console_monitors_auto() {
     # Headless fallback: detached tmux session (non-blocking)
     if command -v tmux >/dev/null 2>&1; then
         local pane_target=""
-        tmux has-session -t "$RHIS_VM_MONITOR_SESSION" 2>/dev/null && tmux kill-session -t "$RHIS_VM_MONITOR_SESSION"
+        tmux has-session -t "$MINIRHIS_VM_MONITOR_SESSION" 2>/dev/null && tmux kill-session -t "$MINIRHIS_VM_MONITOR_SESSION"
         for vm in "${vms[@]}"; do
             vm_label="$(get_vm_console_label "${vm}")"
             console_attach_cmd="$(console_attach_cmd_for_vm "${vm}")"
             monitor_cmd="echo [${vm_label}] monitor active \(auto-reconnect enabled\); while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo [${vm_label}] connecting virsh console \(Ctrl+\] to detach\); ${console_attach_cmd}; echo [${vm_label}] console disconnected \(reboot/install transition\); retrying in 5s...; sleep 5; done"
             printf -v monitor_cmd_escaped "%q" "${monitor_cmd}"
             if [ -z "${pane_target}" ]; then
-                tmux new-session -d -s "$RHIS_VM_MONITOR_SESSION" -n "$vm_label" "bash -lc ${monitor_cmd_escaped}"
-                pane_target="${RHIS_VM_MONITOR_SESSION}:0"
+                tmux new-session -d -s "$MINIRHIS_VM_MONITOR_SESSION" -n "$vm_label" "bash -lc ${monitor_cmd_escaped}"
+                pane_target="${MINIRHIS_VM_MONITOR_SESSION}:0"
             else
                 tmux split-window -h -t "${pane_target}" "bash -lc ${monitor_cmd_escaped}"
             fi
         done
-        tmux select-layout -t "$RHIS_VM_MONITOR_SESSION:0" tiled >/dev/null 2>&1 || true
-        tmux select-pane -t "$RHIS_VM_MONITOR_SESSION:0.0" -T "$(get_vm_console_label satellite)" >/dev/null 2>&1 || true
-        tmux select-pane -t "$RHIS_VM_MONITOR_SESSION:0.1" -T "$(get_vm_console_label aap)" >/dev/null 2>&1 || true
-        tmux select-pane -t "$RHIS_VM_MONITOR_SESSION:0.2" -T "$(get_vm_console_label idm)" >/dev/null 2>&1 || true
-        print_step "No GUI terminal detected. Started tmux console monitor session: $RHIS_VM_MONITOR_SESSION"
-        print_step "Attach anytime with: tmux attach -t $RHIS_VM_MONITOR_SESSION"
+        tmux select-layout -t "$MINIRHIS_VM_MONITOR_SESSION:0" tiled >/dev/null 2>&1 || true
+        tmux select-pane -t "$MINIRHIS_VM_MONITOR_SESSION:0.0" -T "$(get_vm_console_label satellite)" >/dev/null 2>&1 || true
+        tmux select-pane -t "$MINIRHIS_VM_MONITOR_SESSION:0.1" -T "$(get_vm_console_label aap)" >/dev/null 2>&1 || true
+        tmux select-pane -t "$MINIRHIS_VM_MONITOR_SESSION:0.2" -T "$(get_vm_console_label idm)" >/dev/null 2>&1 || true
+        print_step "No GUI terminal detected. Started tmux console monitor session: $MINIRHIS_VM_MONITOR_SESSION"
+        print_step "Attach anytime with: tmux attach -t $MINIRHIS_VM_MONITOR_SESSION"
         return 0
     fi
 
@@ -4270,16 +4069,16 @@ stop_vm_console_monitors() {
     local pid
 
     if command -v tmux >/dev/null 2>&1; then
-        tmux has-session -t "$RHIS_VM_MONITOR_SESSION" 2>/dev/null && tmux kill-session -t "$RHIS_VM_MONITOR_SESSION" || true
+        tmux has-session -t "$MINIRHIS_VM_MONITOR_SESSION" 2>/dev/null && tmux kill-session -t "$MINIRHIS_VM_MONITOR_SESSION" || true
     fi
 
-    if [ -f "$RHIS_VM_MONITOR_PID_FILE" ]; then
+    if [ -f "$MINIRHIS_VM_MONITOR_PID_FILE" ]; then
         while IFS= read -r pid; do
             [ -n "$pid" ] || continue
             kill "$pid" >/dev/null 2>&1 || true
             kill -9 "$pid" >/dev/null 2>&1 || true
-        done < "$RHIS_VM_MONITOR_PID_FILE"
-        rm -f "$RHIS_VM_MONITOR_PID_FILE"
+        done < "$MINIRHIS_VM_MONITOR_PID_FILE"
+        rm -f "$MINIRHIS_VM_MONITOR_PID_FILE"
     fi
 
     return 0
@@ -4320,27 +4119,27 @@ start_vm_power_watchdog() {
         done
     ) >/dev/null 2>&1 &
 
-    RHIS_VM_WATCHDOG_PID="$!"
-    print_step "Started VM power watchdog (PID ${RHIS_VM_WATCHDOG_PID}) to keep Satellite/AAP/IdM ON"
+    MINIRHIS_VM_WATCHDOG_PID="$!"
+    print_step "Started VM power watchdog (PID ${MINIRHIS_VM_WATCHDOG_PID}) to keep Satellite/AAP/IdM ON"
     return 0
 }
 
 stop_vm_power_watchdog() {
-    if [ -n "${RHIS_VM_WATCHDOG_PID:-}" ]; then
-        kill "${RHIS_VM_WATCHDOG_PID}" >/dev/null 2>&1 || true
-        wait "${RHIS_VM_WATCHDOG_PID}" >/dev/null 2>&1 || true
-        RHIS_VM_WATCHDOG_PID=""
+    if [ -n "${MINIRHIS_VM_WATCHDOG_PID:-}" ]; then
+        kill "${MINIRHIS_VM_WATCHDOG_PID}" >/dev/null 2>&1 || true
+        wait "${MINIRHIS_VM_WATCHDOG_PID}" >/dev/null 2>&1 || true
+        MINIRHIS_VM_WATCHDOG_PID=""
     fi
     return 0
 }
 
-force_kill_rhis_leftovers() {
+force_kill_minirhis_leftovers() {
     local -a patterns=(
         "python3 -m http.server 8080 --bind"
         "virsh console satellite"
         "virsh console aap"
         "virsh console idm"
-        "rhis-vm-consoles"
+        "minirhis-vm-consoles"
         "curl -fL --retry 3 --retry-delay 10"
         "aap-bundle.tar.gz"
         "setup.sh 2>&1"
@@ -4350,7 +4149,7 @@ force_kill_rhis_leftovers() {
     local self_pid="$$"
     local parent_pid="${PPID:-0}"
 
-    print_step "Force-killing RHIS leftover processes from current/past runs"
+    print_step "Force-killing MINIRHIS leftover processes from current/past runs"
     for pattern in "${patterns[@]}"; do
         while IFS= read -r pid; do
             [ -n "${pid}" ] || continue
@@ -4372,12 +4171,12 @@ force_kill_rhis_leftovers() {
     done
 
     # Also hard-kill any tracked monitor terminal PIDs from previous runs.
-    if [ -f "$RHIS_VM_MONITOR_PID_FILE" ]; then
+    if [ -f "$MINIRHIS_VM_MONITOR_PID_FILE" ]; then
         while IFS= read -r pid; do
             [ -n "$pid" ] || continue
             kill -9 "$pid" >/dev/null 2>&1 || true
-        done < "$RHIS_VM_MONITOR_PID_FILE"
-        rm -f "$RHIS_VM_MONITOR_PID_FILE"
+        done < "$MINIRHIS_VM_MONITOR_PID_FILE"
+        rm -f "$MINIRHIS_VM_MONITOR_PID_FILE"
     fi
 
     return 0
@@ -4421,6 +4220,15 @@ ensure_selinux() {
 }
 
 ensure_firewalld() {
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    # minirhis_host_setup covers firewalld install + enable + port/service rules.
+    # We call it here so all three related functions share one Ansible run.
+    # If Ansible is unavailable the bash fallback below is used.
+    if run_local_role "minirhis_host_setup" "installer" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_host_setup unavailable; running bash fallback for ensure_firewalld"
+    # ── Bash fallback ───────────────────────────────────────────────────────
     if ! command -v firewall-cmd >/dev/null 2>&1; then
         print_warning "firewalld not found. Attempting installation..."
         sudo dnf install -y --nogpgcheck firewalld
@@ -4431,11 +4239,17 @@ ensure_firewalld() {
     print_step "firewalld is enabled and running"
 }
 
-configure_rhis_network_policy() {
+configure_minirhis_network_policy() {
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    if run_local_role "minirhis_host_setup" "installer" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_host_setup unavailable; running bash fallback for configure_minirhis_network_policy"
+    # ── Bash fallback ───────────────────────────────────────────────────────
     ensure_selinux
     ensure_firewalld || return 0
 
-    # RHIS dashboard/API
+    # MINIRHIS dashboard/API
     sudo firewall-cmd --permanent --add-port=3000/tcp
     sudo firewall-cmd --reload
 
@@ -4449,10 +4263,16 @@ configure_rhis_network_policy() {
         print_warning "semanage not found; install policycoreutils-python-utils if SELinux port labeling is required."
     fi
 
-    print_step "Security policy applied for RHIS (SELinux + firewalld port 3000)"
+    print_step "Security policy applied for MINIRHIS (SELinux + firewalld port 3000)"
 }
 
 configure_libvirt_firewall_policy() {
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    if run_local_role "minirhis_host_setup" "installer" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_host_setup unavailable; running bash fallback for configure_libvirt_firewall_policy"
+    # ── Bash fallback ───────────────────────────────────────────────────────
     ensure_selinux
     ensure_firewalld || return 0
 
@@ -4467,6 +4287,15 @@ configure_libvirt_firewall_policy() {
 configure_libvirt_networks() {
     print_step "Configuring libvirt networks (ensure external + create internal)"
 
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    load_ansible_env_file 2>/dev/null || true
+    normalize_shared_env_vars 2>/dev/null || true
+    if run_local_role "minirhis_libvirt_networks" "installer" \
+            --extra-vars "internal_gw=${INTERNAL_GW:-10.168.0.1} netmask=${NETMASK:-255.255.0.0}" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_libvirt_networks unavailable; running bash fallback"
+    # ── Bash fallback ───────────────────────────────────────────────────────
     if ! command -v virsh >/dev/null 2>&1; then
         print_warning "virsh not found; skipping libvirt network configuration."
         return 0
@@ -4521,28 +4350,28 @@ EOF
 # Local Installation
 install_local() {
     print_step "Starting Local Installation"
-    configure_rhis_network_policy
+    configure_minirhis_network_policy
 
     if ! ensure_node; then
         print_warning "Node.js installation failed. Please install Node.js first."
         return 1
     fi
 
-    print_step "Resolving RHIS project directory"
+    print_step "Resolving MINIRHIS project directory"
     cd "$SCRIPT_DIR"
 
     if [ -f "package.json" ]; then
-        print_step "Using script directory as RHIS project: $SCRIPT_DIR"
-    elif [ -n "$REPO_URL" ] && [[ "$REPO_URL" != *"your-org/RHIS.git"* ]]; then
+        print_step "Using script directory as MINIRHIS project: $SCRIPT_DIR"
+    elif [ -n "$REPO_URL" ] && [[ "$REPO_URL" != *"your-org/MINIRHIS.git"* ]]; then
         print_step "No local package.json found, cloning from REPO_URL"
-        if [ ! -d "RHIS/.git" ]; then
-            git clone "$REPO_URL" RHIS
+        if [ ! -d "MINIRHIS/.git" ]; then
+            git clone "$REPO_URL" MINIRHIS
         fi
-        cd RHIS
+        cd MINIRHIS
     else
         print_warning "No local package.json found in $SCRIPT_DIR (npm app mode unavailable)."
-        print_warning "RHIS in this repository is infrastructure/container-first."
-        print_warning "Use menu option 1 (RHIS Full Stack) or 4 (Configure Existing Stack)."
+        print_warning "MINIRHIS in this repository is infrastructure/container-first."
+        print_warning "Use menu option 1 (MINIRHIS Full Stack) or 4 (Configure Existing Stack)."
         if is_noninteractive; then
             use_container="Y"
             print_step "NONINTERACTIVE mode: defaulting to container deployment for menu option 1."
@@ -4565,7 +4394,7 @@ install_local() {
 
     print_step "Skipping local .env creation (credentials are centralized in ${ANSIBLE_ENV_FILE})"
 
-    print_step "Starting RHIS service"
+    print_step "Starting MINIRHIS service"
     npm start &
 
     print_success "Local installation complete"
@@ -4640,11 +4469,11 @@ ensure_rootless_podman() {
     return 0
 }
 
-# Ensure the RHIS provisioner container is running.  Idempotent: no-op if it is
+# Ensure the MINIRHIS provisioner container is running.  Idempotent: no-op if it is
 # already up.  The container's entrypoint drops to an interactive bash shell, so
 # it needs a pseudo-TTY (-t) to stay alive in detached (-d) mode.
 # Three host directories are bind-mounted inside the container:
-#   external_inventory  -> inventory file(s) consumed by rhis-builder playbooks
+#   external_inventory  -> inventory file(s) consumed by minirhis-builder playbooks
 #   host_vars           -> per-node variable files (satellite.yml, aap.yml, …)
 #   vault               -> Ansible vault env.yml + optional .vaultpass.txt
 
@@ -4658,21 +4487,21 @@ ensure_rootless_podman() {
 # version is available.  That warning cannot be suppressed via a version pin.
 ensure_container_collection_compat() {
     local core_ver
-    core_ver=$(podman exec "${RHIS_CONTAINER_NAME}" ansible --version 2>/dev/null \
+    core_ver=$(podman exec "${MINIRHIS_CONTAINER_NAME}" ansible --version 2>/dev/null \
         | awk '/^ansible \[core/{gsub(/[\[\]]/,"",$3); print $3}')
 
     # Only needed for ansible-core 2.14.x; newer images are already fine.
     [[ "${core_ver}" == 2.14.* ]] || return 0
 
     local utils_ver
-    utils_ver=$(podman exec "${RHIS_CONTAINER_NAME}" ansible-galaxy collection list 2>/dev/null \
+    utils_ver=$(podman exec "${MINIRHIS_CONTAINER_NAME}" ansible-galaxy collection list 2>/dev/null \
         | awk '/^ansible\.utils[[:space:]]/{print $2}')
 
     # Already pinned to 4.x — nothing to do.
     [[ "${utils_ver}" == 4.* ]] && return 0
 
     print_step "Pinning ansible.utils to 4.1.0 for ansible-core ${core_ver} compatibility"
-    if podman exec "${RHIS_CONTAINER_NAME}" \
+    if podman exec "${MINIRHIS_CONTAINER_NAME}" \
            ansible-galaxy collection install "ansible.utils:4.1.0" --force >/dev/null 2>&1; then
         print_success "ansible.utils pinned to 4.1.0 (was ${utils_ver:-unknown})."
     else
@@ -4681,13 +4510,13 @@ ensure_container_collection_compat() {
     return 0
 }
 
-# Maintain RHIS-managed hotfixes inside the provisioner container so each newly
+# Maintain MINIRHIS-managed hotfixes inside the provisioner container so each newly
 # deployed container gets the same compatibility/workaround patches before any
 # playbooks are executed.
 ensure_container_managed_chrony_template() {
-    local _tpl_path="/rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2"
-    local _mk_cmd='mkdir -p /rhis/rhis-builder-satellite/roles/satellite_pre/templates && cat > /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
-# RHIS fallback chrony template (auto-generated when upstream template is missing)
+    local _tpl_path="/minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2"
+    local _mk_cmd='mkdir -p /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates && cat > /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
+# MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
@@ -4695,14 +4524,14 @@ logdir /var/log/chrony
 pool 2.rhel.pool.ntp.org iburst
 EOF'
 
-    if podman exec "${RHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
+    if podman exec "${MINIRHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
         return 0
     fi
 
     print_warning "Managed container patch: chrony.j2 missing; applying fallback template."
 
-    if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
-       podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
+    if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
+       podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
         print_success "Managed container patch applied: fallback chrony.j2 created."
         return 0
     fi
@@ -4712,9 +4541,9 @@ EOF'
 }
 
 ensure_container_managed_idm_chrony_template() {
-    local _tpl_path="/rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2"
-    local _mk_cmd='mkdir -p /rhis/rhis-builder-idm/roles/idm_pre/templates && cat > /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
-# RHIS fallback chrony template (auto-generated when upstream template is missing)
+    local _tpl_path="/minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2"
+    local _mk_cmd='mkdir -p /minirhis/minirhis-builder-idm/roles/idm_pre/templates && cat > /minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
+# MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
@@ -4722,14 +4551,14 @@ logdir /var/log/chrony
 pool 2.rhel.pool.ntp.org iburst
 EOF'
 
-    if podman exec "${RHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
+    if podman exec "${MINIRHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
         return 0
     fi
 
     print_warning "Managed container patch: IdM chrony.j2 missing; applying fallback template."
 
-    if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
-       podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
+    if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
+       podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
         print_success "Managed container patch applied: IdM fallback chrony.j2 created."
         return 0
     fi
@@ -4739,11 +4568,11 @@ EOF'
 }
 
 ensure_container_managed_satellite_foreman_patch() {
-    local _root="/rhis/rhis-builder-satellite/roles/satellite_pre/tasks"
+    local _root="/minirhis/minirhis-builder-satellite/roles/satellite_pre/tasks"
     local _py='import pathlib
 import re
 
-root = pathlib.Path("/rhis/rhis-builder-satellite/roles/satellite_pre/tasks")
+root = pathlib.Path("/minirhis/minirhis-builder-satellite/roles/satellite_pre/tasks")
 if not root.exists():
     print("MISSING_TASKS_DIR")
     raise SystemExit(0)
@@ -4815,9 +4644,9 @@ print(f"UPDATED={updated}")'
     local _cmd=$'python3 - <<\'PY\'\n'"${_py}"$'\nPY'
     local _out=""
 
-    _out="$(podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+    _out="$(podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
     if [ -z "${_out}" ]; then
-        _out="$(podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+        _out="$(podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
     fi
 
     if printf '%s\n' "${_out}" | grep -q 'UPDATED='; then
@@ -4837,7 +4666,7 @@ ensure_container_managed_idm_update_patch() {
     local _py='import pathlib
 import re
 
-path = pathlib.Path("/rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml")
+path = pathlib.Path("/minirhis/minirhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml")
 if not path.exists():
     print("MISSING_IDM_UPDATE_TASK")
     raise SystemExit(0)
@@ -4915,9 +4744,9 @@ else:
 
     local _cmd=$'python3 - <<\'PY\'\n'"${_py}"$'\nPY'
     local _out=""
-    _out="$(podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+    _out="$(podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
     if [ -z "${_out}" ]; then
-        _out="$(podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+        _out="$(podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
     fi
 
     if printf '%s\n' "${_out}" | grep -q 'UPDATED=1'; then
@@ -4948,12 +4777,12 @@ sync_local_roles_to_container() {
         return 0
     fi
 
-    print_step "Syncing local container/roles/* to provisioner container /rhis/"
-    for tree in "${local_roles_dir}"/rhis-builder-*/; do
+    print_step "Syncing local container/roles/* to provisioner container /minirhis/"
+    for tree in "${local_roles_dir}"/minirhis-builder-*/; do
         tree="$(basename "${tree}")"
-        podman exec "${RHIS_CONTAINER_NAME}" mkdir -p "/rhis/${tree}" >/dev/null 2>&1 || true
+        podman exec "${MINIRHIS_CONTAINER_NAME}" mkdir -p "/minirhis/${tree}" >/dev/null 2>&1 || true
         if podman cp "${local_roles_dir}/${tree}/." \
-               "${RHIS_CONTAINER_NAME}:/rhis/${tree}/" >/dev/null 2>&1; then
+               "${MINIRHIS_CONTAINER_NAME}:/minirhis/${tree}/" >/dev/null 2>&1; then
             print_step "  synced: ${tree}"
         else
             print_warning "  failed to sync: ${tree}"
@@ -4962,11 +4791,11 @@ sync_local_roles_to_container() {
     done
 
     # Keep top-level container/roles assets in sync for local/adhoc runs inside
-    # rhis-provisioner (ansible.cfg and requirements files).
+    # minirhis-provisioner (ansible.cfg and requirements files).
     for rel_file in "${top_level_assets[@]}"; do
         if [ -f "${local_roles_dir}/${rel_file}" ]; then
             if podman cp "${local_roles_dir}/${rel_file}" \
-                   "${RHIS_CONTAINER_NAME}:/rhis/${rel_file}" >/dev/null 2>&1; then
+                   "${MINIRHIS_CONTAINER_NAME}:/minirhis/${rel_file}" >/dev/null 2>&1; then
                 print_step "  synced: ${rel_file}"
             else
                 print_warning "  failed to sync: ${rel_file}"
@@ -4985,27 +4814,27 @@ sync_local_roles_to_container() {
 }
 
 apply_managed_container_patches() {
-    local _verify_cmd='test -f /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 && test -f /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 && grep -q "failed_when: false" /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml'
+    local _verify_cmd='test -f /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 && test -f /minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2 && grep -q "failed_when: false" /minirhis/minirhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /minirhis/minirhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /minirhis/minirhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml'
 
-    if ! is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
-        print_step "Managed container patches disabled (RHIS_ENABLE_CONTAINER_HOTFIXES=${RHIS_ENABLE_CONTAINER_HOTFIXES})."
+    if ! is_enabled "${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+        print_step "Managed container patches disabled (MINIRHIS_ENABLE_CONTAINER_HOTFIXES=${MINIRHIS_ENABLE_CONTAINER_HOTFIXES})."
         return 0
     fi
 
-    print_step "Applying RHIS-managed patches to provisioner container components"
+    print_step "Applying MINIRHIS-managed patches to provisioner container components"
 
     ensure_container_managed_chrony_template || true
     ensure_container_managed_idm_chrony_template || true
     ensure_container_managed_satellite_foreman_patch || true
     ensure_container_managed_idm_update_patch || true
 
-    if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1 || \
-       podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1; then
+    if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1 || \
+       podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1; then
         print_success "Managed container patch verification passed."
         return 0
     fi
 
-    if is_enabled "${RHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"; then
+    if is_enabled "${MINIRHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"; then
         print_warning "Managed container patch verification failed and enforcement is ON."
         return 1
     fi
@@ -5016,13 +4845,13 @@ apply_managed_container_patches() {
 
 ensure_container_running() {
     # Auto-generate required host mount directories for runtime artifacts.
-    mkdir -p "${RHIS_INVENTORY_DIR}" "${RHIS_HOST_VARS_DIR}" "${ANSIBLE_ENV_DIR}" || {
+    mkdir -p "${MINIRHIS_INVENTORY_DIR}" "${MINIRHIS_HOST_VARS_DIR}" "${ANSIBLE_ENV_DIR}" || {
         print_warning "Failed to create required runtime directories for container mounts."
         return 1
     }
 
-    generate_rhis_ansible_cfg || {
-        print_warning "Could not generate RHIS Ansible config at ${RHIS_ANSIBLE_CFG_VAULT_HOST}"
+    generate_minirhis_ansible_cfg || {
+        print_warning "Could not generate MINIRHIS Ansible config at ${MINIRHIS_ANSIBLE_CFG_VAULT_HOST}"
         return 1
     }
 
@@ -5031,9 +4860,9 @@ ensure_container_running() {
         return 1
     }
 
-    if podman ps --filter "name=^${RHIS_CONTAINER_NAME}$" --format '{{.Names}}' 2>/dev/null \
-           | grep -q "^${RHIS_CONTAINER_NAME}$"; then
-        print_success "RHIS provisioner container '${RHIS_CONTAINER_NAME}' is already running."
+    if podman ps --filter "name=^${MINIRHIS_CONTAINER_NAME}$" --format '{{.Names}}' 2>/dev/null \
+           | grep -q "^${MINIRHIS_CONTAINER_NAME}$"; then
+        print_success "MINIRHIS provisioner container '${MINIRHIS_CONTAINER_NAME}' is already running."
         ensure_container_collection_compat || true
         sync_local_roles_to_container || print_warning "Role sync had errors; continuing."
         apply_managed_container_patches || return 1
@@ -5041,38 +4870,38 @@ ensure_container_running() {
     fi
 
     # Remove a stopped/crashed remnant so the name is free
-    podman rm -f "${RHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
+    podman rm -f "${MINIRHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
 
     # Right after container teardown, consolidate runtime values from any
     # active sources (preseed, shell exports, prior vault state) back into
     # encrypted ~/.ansible/conf/env.yml.
     sync_runtime_values_to_ansible_vault || print_warning "Could not consolidate runtime values into ${ANSIBLE_ENV_FILE}; continuing."
 
-    print_step "Starting RHIS provisioner container '${RHIS_CONTAINER_NAME}'"
+    print_step "Starting MINIRHIS provisioner container '${MINIRHIS_CONTAINER_NAME}'"
     podman run -d -t \
-        --name "${RHIS_CONTAINER_NAME}" \
+        --name "${MINIRHIS_CONTAINER_NAME}" \
         --network host \
-        -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" \
-        -v "${RHIS_INVENTORY_DIR}:/rhis/vars/external_inventory:Z" \
-        -v "${RHIS_HOST_VARS_DIR}:/rhis/vars/host_vars:Z" \
-        -v "${ANSIBLE_ENV_DIR}:/rhis/vars/vault:z" \
-        -v "${RHIS_INSTALLER_SSH_KEY_DIR}:${RHIS_INSTALLER_SSH_KEY_CONTAINER_DIR}:z,ro" \
-        "${RHIS_CONTAINER_IMAGE}"
+        -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" \
+        -v "${MINIRHIS_INVENTORY_DIR}:/minirhis/vars/external_inventory:Z" \
+        -v "${MINIRHIS_HOST_VARS_DIR}:/minirhis/vars/host_vars:Z" \
+        -v "${ANSIBLE_ENV_DIR}:/minirhis/vars/vault:z" \
+        -v "${MINIRHIS_INSTALLER_SSH_KEY_DIR}:${MINIRHIS_INSTALLER_SSH_KEY_CONTAINER_DIR}:z,ro" \
+        "${MINIRHIS_CONTAINER_IMAGE}"
 
     ensure_container_collection_compat || true
     sync_local_roles_to_container || print_warning "Role sync had errors; continuing."
     apply_managed_container_patches || return 1
-    print_success "Container '${RHIS_CONTAINER_NAME}' started."
-    echo "Exec into the container : podman exec -it ${RHIS_CONTAINER_NAME} /bin/bash"
-    echo "Ansible config vault    : ${RHIS_ANSIBLE_CFG_VAULT_HOST}"
-    echo "Ansible config runtime  : ${RHIS_ANSIBLE_CFG_HOST}"
+    print_success "Container '${MINIRHIS_CONTAINER_NAME}' started."
+    echo "Exec into the container : podman exec -it ${MINIRHIS_CONTAINER_NAME} /bin/bash"
+    echo "Ansible config vault    : ${MINIRHIS_ANSIBLE_CFG_VAULT_HOST}"
+    echo "Ansible config runtime  : ${MINIRHIS_ANSIBLE_CFG_HOST}"
     echo "Ansible log file        : ${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}"
-    echo "Ansible fact cache      : ${RHIS_ANSIBLE_FACT_CACHE_HOST}"
-    echo "Run a playbook example  : podman exec -it ${RHIS_CONTAINER_NAME} ansible-playbook \\"
-    echo "    --inventory ${RHIS_CONTAINER_INVENTORY_FILE} \\" 
+    echo "Ansible fact cache      : ${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}"
+    echo "Run a playbook example  : podman exec -it ${MINIRHIS_CONTAINER_NAME} ansible-playbook \\"
+    echo "    --inventory ${MINIRHIS_CONTAINER_INVENTORY_FILE} \\" 
     echo "    --user ansiblerunner --ask-pass --ask-vault-pass \\" 
-    echo "    --extra-vars 'vault_dir=/rhis/vars/vault/' \\"
-    echo "    --limit idm_primary /rhis/rhis-builder-idm/main.yml"
+    echo "    --extra-vars 'vault_dir=/minirhis/vars/vault/' \\"
+    echo "    --limit idm_primary /minirhis/minirhis-builder-idm/main.yml"
 }
 
 # Try to ensure the provisioner container is running, with optional restart
@@ -5080,8 +4909,8 @@ ensure_container_running() {
 # can find all start/restart behavior in one place.
 ensure_container_running_with_retry() {
     local tries=0
-    local max=${RHIS_CONTAINER_RESTART_RETRIES:-2}
-    local interval=${RHIS_CONTAINER_RESTART_INTERVAL:-10}
+    local max=${MINIRHIS_CONTAINER_RESTART_RETRIES:-2}
+    local interval=${MINIRHIS_CONTAINER_RESTART_INTERVAL:-10}
 
     while true; do
         if ensure_container_running; then
@@ -5095,7 +4924,7 @@ ensure_container_running_with_retry() {
         fi
 
         print_step "Attempting to restart provisioner container (attempt ${tries}/${max})..."
-        podman rm -f "${RHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
+        podman rm -f "${MINIRHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
         sleep "${interval}"
     done
 }
@@ -5103,35 +4932,35 @@ ensure_container_running_with_retry() {
 install_container() {
     print_step "Starting Container Deployment"
     ensure_rootless_podman || return 1
-    configure_rhis_network_policy
+    configure_minirhis_network_policy
 
-    print_step "Pulling RHIS container image: ${RHIS_CONTAINER_IMAGE}"
-    podman pull "${RHIS_CONTAINER_IMAGE}"
+    print_step "Pulling MINIRHIS container image: ${MINIRHIS_CONTAINER_IMAGE}"
+    podman pull "${MINIRHIS_CONTAINER_IMAGE}"
     podman images -f "dangling=true" -q | xargs --no-run-if-empty podman rmi && \
         print_step "Cleaned up dangling container images." || true
 
     ensure_container_running
 
     print_success "Container deployment complete"
-    echo "Exec into the container: podman exec -it ${RHIS_CONTAINER_NAME} /bin/bash"
+    echo "Exec into the container: podman exec -it ${MINIRHIS_CONTAINER_NAME} /bin/bash"
 }
 
 run_container_prescribed_sequence() {
-    if ! is_enabled "${RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY:-1}"; then
-        print_step "Container auto-config is disabled (RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=${RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY})."
+    if ! is_enabled "${MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY:-1}"; then
+        print_step "Container auto-config is disabled (MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=${MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY})."
         return 0
     fi
 
     if ! preflight_config_as_code_targets; then
         print_step "Prerequisites for container auto-config are missing; auto-running VM provisioning workflow"
-        print_step "This will generate kickstarts/OEMDRV, create RHIS VMs, and continue configuration automatically"
-        create_rhis_vms || return 1
+        print_step "This will generate kickstarts/OEMDRV, create MINIRHIS VMs, and continue configuration automatically"
+        create_minirhis_vms || return 1
         return 0
     fi
 
     print_step "Container deployment complete; running prescribed config sequence automatically"
     print_step "Prescribed order: IdM -> Satellite -> AAP"
-    run_rhis_config_as_code || {
+    run_minirhis_config_as_code || {
         print_warning "Automatic prescribed sequence did not complete cleanly."
         print_warning "You can re-run by selecting menu option 2 again or invoking the same playbooks manually."
         return 1
@@ -5146,8 +4975,8 @@ run_container_config_only() {
 
     if ! preflight_config_as_code_targets; then
         print_step "Prerequisites for config-only are missing; auto-running VM provisioning workflow"
-        print_step "This will generate kickstarts/OEMDRV, create RHIS VMs, and continue configuration automatically"
-        create_rhis_vms || return 1
+        print_step "This will generate kickstarts/OEMDRV, create MINIRHIS VMs, and continue configuration automatically"
+        create_minirhis_vms || return 1
         return 0
     fi
 
@@ -5189,8 +5018,8 @@ prompt_deployment_scope() {
 
     read -r -p "Start guided deployment workflow now? [Y/n]: " _guided_choice
     case "${_guided_choice:-Y}" in
-        Y|y|"") RHIS_GUIDED_SCOPE_FLOW=1 ;;
-        *) RHIS_GUIDED_SCOPE_FLOW=0 ;;
+        Y|y|"") MINIRHIS_GUIDED_SCOPE_FLOW=1 ;;
+        *) MINIRHIS_GUIDED_SCOPE_FLOW=0 ;;
     esac
 }
 
@@ -5209,19 +5038,19 @@ detect_host_os_family() {
         linux*)
             case "${os_id}:${os_like}" in
                 rhel*:*|centos*:*|rocky*:*|almalinux*:*|fedora*:*|*:rhel*|*:fedora*)
-                    RHIS_DETECTED_OS="linux-rhel-family"
+                    MINIRHIS_DETECTED_OS="linux-rhel-family"
                     ;;
                 *)
-                    RHIS_DETECTED_OS="linux"
+                    MINIRHIS_DETECTED_OS="linux"
                     ;;
             esac
             ;;
-        darwin*) RHIS_DETECTED_OS="macos" ;;
-        msys*|cygwin*|win32*) RHIS_DETECTED_OS="windows" ;;
-        *) RHIS_DETECTED_OS="unknown" ;;
+        darwin*) MINIRHIS_DETECTED_OS="macos" ;;
+        msys*|cygwin*|win32*) MINIRHIS_DETECTED_OS="windows" ;;
+        *) MINIRHIS_DETECTED_OS="unknown" ;;
     esac
 
-    print_step "Detected host OS profile: ${RHIS_DETECTED_OS}"
+    print_step "Detected host OS profile: ${MINIRHIS_DETECTED_OS}"
     return 0
 }
 
@@ -5231,7 +5060,7 @@ prompt_local_vm_client() {
     echo "Local Virtualization Client"
     echo ""
     echo "  0) Back"
-    case "${RHIS_DETECTED_OS:-linux}" in
+    case "${MINIRHIS_DETECTED_OS:-linux}" in
         linux-rhel-family|linux)
             echo "  1) Libvirt (KVM) [recommended/default]"
             echo "  2) Vagrant + libvirt"
@@ -5239,9 +5068,9 @@ prompt_local_vm_client() {
             read -r -p "Choose local VM client [0-3, default 1]: " choice
             case "${choice:-1}" in
                 0) return 10 ;;
-                2) RHIS_VM_CLIENT="vagrant-libvirt" ;;
-                3) RHIS_VM_CLIENT="other" ;;
-                *) RHIS_VM_CLIENT="libvirt" ;;
+                2) MINIRHIS_VM_CLIENT="vagrant-libvirt" ;;
+                3) MINIRHIS_VM_CLIENT="other" ;;
+                *) MINIRHIS_VM_CLIENT="libvirt" ;;
             esac
             ;;
         macos)
@@ -5251,9 +5080,9 @@ prompt_local_vm_client() {
             read -r -p "Choose local VM client [0-3, default 1]: " choice
             case "${choice:-1}" in
                 0) return 10 ;;
-                2) RHIS_VM_CLIENT="parallels" ;;
-                3) RHIS_VM_CLIENT="utm-qemu" ;;
-                *) RHIS_VM_CLIENT="vmware-fusion" ;;
+                2) MINIRHIS_VM_CLIENT="parallels" ;;
+                3) MINIRHIS_VM_CLIENT="utm-qemu" ;;
+                *) MINIRHIS_VM_CLIENT="vmware-fusion" ;;
             esac
             ;;
         windows)
@@ -5263,22 +5092,22 @@ prompt_local_vm_client() {
             read -r -p "Choose local VM client [0-3, default 1]: " choice
             case "${choice:-1}" in
                 0) return 10 ;;
-                2) RHIS_VM_CLIENT="virtualbox" ;;
-                3) RHIS_VM_CLIENT="vmware-workstation" ;;
-                *) RHIS_VM_CLIENT="hyperv" ;;
+                2) MINIRHIS_VM_CLIENT="virtualbox" ;;
+                3) MINIRHIS_VM_CLIENT="vmware-workstation" ;;
+                *) MINIRHIS_VM_CLIENT="hyperv" ;;
             esac
             ;;
         *)
-            RHIS_VM_CLIENT="libvirt"
+            MINIRHIS_VM_CLIENT="libvirt"
             ;;
     esac
 
-    print_step "Selected local VM client: ${RHIS_VM_CLIENT}"
+    print_step "Selected local VM client: ${MINIRHIS_VM_CLIENT}"
     return 0
 }
 
 prepare_selected_local_vm_client() {
-    case "${RHIS_VM_CLIENT:-libvirt}" in
+    case "${MINIRHIS_VM_CLIENT:-libvirt}" in
         libvirt|vagrant-libvirt)
             print_step "Preparing local libvirt/KVM prerequisites"
             ensure_platform_packages_for_virt_manager || return 1
@@ -5286,11 +5115,11 @@ prepare_selected_local_vm_client() {
             configure_libvirt_networks || return 1
             ;;
         vmware-fusion|parallels|utm-qemu|hyperv|virtualbox|vmware-workstation|other)
-            print_warning "Selected VM client '${RHIS_VM_CLIENT}' requires platform-specific setup outside this script."
-            print_warning "Continuing with RHIS kickstart + provisioning workflow where possible."
+            print_warning "Selected VM client '${MINIRHIS_VM_CLIENT}' requires platform-specific setup outside this script."
+            print_warning "Continuing with MINIRHIS kickstart + provisioning workflow where possible."
             ;;
         *)
-            print_warning "Unknown local VM client '${RHIS_VM_CLIENT}', continuing without automated client setup."
+            print_warning "Unknown local VM client '${MINIRHIS_VM_CLIENT}', continuing without automated client setup."
             ;;
     esac
     return 0
@@ -5313,16 +5142,16 @@ prompt_remote_virtualization_platform() {
     read -r -p "Choose platform [0-7, default 1]: " choice
     case "${choice:-1}" in
         0) return 10 ;;
-        2) RHIS_REMOTE_PLATFORM="nutanix" ;;
-        3) RHIS_REMOTE_PLATFORM="openshift" ;;
-        4) RHIS_REMOTE_PLATFORM="openshift-virt" ;;
-        5) RHIS_REMOTE_PLATFORM="aws" ;;
-        6) RHIS_REMOTE_PLATFORM="azure" ;;
-        7) RHIS_REMOTE_PLATFORM="gcp" ;;
-        *) RHIS_REMOTE_PLATFORM="vmware" ;;
+        2) MINIRHIS_REMOTE_PLATFORM="nutanix" ;;
+        3) MINIRHIS_REMOTE_PLATFORM="openshift" ;;
+        4) MINIRHIS_REMOTE_PLATFORM="openshift-virt" ;;
+        5) MINIRHIS_REMOTE_PLATFORM="aws" ;;
+        6) MINIRHIS_REMOTE_PLATFORM="azure" ;;
+        7) MINIRHIS_REMOTE_PLATFORM="gcp" ;;
+        *) MINIRHIS_REMOTE_PLATFORM="vmware" ;;
     esac
 
-    print_step "Selected remote platform: ${RHIS_REMOTE_PLATFORM}"
+    print_step "Selected remote platform: ${MINIRHIS_REMOTE_PLATFORM}"
     print_warning "Remote platform provisioning integration is best-effort; local orchestration path remains primary."
     return 0
 }
@@ -5336,21 +5165,21 @@ prompt_install_component_choice() {
     echo "  1) Ansible Automation Platform 2.6"
     echo "  2) IdM 5.0"
     echo "  3) Satellite 6.18"
-    echo "  4) RHIS Integrated Full Stack"
+    echo "  4) MINIRHIS Integrated Full Stack"
     echo "     - AAP + IdM + Satellite"
     echo ""
     read -r -p "Choose component [0-4, default 4]: " choice
     case "${choice:-4}" in
         0)
-            print_step "Exiting RHIS installer by user request."
+            print_step "Exiting MINIRHIS installer by user request."
             exit 0
             ;;
-        1) RHIS_INSTALL_COMPONENT="aap" ;;
-        2) RHIS_INSTALL_COMPONENT="idm" ;;
-        3) RHIS_INSTALL_COMPONENT="satellite" ;;
-        *) RHIS_INSTALL_COMPONENT="full" ;;
+        1) MINIRHIS_INSTALL_COMPONENT="aap" ;;
+        2) MINIRHIS_INSTALL_COMPONENT="idm" ;;
+        3) MINIRHIS_INSTALL_COMPONENT="satellite" ;;
+        *) MINIRHIS_INSTALL_COMPONENT="full" ;;
     esac
-    print_step "Selected install target: ${RHIS_INSTALL_COMPONENT}"
+    print_step "Selected install target: ${MINIRHIS_INSTALL_COMPONENT}"
     return 0
 }
 
@@ -5380,7 +5209,7 @@ run_guided_scope_workflow() {
                 fi
 
                 print_step "Starting kickstart generation and installation workflow for selected target"
-                case "${RHIS_INSTALL_COMPONENT:-full}" in
+                case "${MINIRHIS_INSTALL_COMPONENT:-full}" in
                     satellite)
                         install_satellite_only || return 1
                         ;;
@@ -5394,7 +5223,7 @@ run_guided_scope_workflow() {
                         run_container_config_only || return 1
                         ;;
                     *)
-                        print_warning "Unknown component target '${RHIS_INSTALL_COMPONENT}'."
+                        print_warning "Unknown component target '${MINIRHIS_INSTALL_COMPONENT}'."
                         return 1
                         ;;
                 esac
@@ -5423,7 +5252,7 @@ run_guided_scope_workflow() {
                 fi
 
                 print_step "Starting kickstart generation and installation workflow for selected target"
-                case "${RHIS_INSTALL_COMPONENT:-full}" in
+                case "${MINIRHIS_INSTALL_COMPONENT:-full}" in
                     satellite)
                         install_satellite_only || return 1
                         ;;
@@ -5437,7 +5266,7 @@ run_guided_scope_workflow() {
                         run_container_config_only || return 1
                         ;;
                     *)
-                        print_warning "Unknown component target '${RHIS_INSTALL_COMPONENT}'."
+                        print_warning "Unknown component target '${MINIRHIS_INSTALL_COMPONENT}'."
                         return 1
                         ;;
                 esac
@@ -5490,7 +5319,7 @@ run_component_config_scope() {
                 create_aap_vm_only || return 1
                 ;;
             *)
-                create_rhis_vms || return 1
+                create_minirhis_vms || return 1
                 return 0
                 ;;
         esac
@@ -5498,19 +5327,19 @@ run_component_config_scope() {
         preflight_config_as_code_targets "${targets[@]}" || return 1
     fi
 
-    RHIS_COMPONENT_SCOPE="${scope}" run_rhis_config_as_code || return 1
+    MINIRHIS_COMPONENT_SCOPE="${scope}" run_minirhis_config_as_code || return 1
     return 0
 }
 
 ensure_satellite_content_profile_bootstrap() {
-                local profile_path="${RHIS_HOST_VARS_DIR}/satellite_content_profile.yml"
+                local profile_path="${MINIRHIS_HOST_VARS_DIR}/satellite_content_profile.yml"
                 local sync_date_default
                 local sync_date
                 local include_product_links="1"
                 local include_repo_sets="1"
                 local answer=""
 
-                mkdir -p "${RHIS_HOST_VARS_DIR}" || return 1
+                mkdir -p "${MINIRHIS_HOST_VARS_DIR}" || return 1
 
                 if [ -f "${profile_path}" ]; then
                                 print_step "Satellite content profile already exists: ${profile_path}"
@@ -5548,7 +5377,7 @@ ensure_satellite_content_profile_bootstrap() {
 
                 cat > "${profile_path}" <<EOF
 ---
-# satellite_content_profile.yml — generated by rhis_install.sh (Satellite bootstrap)
+# satellite_content_profile.yml — generated by minirhis_install.sh (Satellite bootstrap)
 
 satellite_username: "admin"
 satellite_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
@@ -5560,7 +5389,7 @@ satellite_location: "{{ sat_loc | default('CORE') }}"
 satellite_url: "https://${SAT_IP:-10.168.128.1}"
 
 sync_plans:
-    - name: "weekly_rhis_sync"
+    - name: "weekly_minirhis_sync"
         interval: "weekly"
         enabled: true
         sync_date: "${sync_date}"
@@ -5571,13 +5400,13 @@ EOF
                                 cat >> "${profile_path}" <<'EOF'
 product_plans:
     - name: "Red Hat Enterprise Linux for x86_64"
-        plan: "weekly_rhis_sync"
+        plan: "weekly_minirhis_sync"
     - name: "Red Hat Satellite Client"
-        plan: "weekly_rhis_sync"
+        plan: "weekly_minirhis_sync"
     - name: "Red Hat Ansible Automation Platform"
-        plan: "weekly_rhis_sync"
+        plan: "weekly_minirhis_sync"
     - name: "Red Hat Enterprise Linux Server"
-        plan: "weekly_rhis_sync"
+        plan: "weekly_minirhis_sync"
 
 EOF
                 else
@@ -5757,12 +5586,12 @@ install_satellite_only() {
     fi
 
     print_step "Kickstart provisioning complete. Running post-boot Satellite component setup..."
-    RHIS_COMPONENT_SCOPE="satellite" run_rhis_config_as_code || {
+    MINIRHIS_COMPONENT_SCOPE="satellite" run_minirhis_config_as_code || {
         print_warning "Satellite post-boot component setup failed."
         return 1
     }
 
-    revert_rc_local_nonexec_on_rhis_vms "satellite" || print_warning "rc.local permission reversion reported issues for Satellite; continuing."
+    revert_rc_local_nonexec_on_minirhis_vms "satellite" || print_warning "rc.local permission reversion reported issues for Satellite; continuing."
 
     print_success "Satellite standalone workflow complete (kickstart + post-boot component setup)."
     return 0
@@ -5795,12 +5624,12 @@ install_idm_only() {
     fi
 
     print_step "Kickstart provisioning complete. Running post-boot IdM component setup..."
-    RHIS_COMPONENT_SCOPE="idm" run_rhis_config_as_code || {
+    MINIRHIS_COMPONENT_SCOPE="idm" run_minirhis_config_as_code || {
         print_warning "IdM post-boot component setup failed."
         return 1
     }
 
-    revert_rc_local_nonexec_on_rhis_vms "idm" || print_warning "rc.local permission reversion reported issues for IdM; continuing."
+    revert_rc_local_nonexec_on_minirhis_vms "idm" || print_warning "rc.local permission reversion reported issues for IdM; continuing."
 
     print_success "IdM standalone workflow complete (kickstart + post-boot component setup)."
     return 0
@@ -5833,18 +5662,18 @@ install_aap_only() {
     fi
 
     print_step "Kickstart provisioning complete. Running post-boot AAP component setup..."
-    RHIS_COMPONENT_SCOPE="aap" run_rhis_config_as_code || {
+    MINIRHIS_COMPONENT_SCOPE="aap" run_minirhis_config_as_code || {
         print_warning "AAP post-boot component setup failed."
         return 1
     }
 
-    revert_rc_local_nonexec_on_rhis_vms "aap" || print_warning "rc.local permission reversion reported issues for AAP; continuing."
+    revert_rc_local_nonexec_on_minirhis_vms "aap" || print_warning "rc.local permission reversion reported issues for AAP; continuing."
 
     print_success "AAP standalone workflow complete (kickstart + post-boot component setup)."
     return 0
 }
 
-sync_rhis_external_hosts_entries() {
+sync_minirhis_external_hosts_entries() {
     local block_file_internal block_file_external rendered_file
     local vm ext_ip fqdn alias internal_ip row
     local -a rows_internal=()
@@ -5854,6 +5683,23 @@ sync_rhis_external_hosts_entries() {
         "aap:${AAP_HOSTNAME}:${AAP_ALIAS}:${AAP_IP}"
         "idm:${IDM_HOSTNAME}:${IDM_ALIAS}:${IDM_IP}"
     )
+
+    # ── Ansible-first path (internal /etc/hosts block only) ─────────────────
+    # Build the minirhis_hosts_entries list from our known internal IPs and pass it
+    # to the minirhis_hosts_sync role, which uses blockinfile for idempotent updates.
+    local _entries_json
+    _entries_json="$(printf '[{"ip":"%s","fqdn":"%s","shortname":"%s"},{"ip":"%s","fqdn":"%s","shortname":"%s"},{"ip":"%s","fqdn":"%s","shortname":"%s"}]' \
+        "${SAT_IP}" "${SAT_HOSTNAME}" "${SAT_ALIAS}" \
+        "${AAP_IP}" "${AAP_HOSTNAME}" "${AAP_ALIAS}" \
+        "${IDM_IP}" "${IDM_HOSTNAME}" "${IDM_ALIAS}" 2>/dev/null || true)"
+    if [ -n "${_entries_json}" ] && \
+       run_local_role "minirhis_hosts_sync" "installer" \
+           --extra-vars "{\"minirhis_hosts_entries\": ${_entries_json}}" 2>/dev/null; then
+        : # Internal block handled by Ansible; fall through to handle external IPs below
+    else
+        print_warning "Ansible role minirhis_hosts_sync unavailable; using bash path for internal /etc/hosts block"
+    fi
+    # ── Bash fallback (and external IP handling) ────────────────────────────
 
     # Build a single /etc/hosts row while avoiding duplicate name tokens
     # (e.g. 'idm idm' when FQDN and alias are the same).
@@ -5891,7 +5737,7 @@ sync_rhis_external_hosts_entries() {
         alias="${spec#*:*:}"; alias="${alias%%:*}"
         internal_ip="${spec##*:}"
 
-        # Keep controller /etc/hosts populated with RHIS internal addresses.
+        # Keep controller /etc/hosts populated with MINIRHIS internal addresses.
         row="$(_build_hosts_row "${internal_ip}" "${fqdn}" "${alias}" 2>/dev/null || true)"
         [ -n "${row}" ] && rows_internal+=("${row}")
 
@@ -5903,21 +5749,21 @@ sync_rhis_external_hosts_entries() {
     done
 
     if [ "${#rows_internal[@]}" -eq 0 ] && [ "${#rows_external[@]}" -eq 0 ]; then
-        print_step "No RHIS VM addresses discovered for /etc/hosts sync yet."
+        print_step "No MINIRHIS VM addresses discovered for /etc/hosts sync yet."
         return 0
     fi
 
-    block_file_internal="$(mktemp /tmp/rhis-hosts-int-block.XXXXXX)"
-    block_file_external="$(mktemp /tmp/rhis-hosts-ext-block.XXXXXX)"
-    rendered_file="$(mktemp /tmp/rhis-hosts-rendered.XXXXXX)"
+    block_file_internal="$(mktemp /tmp/minirhis-hosts-int-block.XXXXXX)"
+    block_file_external="$(mktemp /tmp/minirhis-hosts-ext-block.XXXXXX)"
+    rendered_file="$(mktemp /tmp/minirhis-hosts-rendered.XXXXXX)"
 
     if [ "${#rows_internal[@]}" -gt 0 ]; then
         {
-            echo "# BEGIN RHIS INTERNAL HOSTS"
+            echo "# BEGIN MINIRHIS INTERNAL HOSTS"
             for row in "${rows_internal[@]}"; do
                 printf '%s\n' "${row}"
             done
-            echo "# END RHIS INTERNAL HOSTS"
+            echo "# END MINIRHIS INTERNAL HOSTS"
         } > "${block_file_internal}"
     else
         : > "${block_file_internal}"
@@ -5925,22 +5771,22 @@ sync_rhis_external_hosts_entries() {
 
     if [ "${#rows_external[@]}" -gt 0 ]; then
         {
-            echo "# BEGIN RHIS EXTERNAL HOSTS"
+            echo "# BEGIN MINIRHIS EXTERNAL HOSTS"
             for row in "${rows_external[@]}"; do
                 printf '%s\n' "${row}"
             done
-            echo "# END RHIS EXTERNAL HOSTS"
+            echo "# END MINIRHIS EXTERNAL HOSTS"
         } > "${block_file_external}"
     else
         : > "${block_file_external}"
     fi
 
-    # Remove previously managed RHIS blocks, then append refreshed blocks.
+    # Remove previously managed MINIRHIS blocks, then append refreshed blocks.
     sudo awk '
-        /^# BEGIN RHIS INTERNAL HOSTS$/ {in_internal=1; next}
-        /^# END RHIS INTERNAL HOSTS$/   {in_internal=0; next}
-        /^# BEGIN RHIS EXTERNAL HOSTS$/ {in_external=1; next}
-        /^# END RHIS EXTERNAL HOSTS$/   {in_external=0; next}
+        /^# BEGIN MINIRHIS INTERNAL HOSTS$/ {in_internal=1; next}
+        /^# END MINIRHIS INTERNAL HOSTS$/   {in_internal=0; next}
+        /^# BEGIN MINIRHIS EXTERNAL HOSTS$/ {in_external=1; next}
+        /^# END MINIRHIS EXTERNAL HOSTS$/   {in_external=0; next}
         !in_internal && !in_external { print }
     ' /etc/hosts > "${rendered_file}" || true
 
@@ -5952,9 +5798,9 @@ sync_rhis_external_hosts_entries() {
     mv -f "${rendered_file}.new" "${rendered_file}" >/dev/null 2>&1 || true
 
     if [ -s "${rendered_file}" ] && sudo cp -f "${rendered_file}" /etc/hosts 2>/dev/null; then
-        print_success "Updated /etc/hosts with RHIS internal/external interface entries."
+        print_success "Updated /etc/hosts with MINIRHIS internal/external interface entries."
     else
-        print_warning "Could not update /etc/hosts with RHIS internal/external interface entries."
+        print_warning "Could not update /etc/hosts with MINIRHIS internal/external interface entries."
     fi
 
     rm -f "${block_file_internal}" "${block_file_external}" "${rendered_file}" || true
@@ -5985,17 +5831,40 @@ preflight_config_as_code_targets() {
     fi
 
     if ! command -v virsh >/dev/null 2>&1; then
-        print_warning "virsh not found; cannot verify RHIS VM state before config-as-code."
+        print_warning "virsh not found; cannot verify MINIRHIS VM state before config-as-code."
         return 0
     fi
 
     discover_vm_ipv4() {
         local vm="$1"
-        timeout 10 sudo -n virsh domifaddr "$vm" 2>/dev/null \
+        local configured_ip="${2:-}"
+        local discovered_ips=""
+        local ip=""
+
+        if [ -n "${configured_ip}" ]; then
+            # Global policy: always target configured internal MINIRHIS IPs.
+            printf '%s\n' "${configured_ip}"
+            return 0
+        fi
+
+        discovered_ips="$(timeout 10 sudo -n virsh domifaddr "$vm" 2>/dev/null \
             | awk '/ipv4/ {print $4}' \
             | cut -d/ -f1 \
-            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' \
-            | head -1
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true)"
+
+        # Prefer the configured internal address when libvirt reports multiple NICs.
+        if [ -n "${configured_ip}" ] && printf '%s\n' "${discovered_ips}" | grep -Fxq "${configured_ip}"; then
+            printf '%s\n' "${configured_ip}"
+            return 0
+        fi
+
+        ip="$(printf '%s\n' "${discovered_ips}" | grep -E '^10\.168\.' | head -1 || true)"
+        if [ -n "${ip}" ]; then
+            printf '%s\n' "${ip}"
+            return 0
+        fi
+
+        printf '%s\n' "${discovered_ips}" | head -1
     }
 
     resolve_preflight_ip() {
@@ -6003,12 +5872,17 @@ preflight_config_as_code_targets() {
         local configured="$2"
         local discovered=""
 
+        if [ -n "${configured}" ]; then
+            printf '%s\n' "$configured"
+            return 0
+        fi
+
         if probe_ssh_endpoint "$configured"; then
             printf '%s\n' "$configured"
             return 0
         fi
 
-        discovered="$(discover_vm_ipv4 "$vm" || true)"
+        discovered="$(discover_vm_ipv4 "$vm" "$configured" || true)"
         if [ -n "$discovered" ]; then
             printf '%s\n' "$discovered"
             return 0
@@ -6017,7 +5891,7 @@ preflight_config_as_code_targets() {
         printf '%s\n' "$configured"
     }
 
-    print_step "Preflight: validating RHIS VM state and internal SSH reachability"
+    print_step "Preflight: validating MINIRHIS VM state and internal SSH reachability"
     print_step "Preflight targets: ${vm_specs[*]}"
     target_count="${#vm_specs[@]}"
     for spec in "${vm_specs[@]}"; do
@@ -6061,12 +5935,36 @@ preflight_config_as_code_targets() {
     fi
 
     if [ "$unreachable_target" -ne 0 ]; then
-        print_step "Waiting for internal SSH readiness (timeout=${RHIS_INTERNAL_SSH_WAIT_TIMEOUT}s, interval=${RHIS_INTERNAL_SSH_WAIT_INTERVAL}s)"
+        # Progress-bar helper — draws/updates a single line in place.
+        # Usage: _ssh_progress <elapsed> <timeout> <detail_mode> [warn_msg]
+        _ssh_progress() {
+            local elapsed="$1" timeout="$2" detail="$3" warn_msg="${4:-}"
+            local pct=$(( elapsed * 100 / timeout ))
+            [ "$pct" -gt 100 ] && pct=100
+            local filled=$(( pct * 30 / 100 ))
+            local empty=$(( 30 - filled ))
+            local bar=""
+            local i
+            for (( i=0; i<filled; i++ )); do bar="${bar}█"; done
+            for (( i=0; i<empty;  i++ )); do bar="${bar}░"; done
+            local remaining=$(( timeout - elapsed ))
+            if [ "$detail" -eq 1 ] && [ -n "$warn_msg" ]; then
+                # Warn lines go on a new line so they are preserved in logs
+                printf '\r\033[K'
+                echo -e "${YELLOW}[WARNING]${NC} ${warn_msg}"
+            fi
+            printf '\r\033[K'"${BLUE}[SSH-WAIT]${NC} [%s] %3d%%  %ds/%ds (~%ds remaining)" \
+                "${bar}" "${pct}" "${elapsed}" "${timeout}" "${remaining}"
+        }
+
+        printf '\n'
+        print_step "Waiting for internal SSH readiness (timeout=${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT}s)"
         wait_start="$(date +%s)"
-        wait_deadline=$(( wait_start + RHIS_INTERNAL_SSH_WAIT_TIMEOUT ))
+        wait_deadline=$(( wait_start + MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT ))
 
         while true; do
             all_ready=1
+            local _unreachable_vms=()
             for spec in "${vm_specs[@]}"; do
                 vm_name="${spec%%:*}"
                 configured_ip="${spec#*:}"
@@ -6085,44 +5983,44 @@ preflight_config_as_code_targets() {
                 else
                     reached=0
                     all_ready=0
-                fi
-                if [ "$reached" -eq 0 ] && [ "$show_detail_logs" -eq 1 ]; then
-                    print_warning "Internal SSH is not reachable yet for ${vm_name} at ${target_ip}:22"
+                    _unreachable_vms+=("${vm_name}(${target_ip})")
                 fi
             done
 
             if [ "$all_ready" -eq 1 ]; then
+                # Clear the progress line before printing success
+                printf '\r\033[K\n'
                 break
             fi
 
             now="$(date +%s)"
             if [ "$now" -ge "$wait_deadline" ]; then
-                print_warning "RHIS VMs exist, but internal SSH did not become reachable before timeout."
+                printf '\r\033[K\n'
+                print_warning "MINIRHIS VMs exist, but internal SSH did not become reachable before timeout."
                 print_warning "Check VM console output and network config for the 10.168.0.0/16 interfaces."
                 return 1
             fi
 
-            remaining=$(( wait_deadline - now ))
             elapsed=$(( now - wait_start ))
 
-            if [ "$elapsed" -ge "${RHIS_INTERNAL_SSH_WARN_GRACE}" ]; then
+            if [ "$elapsed" -ge "${MINIRHIS_INTERNAL_SSH_WARN_GRACE}" ]; then
                 show_detail_logs=1
             fi
 
-            if [ $((now - last_progress_log)) -ge "${RHIS_INTERNAL_SSH_LOG_EVERY}" ] || [ "$show_detail_logs" -eq 1 ]; then
-                if [ "$show_detail_logs" -eq 1 ]; then
-                    print_warning "Internal SSH still converging after ${elapsed}s (warn_grace=${RHIS_INTERNAL_SSH_WARN_GRACE}s, timeout=${RHIS_INTERNAL_SSH_WAIT_TIMEOUT}s, remaining~${remaining}s)"
-                else
-                    print_step "Internal SSH is still converging (elapsed=${elapsed}s/${RHIS_INTERNAL_SSH_WAIT_TIMEOUT}s, remaining~${remaining}s). Detailed warnings start after ${RHIS_INTERNAL_SSH_WARN_GRACE}s."
-                fi
+            if [ "$show_detail_logs" -eq 1 ] && \
+               [ $((now - last_progress_log)) -ge "${MINIRHIS_INTERNAL_SSH_LOG_EVERY}" ]; then
+                local _detail_msg="Still waiting: ${_unreachable_vms[*]:-} (${elapsed}s/${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT}s)"
+                _ssh_progress "$elapsed" "${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT}" 1 "$_detail_msg"
                 last_progress_log="$now"
+            else
+                _ssh_progress "$elapsed" "${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT}" 0
             fi
 
-            sleep "$RHIS_INTERNAL_SSH_WAIT_INTERVAL"
+            sleep "$MINIRHIS_INTERNAL_SSH_WAIT_INTERVAL"
         done
     fi
 
-    print_success "Preflight passed: RHIS VMs are running and reachable on the internal network."
+    print_success "Preflight passed: MINIRHIS VMs are running and reachable on the internal network."
     return 0
 }
 
@@ -6131,7 +6029,7 @@ preflight_config_as_code_targets() {
 #
 # Standalone pre-flight checker for headless / non-interactive deployments.
 # Checks required variables per menu choice, system requirements, commands,
-# SSH keys, IP/FQDN format, storage (≥700 GB), memory (≥80 GB), and CDN/DNS
+# SSH keys, IP/FQDN format, storage (≥300 GB), memory (≥64 GB), and CDN/DNS
 # reachability.
 #
 # Called by --validate / --preflight, or automatically before a non-interactive
@@ -6154,7 +6052,7 @@ validate_headless_config() {
     _vhead() { printf "\n${_vBLUE}━━ %s${_vNC}\n" "$1"; }
 
     printf "${_vBLUE}╔══════════════════════════════════════════════════════════════╗${_vNC}\n"
-    printf "${_vBLUE}║  RHIS Headless Environment Validation                       ║${_vNC}\n"
+    printf "${_vBLUE}║  MINIRHIS Headless Environment Validation                       ║${_vNC}\n"
     printf "${_vBLUE}╚══════════════════════════════════════════════════════════════╝${_vNC}\n\n"
 
     # ── Env file check ──────────────────────────────────────────────────────────
@@ -6285,7 +6183,7 @@ validate_headless_config() {
 
     # ── SSH keys ───────────────────────────────────────────────────────────────
     _vhead "SSH Configuration"
-    local ssh_key="${RHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/rhis-installer/id_rsa}"
+    local ssh_key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}"
     if [ -f "${ssh_key}" ]; then
         _vok "SSH private key exists: ${ssh_key}"
     else
@@ -6313,14 +6211,14 @@ validate_headless_config() {
 
     # Satellite service-plane policy: internal 10.168.0.0/16 only (eth1).
     if [[ "${choice}" =~ ^(3|4|5|7)$ ]]; then
-        if [[ "${RHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}" == "1" ]]; then
+        if [[ "${MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}" == "1" ]]; then
             if [[ "${SAT_IP:-}" =~ ^10\.168\. ]]; then
                 _vok "SAT_IP is on internal service network: ${SAT_IP}"
             else
                 _vfail "SAT_IP must be within 10.168.0.0/16 when Satellite services are enabled (current: ${SAT_IP:-unset})"
             fi
         else
-            _vwarn "RHIS_ENFORCE_SAT_INTERNAL_NETWORK=0; internal SAT_IP policy is disabled (current SAT_IP=${SAT_IP:-unset})"
+            _vwarn "MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK=0; internal SAT_IP policy is disabled (current SAT_IP=${SAT_IP:-unset})"
         fi
     fi
 
@@ -6345,10 +6243,10 @@ validate_headless_config() {
     local avail_gb
     avail_gb=$(df -BG /var/lib/libvirt 2>/dev/null | awk 'NR==2 {gsub(/G/,"",$4); print $4}') || avail_gb=""
     if [ -n "${avail_gb:-}" ] && [[ "${avail_gb}" =~ ^[0-9]+$ ]]; then
-        if [ "${avail_gb}" -ge 700 ]; then
-            _vok "${avail_gb} GB free (≥700 GB recommended for standard full stack)"
+        if [ "${avail_gb}" -ge 300 ]; then
+            _vok "${avail_gb} GB free (≥300 GB required)"
         else
-            _vfail "Only ${avail_gb} GB free — need ≥700 GB for standard full stack"
+            _vfail "Only ${avail_gb} GB free — need ≥300 GB"
         fi
     else
         _vwarn "Could not determine free space on /var/lib/libvirt"
@@ -6359,10 +6257,10 @@ validate_headless_config() {
     local mem_gb
     mem_gb=$(awk '/MemTotal/{print int($2/1024/1024)}' /proc/meminfo 2>/dev/null) || mem_gb=""
     if [ -n "${mem_gb:-}" ] && [[ "${mem_gb}" =~ ^[0-9]+$ ]]; then
-        if [ "${mem_gb}" -ge 80 ]; then
-            _vok "System RAM: ${mem_gb} GB (≥80 GB recommended for standard full stack)"
+        if [ "${mem_gb}" -ge 64 ]; then
+            _vok "System RAM: ${mem_gb} GB (≥64 GB recommended)"
         else
-            _vwarn "System RAM: ${mem_gb} GB — ≥80 GB recommended for standard full stack; may be constrained"
+            _vwarn "System RAM: ${mem_gb} GB — ≥64 GB recommended; may be constrained"
         fi
     else
         _vwarn "Could not read /proc/meminfo"
@@ -6408,27 +6306,27 @@ validate_headless_config() {
 # generate_env_template
 #
 # Writes a filled headless env-file template to the specified path.
-# Called via --generate-env [path].  Defaults to ./rhis-headless.env.template.
+# Called via --generate-env [path].  Defaults to ./minirhis-headless.env.template.
 # ---------------------------------------------------------------------------
 generate_env_template() {
-    local output_path="${1:-${SCRIPT_DIR}/rhis-headless.env.template}"
+    local output_path="${1:-${SCRIPT_DIR}/minirhis-headless.env.template}"
     local tmp_template=""
 
     tmp_template="$(mktemp)" || return 1
     cat > "${tmp_template}" <<'ENV_TEMPLATE_EOF'
 #!/bin/bash
-# RHIS Headless Environment Configuration Template
+# MINIRHIS Headless Environment Configuration Template
 #
 # Usage:
-#   1. Copy this file:  cp rhis-headless.env.template /etc/rhis/headless.env
-#   2. Fill it in:      nano /etc/rhis/headless.env
-#   3. Validate:        ./rhis_install.sh --validate --menu-choice 5 \
-#                                         --env-file /etc/rhis/headless.env
-#   4. Deploy:          ./rhis_install.sh --non-interactive --menu-choice 5 \
-#                                         --env-file /etc/rhis/headless.env
+#   1. Copy this file:  cp minirhis-headless.env.template /etc/minirhis/headless.env
+#   2. Fill it in:      nano /etc/minirhis/headless.env
+#   3. Validate:        ./minirhis_install.sh --validate --menu-choice 5 \
+#                                         --env-file /etc/minirhis/headless.env
+#   4. Deploy:          ./minirhis_install.sh --non-interactive --menu-choice 5 \
+#                                         --env-file /etc/minirhis/headless.env
 #
 # Security:
-#   chmod 600 /etc/rhis/headless.env
+#   chmod 600 /etc/minirhis/headless.env
 #   Never commit this file with real credentials to version control.
 
 # =============================================================================
@@ -6500,10 +6398,10 @@ HOST_INT_IP="192.168.122.1"         # KVM NAT bridge IP on the installer host
 # FEATURE FLAGS  (optional — uncomment to override)
 # =============================================================================
 # DEMO_MODE="0"                           # 1 = minimal/demo VM specs
-# RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY="1"
-# RHIS_RETRY_FAILED_PHASES_ONCE="1"
-# RHIS_ENABLE_POST_HEALTHCHECK="1"
-# RHIS_HEALTHCHECK_AUTOFIX="1"
+# MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY="1"
+# MINIRHIS_RETRY_FAILED_PHASES_ONCE="1"
+# MINIRHIS_ENABLE_POST_HEALTHCHECK="1"
+# MINIRHIS_HEALTHCHECK_AUTOFIX="1"
 
 # =============================================================================
 # AAP INVENTORY TEMPLATE  (optional — prompted interactively if empty)
@@ -6524,7 +6422,7 @@ ENV_TEMPLATE_EOF
 }
 
 wait_for_post_vm_settle() {
-    local grace="${1:-${RHIS_POST_VM_SETTLE_GRACE:-650}}"
+    local grace="${1:-${MINIRHIS_POST_VM_SETTLE_GRACE:-650}}"
     local remaining
     local original_grace elapsed percent filled bar
 
@@ -6537,7 +6435,7 @@ wait_for_post_vm_settle() {
     fi
 
     original_grace="$grace"
-    print_step "Guest install settle window: giving RHIS VMs ${grace}s before internal SSH checks begin"
+    print_step "Guest install settle window: giving MINIRHIS VMs ${grace}s before internal SSH checks begin"
     while [ "$grace" -gt 0 ]; do
         remaining="$grace"
         if [ "$remaining" -gt 60 ]; then
@@ -6557,12 +6455,12 @@ wait_for_post_vm_settle() {
     print_step "Initial settle progress: [####################] 100%% (${original_grace}s/${original_grace}s)"
 }
 
-print_rhis_health_summary() {
+print_minirhis_health_summary() {
     local vm state ip
     local -a vms=("satellite:${SAT_IP}" "aap:${AAP_IP}" "idm:${IDM_IP}")
 
     echo ""
-    echo "================ RHIS Health Summary ================"
+    echo "================ MINIRHIS Health Summary ================"
     for spec in "${vms[@]}"; do
         vm="${spec%%:*}"
         ip="${spec#*:}"
@@ -6583,9 +6481,10 @@ print_rhis_health_summary() {
 }
 
 run_deferred_aap_callback() {
-    if ! [ "${AAP_HTTP_PID:-0}" -gt 0 ] 2>/dev/null; then
-        return 0
-    fi
+    ensure_ssh_keys || {
+        print_warning "AAP callback cannot start: failed to ensure SSH keys at ${AAP_SSH_KEY_DIR}."
+        return 1
+    }
 
     AAP_SSH_CALLBACK_ENABLED=1
     print_step "AAP VM is installing. SSH callback will begin as soon as the VM is reachable."
@@ -6601,7 +6500,7 @@ run_deferred_aap_callback() {
         return 1
     fi
 
-    if kill "${AAP_HTTP_PID}" 2>/dev/null; then
+    if [ "${AAP_HTTP_PID:-0}" -gt 0 ] 2>/dev/null && kill "${AAP_HTTP_PID}" 2>/dev/null; then
         print_success "AAP bundle HTTP server stopped (PID ${AAP_HTTP_PID})."
     fi
     AAP_HTTP_PID=""
@@ -6613,13 +6512,13 @@ run_deferred_aap_callback() {
 # ─── Inventory + host_vars generation ─────────────────────────────────────────
 # Generate inventory from current env vars so the container
 # always has a correct, up-to-date inventory regardless of who cloned the repo.
-generate_rhis_inventory() {
+generate_minirhis_inventory() {
     if [ -f "${ANSIBLE_ENV_FILE}" ]; then
         load_ansible_env_file || return 1
     fi
     normalize_shared_env_vars
 
-    mkdir -p "${RHIS_INVENTORY_DIR}" "${SCRIPT_DIR}/container/roles/inventory" || return 1
+    mkdir -p "${MINIRHIS_INVENTORY_DIR}" "${SCRIPT_DIR}/container/roles/inventory" || return 1
 
     local controller_host
     local inventory_basename
@@ -6628,40 +6527,25 @@ generate_rhis_inventory() {
     local controller_host_e host_int_ip_e installer_user_e sat_host_e sat_alias_e sat_ip_e aap_host_e aap_alias_e aap_ip_e idm_host_e idm_alias_e idm_ip_e admin_user_e
     local sat_connect_host aap_connect_host idm_connect_host
 
-    # Default behavior uses internal RHIS addressing (10.168.x.x) for stable
+    # Global behavior uses internal MINIRHIS addressing (10.168.x.x) for stable
     # node-to-node trust and predictable Ansible reachability across rebuilds.
-    # Optional eth0 mode can be enabled for environments that intentionally
-    # manage nodes via external/NAT addressing.
-    # Fallback order when eth0 mode is enabled:
-    #   detected external IP via virsh -> FQDN hostname -> configured internal IP
     resolve_vm_connect_host() {
         local vm_name="$1"
         local fallback_host="$2"
         local fallback_ip="$3"
-        local detected_ip=""
-
-        if is_enabled "${RHIS_MANAGED_SSH_OVER_ETH0:-0}"; then
-            detected_ip="$(sudo virsh domifaddr "${vm_name}" 2>/dev/null | awk 'NR>2{print $4}' | cut -d/ -f1 | awk '$1 !~ /^10\.168\./ {print; exit}')"
-            if [ -n "${detected_ip}" ]; then
-                printf '%s' "${detected_ip}"
-                return 0
-            fi
-
-            if [ -n "${fallback_host}" ]; then
-                printf '%s' "${fallback_host}"
-                return 0
-            fi
-        fi
-
+        # shellcheck disable=SC2034
+        vm_name="${vm_name}"
+        # shellcheck disable=SC2034
+        fallback_host="${fallback_host}"
         printf '%s' "${fallback_ip}"
         return 0
     }
     controller_host="$(hostname -f 2>/dev/null || hostname)"
 
-    inventory_basename="$(basename "${RHIS_INVENTORY_FILE}")"
-    template_file="${RHIS_INVENTORY_FILE}.SAMPLE"
-    [ -f "${template_file}" ] || template_file="${RHIS_INVENTORY_FILE}"
-    [ -f "${template_file}" ] || template_file="${RHIS_INVENTORY_DIR}/hosts.SAMPLE"
+    inventory_basename="$(basename "${MINIRHIS_INVENTORY_FILE}")"
+    template_file="${MINIRHIS_INVENTORY_FILE}.SAMPLE"
+    [ -f "${template_file}" ] || template_file="${MINIRHIS_INVENTORY_FILE}"
+    [ -f "${template_file}" ] || template_file="${MINIRHIS_INVENTORY_DIR}/hosts.SAMPLE"
     [ -f "${template_file}" ] || template_file="${SCRIPT_DIR}/container/vars/external_inventory/hosts.yml"
     [ -f "${template_file}" ] || template_file="${SCRIPT_DIR}/inventory/hosts.SAMPLE"
     tmp_hosts="$(mktemp "${ANSIBLE_ENV_DIR}/.hosts.XXXXXX")" || return 1
@@ -6700,7 +6584,7 @@ generate_rhis_inventory() {
             "${template_file}" > "${tmp_hosts}"
     else
         cat > "${tmp_hosts}" <<INVENTORY_EOF
-# RHIS Ansible Inventory — generated by run_rhis_install_sequence.sh on $(date '+%Y-%m-%d %H:%M')
+# MINIRHIS Ansible Inventory — generated by run_minirhis_install_sequence.sh on $(date '+%Y-%m-%d %H:%M')
 # Do NOT commit this file; it contains host-specific values derived from env.yml.
 
 [ansibledev]
@@ -6756,7 +6640,7 @@ INVENTORY_EOF
         print_success "Generated inventory: ${target}"
     }
 
-    sync_inventory_target "${RHIS_INVENTORY_FILE}" || { rm -f "${tmp_hosts}"; return 1; }
+    sync_inventory_target "${MINIRHIS_INVENTORY_FILE}" || { rm -f "${tmp_hosts}"; return 1; }
     sync_inventory_target "${SCRIPT_DIR}/container/roles/inventory/${inventory_basename}" || { rm -f "${tmp_hosts}"; return 1; }
     rm -f "${tmp_hosts}"
 }
@@ -6764,15 +6648,15 @@ INVENTORY_EOF
 # Generate actual host_vars/*.yml files from current env vars so playbooks
 # can find per-node connection details without additional prompts.
 # Passwords are referenced via the vault extra-vars loaded at runtime from
-# /rhis/vars/vault/env.yml (decrypted by --vault-password-file automatically).
-generate_rhis_host_vars() {
+# /minirhis/vars/vault/env.yml (decrypted by --vault-password-file automatically).
+generate_minirhis_host_vars() {
     if [ -f "${ANSIBLE_ENV_FILE}" ]; then
         load_ansible_env_file || return 1
     fi
     normalize_shared_env_vars
 
     local ext_inv_hv_dir="${SCRIPT_DIR}/container/vars/external_inventory/host_vars"
-    mkdir -p "${RHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/container/roles/host_vars" "${ext_inv_hv_dir}" || return 1
+    mkdir -p "${MINIRHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/container/roles/host_vars" "${ext_inv_hv_dir}" || return 1
     local sat_pre_use_idm_value="${SATELLITE_PRE_USE_IDM:-false}"
     local sat_use_non_idm_certs_value="${SAT_USE_NON_IDM_CERTS:-}"
     case "${sat_pre_use_idm_value}" in
@@ -6791,7 +6675,7 @@ generate_rhis_host_vars() {
             ;;
     esac
     local sat_internal_url="https://{{ sat_ip | default('10.168.128.1') }}"
-    local primary_dir="${RHIS_HOST_VARS_DIR}"
+    local primary_dir="${MINIRHIS_HOST_VARS_DIR}"
     local container_dir="${SCRIPT_DIR}/container/roles/host_vars"
 
     write_hostvars_pair() {
@@ -6823,22 +6707,22 @@ generate_rhis_host_vars() {
     # across operators and hosts.
     # aap_remote_user is the admin account on the remote AAP VM → admin_user.
     cat > "${primary_dir}/installer.yml" <<EOF
-# installer.yml — generated by run_rhis_install_sequence.sh
+# installer.yml — generated by run_minirhis_install_sequence.sh
 ansible_user: "{{ installer_user }}"
 aap_remote_user: "{{ admin_user | default('${ADMIN_USER:-admin}') }}"
-ansible_ssh_private_key_file: "{{ rhis_installer_ssh_private_key_file | default('${RHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/rhis-installer/id_rsa}') }}"
+ansible_ssh_private_key_file: "{{ minirhis_installer_ssh_private_key_file | default('${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}') }}"
 EOF
     write_hostvars_pair "installer.yml" "" || return 1
 
     # Satellite
     cat > "${primary_dir}/satellite.yml" <<EOF
-# satellite.yml — generated by run_rhis_install_sequence.sh
+# satellite.yml — generated by run_minirhis_install_sequence.sh
 ansible_user: "{{ admin_user | default('${ADMIN_USER:-admin}') }}"
 ansible_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
 ansible_become: true
 ansible_become_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
 ansible_connection: ssh
-ansible_ssh_private_key_file: "{{ rhis_installer_ssh_private_key_file | default('${RHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/rhis-installer/id_rsa}') }}"
+ansible_ssh_private_key_file: "{{ minirhis_installer_ssh_private_key_file | default('${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}') }}"
 satellite_username: "{{ ansible_user }}"
 satellite_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
 satellite_organization: "{{ sat_org | default('${SAT_ORG:-REDHAT}') }}"
@@ -6855,21 +6739,23 @@ EOF
 
     # AAP
     cat > "${primary_dir}/aap.yml" <<EOF
-# aap.yml — generated by run_rhis_install_sequence.sh
+# aap.yml — generated by run_minirhis_install_sequence.sh
 ansible_user: "{{ admin_user | default('${ADMIN_USER:-admin}') }}"
 ansible_become: true
 ansible_become_pass: "{{ global_admin_password | default('') }}"
 aap_admin_user: "{{ ansible_user }}"
 aap_admin_password: "{{ aap_admin_pass | default(global_admin_password) | default('') }}"
 platform_deployment_type: "${AAP_DEPLOYMENT_TYPE:-container}"
+aap_topology: "${AAP_TOPOLOGY:-standalone}"
 platform_installer_config:
     deployment_type: "${AAP_DEPLOYMENT_TYPE:-container}"
+    topology: "${AAP_TOPOLOGY:-standalone}"
 EOF
     write_hostvars_pair "aap.yml" "${AAP_HOSTNAME:-}" || return 1
 
     # IdM
     cat > "${primary_dir}/idm.yml" <<EOF
-# idm.yml — generated by run_rhis_install_sequence.sh
+# idm.yml — generated by run_minirhis_install_sequence.sh
 ansible_user: "{{ admin_user | default('${ADMIN_USER:-admin}') }}"
 ansible_password: "{{ idm_admin_pass | default(global_admin_password) | default('') }}"
 ansible_become: true
@@ -6877,23 +6763,23 @@ ansible_become_password: "{{ idm_admin_pass | default(global_admin_password) | d
 idm_realm: "{{ idm_realm | default('${IDM_REALM:-$(echo "${DOMAIN:-}" | tr '[:lower:]' '[:upper:]')}') }}"
 idm_domain: "{{ idm_domain | default('${IDM_DOMAIN:-${DOMAIN:-}}') }}"
 idm_user_groups:
-    - name: "{{ idm_admins_group | default('rhis-admins') }}"
-            description: "RHIS Infrastructure Administrators"
+    - name: "{{ idm_admins_group | default('minirhis-admins') }}"
+            description: "MINIRHIS Infrastructure Administrators"
             state: present
             user_list:
-                - rhis-operator
+                - minirhis-operator
     - name: "{{ idm_content_managers_group | default('content-managers') }}"
-            description: "RHIS Content Managers (Satellite, Repos, Lifecycle)"
+            description: "MINIRHIS Content Managers (Satellite, Repos, Lifecycle)"
             state: present
             user_list:
                 - satellite-svc
     - name: "{{ idm_automation_engineers_group | default('automation-engineers') }}"
-            description: "RHIS Automation Engineers (Ansible, AAP)"
+            description: "MINIRHIS Automation Engineers (Ansible, AAP)"
             state: present
             user_list:
                 - aap-svc
     - name: "{{ idm_system_services_group | default('system-services') }}"
-            description: "RHIS System Service Accounts"
+            description: "MINIRHIS System Service Accounts"
             state: present
 idm_users:
     - login: satellite-svc
@@ -6912,12 +6798,12 @@ idm_users:
                 - "aap-svc@{{ idm_domain | default(domain | default('localdomain')) }}"
             random: true
             state: present
-    - login: rhis-operator
-            first: RHIS
+    - login: minirhis-operator
+            first: MINIRHIS
             last: Operator
-            displayname: "RHIS Operator User"
+            displayname: "MINIRHIS Operator User"
             email:
-                - "rhis-operator@{{ idm_domain | default(domain | default('localdomain')) }}"
+                - "minirhis-operator@{{ idm_domain | default(domain | default('localdomain')) }}"
             password: "{{ global_admin_password | default(idm_admin_pass | default('')) }}"
             state: present
 idm_password_policies:
@@ -6945,7 +6831,7 @@ enforce_satellite_internal_service_network() {
         SAT_FIREWALLD_INTERFACE="eth1"
     fi
 
-    if [[ "${RHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}" == "1" ]]; then
+    if [[ "${MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}" == "1" ]]; then
         if [[ ! "${SAT_IP:-}" =~ ^10\.168\. ]]; then
             print_warning "SAT_IP='${SAT_IP:-unset}' is outside 10.168.0.0/16. Refusing to continue with Satellite service configuration."
             return 1
@@ -6957,8 +6843,63 @@ enforce_satellite_internal_service_network() {
     return 0
 }
 
+# ─── Local Ansible role runner ────────────────────────────────────────────────
+# Invoke a role from container/roles/ directly on the installer host (no container).
+# Returns 0 on success, 1 if ansible-playbook is unavailable or the playbook is
+# missing (callers should then fall back to their native bash implementation).
+#
+# Usage: run_local_role <role_name> [target_limit] [extra ansible-playbook args...]
+#   role_name    — must match a sub-dir under container/roles/ that has run.yml
+#   target_limit — inventory limit (default: installer); use colon-separated groups
+#                  e.g. "scenario_satellite:aap:idm"
+#   extra args   — passed verbatim to ansible-playbook (e.g. --extra-vars "...")
+#
+# Environment consumed (all optional):
+#   ANSIBLE_VAULT_PASS_FILE  — path to vault password file
+#   ANSIBLE_ENV_FILE         — path to vault-encrypted vars file (passed as @extra-vars)
+#   MINIRHIS_INVENTORY_FILE      — override default inventory
+run_local_role() {
+    local role="${1:?run_local_role: role name required}"
+    local target="${2:-installer}"
+    shift 2 || true
+    local extra_args=("$@")
+
+    local playbook="${SCRIPT_DIR}/container/roles/${role}/run.yml"
+    local ansible_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
+    local inventory="${MINIRHIS_INVENTORY_FILE:-${SCRIPT_DIR}/container/roles/inventory/hosts.yml}"
+
+    if [ ! -f "${playbook}" ]; then
+        print_warning "run_local_role: playbook not found: ${playbook} — falling back to bash"
+        return 1
+    fi
+
+    if ! command -v ansible-playbook >/dev/null 2>&1; then
+        print_warning "run_local_role: ansible-playbook not in PATH — falling back to bash"
+        return 1
+    fi
+
+    local -a vault_arg=()
+    if [ -f "${ANSIBLE_VAULT_PASS_FILE:-}" ]; then
+        vault_arg=(--vault-password-file "${ANSIBLE_VAULT_PASS_FILE}")
+    fi
+
+    local -a vault_vars=()
+    if [ -f "${ANSIBLE_ENV_FILE:-}" ]; then
+        vault_vars=(--extra-vars "@${ANSIBLE_ENV_FILE}")
+    fi
+
+    print_step "Running Ansible role '${role}' (limit: ${target})"
+    ANSIBLE_CONFIG="${ansible_cfg}" ansible-playbook \
+        --inventory "${inventory}" \
+        --limit "${target}" \
+        "${vault_arg[@]}" \
+        "${vault_vars[@]}" \
+        "${extra_args[@]}" \
+        "${playbook}"
+}
+
 # ─── Container playbook runner ─────────────────────────────────────────────────
-# Run one rhis-builder playbook inside the provisioner container.
+# Run one minirhis-builder playbook inside the provisioner container.
 # Usage: run_container_playbook <playbook_path_inside_container> <--limit GROUP> [extra args...]
 # The vault env.yml is passed as @extra-vars so all vault keys become Ansible vars.
 run_container_playbook() {
@@ -6970,19 +6911,19 @@ run_container_playbook() {
     # Ensure container is up; start it if not
     ensure_container_running || return 1
 
-    local vault_file="/rhis/vars/vault/$(basename "${ANSIBLE_ENV_FILE}")"
-    local vault_pass="/rhis/vars/vault/$(basename "${ANSIBLE_VAULT_PASS_FILE}")"
-    local ansible_log_file="/rhis/vars/vault/${AAP_ANSIBLE_LOG_BASENAME}"
+    local vault_file="/minirhis/vars/vault/$(basename "${ANSIBLE_ENV_FILE}")"
+    local vault_pass="/minirhis/vars/vault/$(basename "${ANSIBLE_VAULT_PASS_FILE}")"
+    local ansible_log_file="/minirhis/vars/vault/${AAP_ANSIBLE_LOG_BASENAME}"
     local -a podman_user_args=()
 
-    print_step "Running ${playbook} --limit ${limit_group} inside container '${RHIS_CONTAINER_NAME}'"
+    print_step "Running ${playbook} --limit ${limit_group} inside container '${MINIRHIS_CONTAINER_NAME}'"
 
     # If vault password file is readable, use it. If not readable as default
     # container user, try root. Otherwise fall back to prompting.
     local vault_arg=()
-    if podman exec "${RHIS_CONTAINER_NAME}" test -r "${vault_pass}" 2>/dev/null; then
+    if podman exec "${MINIRHIS_CONTAINER_NAME}" test -r "${vault_pass}" 2>/dev/null; then
         vault_arg=(--vault-password-file "${vault_pass}")
-    elif podman exec --user 0 "${RHIS_CONTAINER_NAME}" test -r "${vault_pass}" 2>/dev/null; then
+    elif podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" test -r "${vault_pass}" 2>/dev/null; then
         vault_arg=(--vault-password-file "${vault_pass}")
         podman_user_args=(--user 0)
         print_step "Vault password file requires container root access; executing playbook as root."
@@ -6991,11 +6932,11 @@ run_container_playbook() {
     fi
 
     print_step "Ansible log: ${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}"
-    print_step "Ansible config: ${RHIS_ANSIBLE_CFG_HOST}"
+    print_step "Ansible config: ${MINIRHIS_ANSIBLE_CFG_HOST}"
 
-    podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+    podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
         ansible-playbook \
-            --inventory "${RHIS_CONTAINER_INVENTORY_FILE}" \
+            --inventory "${MINIRHIS_CONTAINER_INVENTORY_FILE}" \
             "${vault_arg[@]}" \
             --extra-vars "@${vault_file}" \
             --limit "${limit_group}" \
@@ -7040,7 +6981,7 @@ stage_satellite_manifest() {
     cp -f "${staged_host_path}" "${FILES_DIR}/manifest.zip" 2>/dev/null || \
         print_warning "Could not copy manifest to ${FILES_DIR}."
 
-    # Stage to vault/conf dir — mounted as /rhis/vars/vault/ inside the container
+    # Stage to vault/conf dir — mounted as /minirhis/vars/vault/ inside the container
     if [ ! -d "${ANSIBLE_ENV_DIR}" ]; then
         mkdir -p "${ANSIBLE_ENV_DIR}" && chmod 0755 "${ANSIBLE_ENV_DIR}" || {
             print_warning "Could not create ANSIBLE_ENV_DIR at ${ANSIBLE_ENV_DIR}; skipping manifest staging."
@@ -7052,17 +6993,17 @@ stage_satellite_manifest() {
         return 0
     }
 
-    RHIS_STAGED_MANIFEST_CONTAINER_PATH="/rhis/vars/vault/manifest.zip"
-    export RHIS_STAGED_MANIFEST_CONTAINER_PATH
-    print_success "Manifest staged — container path: ${RHIS_STAGED_MANIFEST_CONTAINER_PATH}"
+    MINIRHIS_STAGED_MANIFEST_CONTAINER_PATH="/minirhis/vars/vault/manifest.zip"
+    export MINIRHIS_STAGED_MANIFEST_CONTAINER_PATH
+    print_success "Manifest staged — container path: ${MINIRHIS_STAGED_MANIFEST_CONTAINER_PATH}"
 }
 
 # ─── Post-install config-as-code orchestration ────────────────────────────────
 # Called automatically after all VMs are running.  Regenerates inventory and
 # host_vars from the current env, starts the provisioner container, then runs
-# the rhis-builder playbooks in dependency order: IdM → Satellite → AAP.
-run_rhis_config_as_code() {
-    print_step "===== RHIS Config-as-Code Phase ====="
+# the minirhis-builder playbooks in dependency order: IdM → Satellite → AAP.
+run_minirhis_config_as_code() {
+    print_step "===== MINIRHIS Config-as-Code Phase ====="
     print_step "Generating fresh inventory and host_vars from env.yml..."
     local idm_status="not-run"
     local satellite_status="not-run"
@@ -7073,7 +7014,7 @@ run_rhis_config_as_code() {
     local phase_auth_fallback_status="not-needed"
     local any_failed=0
     local use_local_exec=0
-    local component_scope="${RHIS_COMPONENT_SCOPE:-all}"
+    local component_scope="${MINIRHIS_COMPONENT_SCOPE:-all}"
     local run_idm=1
     local run_satellite=1
     local run_aap=1
@@ -7101,7 +7042,7 @@ run_rhis_config_as_code() {
             run_aap=1
             ;;
         *)
-            print_warning "Unknown RHIS_COMPONENT_SCOPE='${component_scope}', defaulting to full flow."
+            print_warning "Unknown MINIRHIS_COMPONENT_SCOPE='${component_scope}', defaulting to full flow."
             run_idm=1
             run_satellite=1
             run_aap=1
@@ -7109,14 +7050,14 @@ run_rhis_config_as_code() {
             ;;
     esac
     print_step "Component scope: ${component_scope}"
-    if [ "${RHIS_EXECUTION_MODE:-container}" = "local" ]; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
         print_step "Execution mode: local ${USER} repo (local-first reruns/fallbacks enabled)"
         use_local_exec=1
-        RHIS_LOCAL_ROLE_FALLBACK=1
-        RHIS_ENABLE_CONTAINER_HOTFIXES=0
+        MINIRHIS_LOCAL_ROLE_FALLBACK=1
+        MINIRHIS_ENABLE_CONTAINER_HOTFIXES=0
         generate_local_roles_ansible_cfg || true
     else
-        print_step "Execution mode: rhis_provisioner"
+        print_step "Execution mode: minirhis_provisioner"
     fi
 
     load_ansible_env_file || true
@@ -7124,13 +7065,13 @@ run_rhis_config_as_code() {
     enforce_satellite_internal_service_network || return 1
 
     # Keep installer-host /etc/hosts aligned with current external/NAT VM IPs.
-    sync_rhis_external_hosts_entries || true
+    sync_minirhis_external_hosts_entries || true
 
     # Re-sync installer/user/root trust before entering phase playbooks.
     # This is intentionally best-effort here because some nodes may still be
     # converging; phase auth fallback remains the final safety net.
-    print_step "Pre-flight: refreshing RHIS SSH trust baseline before config-as-code"
-    if ! setup_rhis_ssh_mesh "${component_scope}"; then
+    print_step "Pre-flight: refreshing MINIRHIS SSH trust baseline before config-as-code"
+    if ! setup_minirhis_ssh_mesh "${component_scope}"; then
         print_warning "SSH trust baseline refresh did not fully converge; continuing with phase auth fallback logic."
     fi
 
@@ -7139,8 +7080,8 @@ run_rhis_config_as_code() {
     print_step "Pre-flight: normalizing VM root passwords for auth fallback reliability"
     fix_vm_root_passwords || print_warning "Root password pre-flight normalization did not complete cleanly; continuing."
 
-    generate_rhis_inventory     || { print_warning "Inventory generation failed; skipping config-as-code."; return 1; }
-    generate_rhis_host_vars     || { print_warning "host_vars generation failed; skipping config-as-code."; return 1; }
+    generate_minirhis_inventory     || { print_warning "Inventory generation failed; skipping config-as-code."; return 1; }
+    generate_minirhis_host_vars     || { print_warning "host_vars generation failed; skipping config-as-code."; return 1; }
     if [ "${run_idm}" -eq 1 ]; then
         phase_gate_targets+=("idm:${IDM_IP}")
     fi
@@ -7159,7 +7100,7 @@ run_rhis_config_as_code() {
     run_satellite_precontainer_bootstrap() {
         local sat_target_ip="${SAT_IP:-10.168.128.1}"
         local sat_target_host="${SAT_HOSTNAME:-satellite}"
-        local ssh_key="${RHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/rhis-installer/id_rsa}"
+        local ssh_key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}"
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
         local rh_user_q=""
         local rh_pass_q=""
@@ -7167,8 +7108,8 @@ run_rhis_config_as_code() {
         local admin_pass_q=""
         local remote_cmd=""
 
-        if ! is_enabled "${RHIS_SAT_PRECONTAINER_BOOTSTRAP:-1}"; then
-            print_step "Satellite pre-container bootstrap disabled (RHIS_SAT_PRECONTAINER_BOOTSTRAP=0)."
+        if ! is_enabled "${MINIRHIS_SAT_PRECONTAINER_BOOTSTRAP:-1}"; then
+            print_step "Satellite pre-container bootstrap disabled (MINIRHIS_SAT_PRECONTAINER_BOOTSTRAP=0)."
             return 0
         fi
 
@@ -7240,8 +7181,8 @@ satellite-installer --scenario satellite \
 
     # Pull latest image and ensure container is running with fresh mounts
     if [ "${use_local_exec}" -eq 0 ]; then
-        print_step "Ensuring RHIS provisioner container is running..."
-        podman pull "${RHIS_CONTAINER_IMAGE}" 2>/dev/null || true
+        print_step "Ensuring MINIRHIS provisioner container is running..."
+        podman pull "${MINIRHIS_CONTAINER_IMAGE}" 2>/dev/null || true
         podman images -f "dangling=true" -q | xargs --no-run-if-empty podman rmi 2>/dev/null && \
             print_step "Cleaned up dangling container images." || true
         ensure_container_running || { print_warning "Could not start provisioner container; skipping config-as-code."; return 1; }
@@ -7251,7 +7192,7 @@ satellite-installer --scenario satellite \
 
     # Auto-reattach VM consoles so progress can be observed during configuration.
     # In non-interactive mode this is skipped to avoid spawning terminals/tmux unexpectedly.
-    if should_launch_vm_console_monitors && [ "${use_local_exec}" -eq 0 ]; then
+    if ! is_noninteractive && [ "${use_local_exec}" -eq 0 ]; then
         case "${component_scope}" in
             satellite)
                 launch_single_vm_console_monitor_auto "satellite" || print_warning "Automatic Satellite console reattach failed; continuing config-as-code."
@@ -7268,9 +7209,9 @@ satellite-installer --scenario satellite \
         esac
     fi
 
-    local vault_file="/rhis/vars/vault/$(basename "${ANSIBLE_ENV_FILE}")"
-    local vault_pass_file="/rhis/vars/vault/$(basename "${ANSIBLE_VAULT_PASS_FILE}")"
-    local ansible_log_file="/rhis/vars/vault/${AAP_ANSIBLE_LOG_BASENAME}"
+    local vault_file="/minirhis/vars/vault/$(basename "${ANSIBLE_ENV_FILE}")"
+    local vault_pass_file="/minirhis/vars/vault/$(basename "${ANSIBLE_VAULT_PASS_FILE}")"
+    local ansible_log_file="/minirhis/vars/vault/${AAP_ANSIBLE_LOG_BASENAME}"
     local vault_arg=()
     local -a podman_user_args=()
     local use_interactive_vault_prompt=0
@@ -7280,11 +7221,11 @@ satellite-installer --scenario satellite \
     # ---- Vault / container execution context --------------------------------
     cleanup_staged_vaultpass() {
         # Keep a stable staged vaultpass file so manual reruns can reuse:
-        #   --vault-password-file /rhis/vars/vault/.vaultpass.container
+        #   --vault-password-file /minirhis/vars/vault/.vaultpass.container
         return 0
     }
 
-    if [ "${RHIS_EXECUTION_MODE:-container}" = "local" ]; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
         if [ -r "${ANSIBLE_VAULT_PASS_FILE}" ]; then
             vault_arg=(--vault-password-file "${ANSIBLE_VAULT_PASS_FILE}")
         elif is_noninteractive; then
@@ -7295,9 +7236,9 @@ satellite-installer --scenario satellite \
             vault_arg=(--ask-vault-pass)
             use_interactive_vault_prompt=1
         fi
-    elif podman exec "${RHIS_CONTAINER_NAME}" test -r "${vault_pass_file}" 2>/dev/null; then
+    elif podman exec "${MINIRHIS_CONTAINER_NAME}" test -r "${vault_pass_file}" 2>/dev/null; then
         vault_arg=(--vault-password-file "${vault_pass_file}")
-    elif podman exec --user 0 "${RHIS_CONTAINER_NAME}" test -r "${vault_pass_file}" 2>/dev/null; then
+    elif podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" test -r "${vault_pass_file}" 2>/dev/null; then
         vault_arg=(--vault-password-file "${vault_pass_file}")
         podman_user_args=(--user 0)
         print_step "Vault password file requires container root access; executing config-as-code phases as root."
@@ -7308,12 +7249,12 @@ satellite-installer --scenario satellite \
             cp -f "${ANSIBLE_VAULT_PASS_FILE}" "${staged_vault_pass_host}" 2>/dev/null || staged_vault_pass_host=""
             if [ -n "${staged_vault_pass_host}" ] && [ -f "${staged_vault_pass_host}" ]; then
                 chmod 0644 "${staged_vault_pass_host}" 2>/dev/null || true
-                staged_vault_pass_file="/rhis/vars/vault/$(basename "${staged_vault_pass_host}")"
+                staged_vault_pass_file="/minirhis/vars/vault/$(basename "${staged_vault_pass_host}")"
 
-                if podman exec "${RHIS_CONTAINER_NAME}" test -r "${staged_vault_pass_file}" 2>/dev/null; then
+                if podman exec "${MINIRHIS_CONTAINER_NAME}" test -r "${staged_vault_pass_file}" 2>/dev/null; then
                     vault_arg=(--vault-password-file "${staged_vault_pass_file}")
                     print_step "Using temporary container-readable vault password file for this run."
-                elif podman exec --user 0 "${RHIS_CONTAINER_NAME}" test -r "${staged_vault_pass_file}" 2>/dev/null; then
+                elif podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" test -r "${staged_vault_pass_file}" 2>/dev/null; then
                     vault_arg=(--vault-password-file "${staged_vault_pass_file}")
                     podman_user_args=(--user 0)
                     print_step "Using temporary vault password file (container root access) for this run."
@@ -7341,7 +7282,7 @@ satellite-installer --scenario satellite \
         fi
     fi
 
-    local inv="--inventory ${RHIS_CONTAINER_INVENTORY_FILE}"
+    local inv="--inventory ${MINIRHIS_CONTAINER_INVENTORY_FILE}"
     local sat_pre_use_idm="${SATELLITE_PRE_USE_IDM:-false}"
     local sat_use_non_idm_certs="${SAT_USE_NON_IDM_CERTS:-}"
     local idm_async_timeout="${IDM_ASYNC_TIMEOUT:-14400}"
@@ -7392,7 +7333,7 @@ satellite-installer --scenario satellite \
     # Satellite: supply sat_repository_ids, firewall settings, and CDN registration vars
     local _sat_manual_json="{\"sat_repository_ids\":${SAT_REPOSITORY_IDS_JSON},\"sat_firewalld_zone\":\"${SAT_FIREWALLD_ZONE}\",\"sat_firewalld_interface\":\"${SAT_FIREWALLD_INTERFACE}\",\"sat_firewalld_services\":${SAT_FIREWALLD_SERVICES_JSON},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"ipa_client_dns_servers\":\"${sat_ipa_dns}\",\"ipa_server_fqdn\":\"${sat_ipa_fqdn}\",\"sat_installer_timeout\":${sat_installer_timeout},\"sat_installer_verbose\":${sat_installer_verbose}}"
     local manual_satellite_extras="--extra-vars '${_sat_manual_json}'"
-    local manual_podman_env="-e ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}"
+    local manual_podman_env="-e ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}"
 
     # ---- Nested ansible/podman helper wrappers ------------------------------
     run_ansible_shell_in_container() {
@@ -7401,12 +7342,12 @@ satellite-installer --scenario satellite \
         local root_auth_pass="${3:-}"
         local extra_args="${4:-}"
 
-        if [ "${RHIS_EXECUTION_MODE:-container}" = "local" ]; then
-            local local_inv="--inventory ${RHIS_INVENTORY_FILE}"
+        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+            local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
             local local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
             local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
             local local_vault_arg=""
-            [ -f "${local_cfg}" ] || local_cfg="${RHIS_ANSIBLE_CFG_HOST}"
+            [ -f "${local_cfg}" ] || local_cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
             if [ -r "${ANSIBLE_VAULT_PASS_FILE}" ]; then
                 local_vault_arg="--vault-password-file ${ANSIBLE_VAULT_PASS_FILE}"
             else
@@ -7431,7 +7372,7 @@ satellite-installer --scenario satellite \
 
         if [ -n "${root_auth_pass}" ]; then
             if [ "$use_interactive_vault_prompt" = "1" ]; then
-                podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "${target}" ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -7439,7 +7380,7 @@ satellite-installer --scenario satellite \
                     -e "ansible_become_password=${root_auth_pass}" \
                     -m shell -a "${shell_cmd}" ${extra_args}
             else
-                podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "${target}" ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -7449,11 +7390,11 @@ satellite-installer --scenario satellite \
             fi
         else
             if [ "$use_interactive_vault_prompt" = "1" ]; then
-                podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "${target}" ${inv} "${vault_arg[@]}" ${evars} \
                     -m shell -a "${shell_cmd}" ${extra_args}
             else
-                podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "${target}" ${inv} "${vault_arg[@]}" ${evars} \
                     -m shell -a "${shell_cmd}" ${extra_args}
             fi
@@ -7462,9 +7403,9 @@ satellite-installer --scenario satellite \
 
     # ---- Container hotfix / compatibility helpers ---------------------------
     ensure_satellite_chrony_template() {
-        local _tpl_path="/rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2"
-        local _mk_cmd='mkdir -p /rhis/rhis-builder-satellite/roles/satellite_pre/templates && cat > /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
-# RHIS fallback chrony template (auto-generated when upstream template is missing)
+        local _tpl_path="/minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2"
+        local _mk_cmd='mkdir -p /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates && cat > /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
+# MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
@@ -7472,15 +7413,15 @@ logdir /var/log/chrony
 pool 2.rhel.pool.ntp.org iburst
 EOF'
 
-        if podman exec "${RHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
+        if podman exec "${MINIRHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
             return 0
         fi
 
-        print_warning "chrony.j2 is missing in rhis-builder-satellite; applying fallback template workaround."
+        print_warning "chrony.j2 is missing in minirhis-builder-satellite; applying fallback template workaround."
 
-        if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
-           podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
-            print_success "Fallback chrony.j2 created in rhis-builder-satellite templates."
+        if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
+           podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
+            print_success "Fallback chrony.j2 created in minirhis-builder-satellite templates."
             return 0
         fi
 
@@ -7489,9 +7430,9 @@ EOF'
     }
 
     ensure_idm_chrony_template() {
-        local _tpl_path="/rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2"
-        local _mk_cmd='mkdir -p /rhis/rhis-builder-idm/roles/idm_pre/templates && cat > /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
-# RHIS fallback chrony template (auto-generated when upstream template is missing)
+        local _tpl_path="/minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2"
+        local _mk_cmd='mkdir -p /minirhis/minirhis-builder-idm/roles/idm_pre/templates && cat > /minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
+# MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
@@ -7499,15 +7440,15 @@ logdir /var/log/chrony
 pool 2.rhel.pool.ntp.org iburst
 EOF'
 
-        if podman exec "${RHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
+        if podman exec "${MINIRHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
             return 0
         fi
 
-        print_warning "chrony.j2 is missing in rhis-builder-idm; applying fallback template workaround."
+        print_warning "chrony.j2 is missing in minirhis-builder-idm; applying fallback template workaround."
 
-        if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
-           podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
-            print_success "Fallback chrony.j2 created in rhis-builder-idm templates."
+        if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
+           podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
+            print_success "Fallback chrony.j2 created in minirhis-builder-idm templates."
             return 0
         fi
 
@@ -7518,10 +7459,10 @@ EOF'
     ensure_fix_satellite_content_profile() {
         # Patch the container copy of satellite_content_profile.yml to ensure
         # non-recursive satellite_organization and explicit admin password.
-        local _path="/rhis/vars/host_vars/satellite_content_profile.yml"
+        local _path="/minirhis/vars/host_vars/satellite_content_profile.yml"
         print_step "Applying satellite_content_profile patch inside container"
 
-        if podman exec -i --env TARGET_PATH="${_path}" "${RHIS_CONTAINER_NAME}" python3 - <<'PY'
+        if podman exec -i --env TARGET_PATH="${_path}" "${MINIRHIS_CONTAINER_NAME}" python3 - <<'PY'
 import os, pathlib, sys
 import re
 p=pathlib.Path(os.environ.get('TARGET_PATH'))
@@ -7548,10 +7489,10 @@ PY
 
     ensure_patch_lifecycle_tasks() {
         # Remove no_log and add debug output in lifecycle_environments tasks inside container
-        local _path="/rhis/rhis-builder-satellite/roles/lifecycle_environments/tasks/main.yml"
+        local _path="/minirhis/minirhis-builder-satellite/roles/lifecycle_environments/tasks/main.yml"
         print_step "Patching lifecycle_environments tasks inside container"
 
-        if podman exec -i --env TARGET_PATH="${_path}" "${RHIS_CONTAINER_NAME}" python3 - <<'PY'
+        if podman exec -i --env TARGET_PATH="${_path}" "${MINIRHIS_CONTAINER_NAME}" python3 - <<'PY'
 import os, pathlib, sys
 p=pathlib.Path(os.environ.get('TARGET_PATH'))
 if not p.exists():
@@ -7575,11 +7516,11 @@ PY
     }
 
     ensure_satellite_foreman_service_check_nonfatal() {
-        local _root="/rhis/rhis-builder-satellite/roles/satellite_pre/tasks"
+        local _root="/minirhis/minirhis-builder-satellite/roles/satellite_pre/tasks"
         local _py='import pathlib
 import re
 
-root = pathlib.Path("/rhis/rhis-builder-satellite/roles/satellite_pre/tasks")
+root = pathlib.Path("/minirhis/minirhis-builder-satellite/roles/satellite_pre/tasks")
 if not root.exists():
     print("MISSING_TASKS_DIR")
     raise SystemExit(0)
@@ -7654,9 +7595,9 @@ print(f"UPDATED={updated}")'
         local _cmd=$'python3 - <<\'PY\'\n'"${_py}"$'\nPY'
         local _out=""
 
-        _out="$(podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+        _out="$(podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
         if [ -z "${_out}" ]; then
-            _out="$(podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+            _out="$(podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
         fi
 
         if printf '%s\n' "${_out}" | grep -q 'UPDATED='; then
@@ -7678,7 +7619,7 @@ print(f"UPDATED={updated}")'
         repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         if command -v ansible-playbook >/dev/null 2>&1; then
             ANSIBLE_ROLES_PATH="${repo_root}/container/roles" \
-                ansible-playbook -i localhost, "${repo_root}/container/roles/mini_rhis_installer/run.yml" --connection=local || true
+                ansible-playbook -i localhost, "${repo_root}/container/roles/minirhis_installer/run.yml" --connection=local || true
         else
             print_warning "ansible-playbook not found; skipping repo hotfixes"
         fi
@@ -7688,7 +7629,7 @@ print(f"UPDATED={updated}")'
         local _py='import pathlib
 import re
 
-path = pathlib.Path("/rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml")
+path = pathlib.Path("/minirhis/minirhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml")
 if not path.exists():
     print("MISSING_IDM_UPDATE_TASK")
     raise SystemExit(0)
@@ -7766,9 +7707,9 @@ else:
 
         local _cmd=$'python3 - <<\'PY\'\n'"${_py}"$'\nPY'
         local _out=""
-        _out="$(podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+        _out="$(podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
         if [ -z "${_out}" ]; then
-            _out="$(podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
+            _out="$(podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_cmd}" 2>/dev/null || true)"
         fi
 
         if printf '%s\n' "${_out}" | grep -q 'UPDATED=1'; then
@@ -7785,7 +7726,8 @@ else:
     }
 
     ensure_container_playbook_hotfixes() {
-        local _verify_cmd='test -f /rhis/rhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 && test -f /rhis/rhis-builder-idm/roles/idm_pre/templates/chrony.j2 && grep -q "failed_when: false" /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /rhis/rhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "hammer ping" /rhis/rhis-builder-satellite/tasks/configure_hammer.yml && grep -q "ansible_roles_import_list" /rhis/rhis-builder-satellite/tasks/ensure_import_roles.yml && grep -q "Foreman" /rhis/rhis-builder-satellite/tasks/build_pxe_linux_defaults.yml && ( ! test -e /rhis/rhis-builder-satellite/tasks/ensure_local_tftp_proxy.yml || test -f /rhis/rhis-builder-satellite/tasks/ensure_local_tftp_proxy.yml ) && ( ! test -e /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/ensure_packages_unlock.yml || test -f /rhis/rhis-builder-satellite/roles/satellite_pre/tasks/ensure_packages_unlock.yml )'
+        local _scope="${MINIRHIS_COMPONENT_SCOPE:-all}"
+        local _verify_cmd='test -f /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 && test -f /minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2 && grep -q "failed_when: false" /minirhis/minirhis-builder-satellite/roles/satellite_pre/tasks/is_satellite_installed.yml && grep -q "disable_gpg_check: true" /minirhis/minirhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "exclude: \"intel-audio-firmware\\*\"" /minirhis/minirhis-builder-idm/roles/idm_pre/tasks/ensure_update_system.yml && grep -q "Check Satellite API endpoint readiness (hard gate)" /minirhis/minirhis-builder-satellite/tasks/configure_hammer.yml && grep -q "vars\['"'"'ansible_roles_import_list'"'"'\]" /minirhis/minirhis-builder-satellite/tasks/ensure_import_roles.yml && grep -q "Ensure local Satellite proxy has TFTP enabled in Foreman" /minirhis/minirhis-builder-satellite/tasks/build_pxe_linux_defaults.yml && test -f /minirhis/minirhis-builder-satellite/tasks/ensure_local_tftp_proxy.yml && test -f /minirhis/minirhis-builder-satellite/roles/satellite_pre/tasks/ensure_packages_unlock.yml'
         local _verified=1
 
         print_step "Pre-flight: applying container role hotfixes"
@@ -7796,17 +7738,24 @@ else:
         # New hotfixes applied during troubleshooting (MiniRHIS fixes):
         run_repo_hotfixes || true
 
-        if podman exec "${RHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1 || \
-           podman exec --user 0 "${RHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1; then
+        # AAP-only runs do not execute Satellite/IdM playbooks, so do not block
+        # the workflow on unrelated hotfix verification gates.
+        if [ "${_scope}" = "aap" ]; then
+            print_step "Container hotfix verification: AAP-only scope detected; skipping Satellite/IdM gate checks."
+            return 0
+        fi
+
+        if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1 || \
+           podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_verify_cmd}" >/dev/null 2>&1; then
             _verified=0
         fi
 
         if [ "${_verified}" -eq 0 ]; then
-            print_success "Container hotfix verification passed (current Satellite/IdM role guards present)."
+            print_success "Container hotfix verification passed (Satellite hammer/PXE/import + IdM GPG update guards)."
             return 0
         fi
 
-        if is_enabled "${RHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"; then
+        if is_enabled "${MINIRHIS_ENFORCE_CONTAINER_HOTFIXES:-1}"; then
             print_warning "Container hotfix verification failed and enforcement is ON; stopping before phase playbooks."
             return 1
         fi
@@ -7820,11 +7769,11 @@ else:
     else
         manual_satellite_extras+=" --skip-tags tags_satellite_pre_cdn_registration"
     fi
-    if [ "${RHIS_EXECUTION_MODE:-container}" = "container" ]; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ]; then
         if ! ensure_satellite_chrony_template; then
             manual_satellite_extras+=" --skip-tags tags_satellite_pre_chrony"
         fi
-        if is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+        if is_enabled "${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
             ensure_container_playbook_hotfixes || return 1
         fi
     fi
@@ -7832,7 +7781,7 @@ else:
     # ---- Manual rerun / local fallback helpers ------------------------------
     inventory_group_exists() {
         local group_name="$1"
-        local inv_file="${RHIS_INVENTORY_FILE}"
+        local inv_file="${MINIRHIS_INVENTORY_FILE}"
         [ -n "${group_name}" ] || return 1
         [ -f "${inv_file}" ] || return 1
         grep -qiE "^\[${group_name//./\\.}\]$|^\[${group_name//./\\.}:children\]$" "${inv_file}" 2>/dev/null
@@ -7876,6 +7825,23 @@ else:
         esac
     }
 
+    resolve_local_component_playbook() {
+        local component_dir="$1"
+        local direct_path="${SCRIPT_DIR}/container/roles/${component_dir}/main.yml"
+        local nested_path="${SCRIPT_DIR}/container/roles/${component_dir}/${component_dir}/main.yml"
+
+        if [ -f "${direct_path}" ]; then
+            echo "${direct_path}"
+            return 0
+        fi
+        if [ -f "${nested_path}" ]; then
+            echo "${nested_path}"
+            return 0
+        fi
+
+        echo "${direct_path}"
+    }
+
     print_manual_rerun_template() {
         local component="${1:-all}"
         local target_limit=""
@@ -7886,20 +7852,20 @@ else:
         case "${component}" in
             idm)
                 target_limit="$(resolve_component_limit_group "idm")"
-                local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-idm/main.yml"
-                container_playbook="/rhis/rhis-builder-idm/main.yml"
+                local_playbook="$(resolve_local_component_playbook "minirhis-builder-idm")"
+                container_playbook="/minirhis/minirhis-builder-idm/main.yml"
                 rerun_extras="${manual_idm_extras}"
                 ;;
             satellite)
                 target_limit="$(resolve_component_limit_group "satellite")"
-                local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-satellite/main.yml"
-                container_playbook="/rhis/rhis-builder-satellite/main.yml"
+                local_playbook="$(resolve_local_component_playbook "minirhis-builder-satellite")"
+                container_playbook="/minirhis/minirhis-builder-satellite/main.yml"
                 rerun_extras="${manual_satellite_extras}"
                 ;;
             aap)
                 target_limit="$(resolve_component_limit_group "aap")"
-                local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-aap/main.yml"
-                container_playbook="/rhis/rhis-builder-aap/main.yml"
+                local_playbook="$(resolve_local_component_playbook "minirhis-builder-aap")"
+                container_playbook="/minirhis/minirhis-builder-aap/main.yml"
                 rerun_extras=""
                 ;;
             *)
@@ -7907,27 +7873,27 @@ else:
                 print_manual_rerun_template "idm"
                 print_manual_rerun_template "satellite"
                 print_manual_rerun_template "aap"
-                print_warning "Execution mode note: local ${USER} repo is the default recommendation for now (uses ${SCRIPT_DIR}/container/roles and ${RHIS_INVENTORY_FILE})."
-                print_warning "rhis_provisioner mode is still available if needed."
+                print_warning "Execution mode note: local ${USER} repo is the default recommendation for now (uses ${SCRIPT_DIR}/container/roles and ${MINIRHIS_INVENTORY_FILE})."
+                print_warning "minirhis_provisioner mode is still available if needed."
                 return 0
                 ;;
         esac
 
-        if [ "${RHIS_EXECUTION_MODE:-container}" = "container" ]; then
+        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ]; then
             print_warning "${component^^} rerun (container):"
-            print_warning "  podman exec -it ${manual_podman_env} ${RHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
+            print_warning "  podman exec -it ${manual_podman_env} ${MINIRHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
             print_warning "${component^^} rerun (local, optional):"
-            print_warning "  ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${RHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
+            print_warning "  ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${MINIRHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
         else
             print_warning "${component^^} rerun (local):"
-            print_warning "  ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${RHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
+            print_warning "  ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${MINIRHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
             print_warning "${component^^} rerun (container, optional):"
-            print_warning "  podman exec -it ${manual_podman_env} ${RHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
+            print_warning "  podman exec -it ${manual_podman_env} ${MINIRHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
         fi
     }
 
     sync_container_assets_to_local_roles() {
-        local workdir="${RHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
+        local workdir="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
         local inv_dir="${workdir}/inventory"
         local vault_dir="${workdir}/vault"
         local hv_dir="${workdir}/host_vars"
@@ -7938,25 +7904,25 @@ else:
 
         mkdir -p "${workdir}" "${inv_dir}" "${vault_dir}" "${hv_dir}" || return 1
 
-        for tree in rhis-builder-satellite rhis-builder-idm rhis-builder-aap; do
+        for tree in minirhis-builder-satellite minirhis-builder-idm minirhis-builder-aap; do
             rm -rf "${workdir}/${tree}" >/dev/null 2>&1 || true
-            podman cp "${RHIS_CONTAINER_NAME}:/rhis/${tree}" "${workdir}/" >/dev/null 2>&1 || {
+            podman cp "${MINIRHIS_CONTAINER_NAME}:/minirhis/${tree}" "${workdir}/" >/dev/null 2>&1 || {
                 print_warning "Could not copy ${tree} from container to ${workdir}."
                 return 1
             }
         done
 
-        local inv_name="$(basename "${RHIS_INVENTORY_FILE}")"
-        podman cp "${RHIS_CONTAINER_NAME}:${RHIS_CONTAINER_INVENTORY_FILE}" "${inv_dir}/${inv_name}" >/dev/null 2>&1 || return 1
-        podman cp "${RHIS_CONTAINER_NAME}:/rhis/vars/vault/env.yml" "${vault_dir}/env.yml" >/dev/null 2>&1 || return 1
-        podman cp "${RHIS_CONTAINER_NAME}:/rhis/vars/host_vars/." "${hv_dir}/" >/dev/null 2>&1 || true
+        local inv_name="$(basename "${MINIRHIS_INVENTORY_FILE}")"
+        podman cp "${MINIRHIS_CONTAINER_NAME}:${MINIRHIS_CONTAINER_INVENTORY_FILE}" "${inv_dir}/${inv_name}" >/dev/null 2>&1 || return 1
+        podman cp "${MINIRHIS_CONTAINER_NAME}:/minirhis/vars/vault/env.yml" "${vault_dir}/env.yml" >/dev/null 2>&1 || return 1
+        podman cp "${MINIRHIS_CONTAINER_NAME}:/minirhis/vars/host_vars/." "${hv_dir}/" >/dev/null 2>&1 || true
 
         cat > "${local_cfg}" <<EOF
 [defaults]
     inventory = ${inv_dir}/${inv_name}
 host_key_checking = False
 retry_files_enabled = False
-roles_path = ${workdir}/rhis-builder-satellite/roles:${workdir}/rhis-builder-idm/roles:${workdir}/rhis-builder-aap/roles
+roles_path = ${workdir}/minirhis-builder-satellite/roles:${workdir}/minirhis-builder-idm/roles:${workdir}/minirhis-builder-aap/roles
 stdout_callback = ansible.builtin.default
 result_format = yaml
 EOF
@@ -7967,16 +7933,16 @@ EOF
     }
 
     run_local_satellite_playbook_fallback() {
-        local workdir="${RHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
-        local local_playbook="${workdir}/rhis-builder-satellite/main.yml"
-        local local_inv="${workdir}/inventory/$(basename "${RHIS_INVENTORY_FILE}")"
+        local workdir="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
+        local local_playbook="${workdir}/minirhis-builder-satellite/main.yml"
+        local local_inv="${workdir}/inventory/$(basename "${MINIRHIS_INVENTORY_FILE}")"
         local local_vault_env="${workdir}/vault/env.yml"
         local local_cfg="${workdir}/ansible.cfg"
         local root_auth_pass_local="${ROOT_PASS:-${ADMIN_PASS:-}}"
         local local_extra_json
         local -a local_cmd
 
-        is_enabled "${RHIS_LOCAL_ROLE_FALLBACK:-1}" || return 1
+        is_enabled "${MINIRHIS_LOCAL_ROLE_FALLBACK:-1}" || return 1
 
         sync_container_assets_to_local_roles || return 1
 
@@ -8024,7 +7990,7 @@ EOF
     }
 
     print_step "Ansible log: ${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}"
-    print_step "Ansible config: ${RHIS_ANSIBLE_CFG_HOST}"
+    print_step "Ansible config: ${MINIRHIS_ANSIBLE_CFG_HOST}"
 
     # ---- Phase execution wrappers -------------------------------------------
     run_phase_playbook() {
@@ -8033,7 +7999,7 @@ EOF
         local phase_playbook="$3"
         local -a phase_args=()
         local local_playbook=""
-        local local_inv="--inventory ${RHIS_INVENTORY_FILE}"
+        local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
         local local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
         local local_vault_arg=""
         local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
@@ -8049,7 +8015,7 @@ EOF
         # rhc-worker-playbook but GPG validation fails on RHEL 10 CDN packages;
         # the package is pre-installed by ensure_core_role_packages_on_managed_nodes.
         if [ "${phase_limit}" = "idm" ]; then
-            if is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+            if is_enabled "${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
                 ensure_idm_chrony_template || true
                 ensure_idm_update_task_nogpgcheck || true
             fi
@@ -8068,22 +8034,22 @@ EOF
 
             if ! ensure_satellite_chrony_template; then
                 phase_args+=( --skip-tags "tags_satellite_pre_chrony" )
-                print_warning "chrony.j2 is missing in rhis-builder-satellite; skipping tags_satellite_pre_chrony for this run."
+                print_warning "chrony.j2 is missing in minirhis-builder-satellite; skipping tags_satellite_pre_chrony for this run."
             fi
-            if is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+            if is_enabled "${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
                 ensure_satellite_foreman_service_check_nonfatal || true
             fi
-            if [ -n "${RHIS_STAGED_MANIFEST_CONTAINER_PATH:-}" ]; then
-                phase_args+=( -e "rhis_local_manifest_path=${RHIS_STAGED_MANIFEST_CONTAINER_PATH}" )
+            if [ -n "${MINIRHIS_STAGED_MANIFEST_CONTAINER_PATH:-}" ]; then
+                phase_args+=( -e "minirhis_local_manifest_path=${MINIRHIS_STAGED_MANIFEST_CONTAINER_PATH}" )
             fi
         fi
 
         print_step "${phase_label}"
-        if [ "${RHIS_EXECUTION_MODE:-container}" = "local" ]; then
+        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
             case "${phase_playbook}" in
-                */rhis-builder-idm/main.yml) local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-idm/main.yml" ;;
-                */rhis-builder-satellite/main.yml) local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-satellite/main.yml" ;;
-                */rhis-builder-aap/main.yml) local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-aap/main.yml" ;;
+                */minirhis-builder-idm/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-idm")" ;;
+                */minirhis-builder-satellite/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-satellite")" ;;
+                */minirhis-builder-aap/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-aap")" ;;
                 *) local_playbook="${phase_playbook}" ;;
             esac
 
@@ -8093,20 +8059,20 @@ EOF
                 local_vault_arg="--ask-vault-pass"
             fi
 
-            [ -f "${local_cfg}" ] || local_cfg="${RHIS_ANSIBLE_CFG_HOST}"
+            [ -f "${local_cfg}" ] || local_cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
             ANSIBLE_CONFIG="${local_cfg}" ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}" \
                 ansible-playbook ${local_inv} ${local_vault_arg} ${local_evars} \
                 --limit "${phase_limit}" \
                 "${phase_args[@]}" \
                 "${local_playbook}"
         elif [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                 --limit "${phase_limit}" \
                 "${phase_args[@]}" \
                 "${phase_playbook}"
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                 --limit "${phase_limit}" \
                 "${phase_args[@]}" \
@@ -8129,7 +8095,7 @@ EOF
             fallback_phase_args+=( -e "ipaadmin_password=${IPAADMIN_PASSWORD:-${IPADM_PASSWORD}}" )
         fi
         if [ "${phase_limit}" = "idm" ]; then
-            if is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+            if is_enabled "${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
                 ensure_idm_chrony_template || true
                 ensure_idm_update_task_nogpgcheck || true
             fi
@@ -8146,13 +8112,13 @@ EOF
 
             if ! ensure_satellite_chrony_template; then
                 fallback_phase_args+=( --skip-tags "tags_satellite_pre_chrony" )
-                print_warning "chrony.j2 is missing in rhis-builder-satellite; skipping tags_satellite_pre_chrony for fallback run."
+                print_warning "chrony.j2 is missing in minirhis-builder-satellite; skipping tags_satellite_pre_chrony for fallback run."
             fi
-            if is_enabled "${RHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
+            if is_enabled "${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"; then
                 ensure_satellite_foreman_service_check_nonfatal || true
             fi
-            if [ -n "${RHIS_STAGED_MANIFEST_CONTAINER_PATH:-}" ]; then
-                fallback_phase_args+=( -e "rhis_local_manifest_path=${RHIS_STAGED_MANIFEST_CONTAINER_PATH}" )
+            if [ -n "${MINIRHIS_STAGED_MANIFEST_CONTAINER_PATH:-}" ]; then
+                fallback_phase_args+=( -e "minirhis_local_manifest_path=${MINIRHIS_STAGED_MANIFEST_CONTAINER_PATH}" )
             fi
         fi
 
@@ -8163,7 +8129,7 @@ EOF
             return 0
         fi
 
-        if [ "${RHIS_EXECUTION_MODE:-container}" = "local" ]; then
+        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
             if [ -z "$root_auth_pass" ]; then
                 print_warning "Auth fallback skipped for ${phase_label}: ROOT_PASS/ADMIN_PASS is unset."
                 phase_auth_fallback_status="unavailable"
@@ -8174,14 +8140,14 @@ EOF
             phase_auth_fallback_status="used"
 
             local local_playbook=""
-            local local_inv="--inventory ${RHIS_INVENTORY_FILE}"
+            local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
             local local_vault_arg=""
             local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
 
             case "${phase_playbook}" in
-                */rhis-builder-idm/main.yml) local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-idm/main.yml" ;;
-                */rhis-builder-satellite/main.yml) local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-satellite/main.yml" ;;
-                */rhis-builder-aap/main.yml) local_playbook="${SCRIPT_DIR}/container/roles/rhis-builder-aap/main.yml" ;;
+                */minirhis-builder-idm/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-idm")" ;;
+                */minirhis-builder-satellite/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-satellite")" ;;
+                */minirhis-builder-aap/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-aap")" ;;
                 *) local_playbook="${phase_playbook}" ;;
             esac
 
@@ -8191,7 +8157,7 @@ EOF
                 local_vault_arg="--ask-vault-pass"
             fi
 
-            ANSIBLE_CONFIG="${RHIS_ANSIBLE_CFG_HOST}" ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}" \
+            ANSIBLE_CONFIG="${MINIRHIS_ANSIBLE_CFG_HOST}" ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}" \
                 ansible-playbook ${local_inv} ${local_vault_arg} ${local_evars} \
                 --limit "${phase_limit}" \
                 -e "ansible_user=root" \
@@ -8207,9 +8173,9 @@ EOF
             fi
 
             print_warning "Auth fallback failed for ${phase_label}; collecting quick reachability diagnostics."
-            ANSIBLE_CONFIG="${RHIS_ANSIBLE_CFG_HOST}" ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}" \
+            ANSIBLE_CONFIG="${MINIRHIS_ANSIBLE_CFG_HOST}" ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}" \
                 ansible "${phase_limit}" ${local_inv} ${local_vault_arg} ${local_evars} -m ansible.builtin.ping --one-line || true
-            ANSIBLE_CONFIG="${RHIS_ANSIBLE_CFG_HOST}" ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}" \
+            ANSIBLE_CONFIG="${MINIRHIS_ANSIBLE_CFG_HOST}" ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}" \
                 ansible "${phase_limit}" ${local_inv} ${local_vault_arg} ${local_evars} \
                 -e "ansible_user=root" \
                 -e "ansible_password=${root_auth_pass}" \
@@ -8244,7 +8210,7 @@ EOF
         )
 
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                 --limit "${phase_limit}" \
                 "${root_force_auth_args[@]}" \
@@ -8255,7 +8221,7 @@ EOF
                 return 0
             fi
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                 --limit "${phase_limit}" \
                 "${root_force_auth_args[@]}" \
@@ -8269,14 +8235,14 @@ EOF
 
         print_warning "Auth fallback failed for ${phase_label}; collecting quick reachability diagnostics."
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "${phase_limit}" ${inv} "${vault_arg[@]}" ${evars} -m ansible.builtin.ping --one-line || true
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "${phase_limit}" ${inv} "${vault_arg[@]}" ${evars} "${root_force_auth_args[@]}" -m ansible.builtin.ping --one-line || true
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "${phase_limit}" ${inv} "${vault_arg[@]}" ${evars} -m ansible.builtin.ping --one-line || true
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "${phase_limit}" ${inv} "${vault_arg[@]}" ${evars} "${root_force_auth_args[@]}" -m ansible.builtin.ping --one-line || true
         fi
 
@@ -8289,7 +8255,7 @@ EOF
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
         local sat_target_ip="${SAT_IP:-10.168.128.1}"
         local sat_target_host="${SAT_HOSTNAME:-satellite.example.com}"
-        local ssh_key="${RHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/rhis-installer/id_rsa}"
+        local ssh_key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}"
         local libvirt_host="${INTERNAL_GW:-10.168.0.1}"
         local admin_pass="${SAT_INITIAL_ADMIN_PASS:-${ADMIN_PASS:-}}"
         local admin_user_q=""
@@ -8300,8 +8266,8 @@ EOF
         local compute_resource_cmd=""
         local ssh_opts="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -o ConnectTimeout=10"
 
-        if ! is_enabled "${RHIS_SAT_POSTCONTAINER_SETUP:-1}"; then
-            print_step "Satellite post-container setup disabled (RHIS_SAT_POSTCONTAINER_SETUP=0)."
+        if ! is_enabled "${MINIRHIS_SAT_POSTCONTAINER_SETUP:-1}"; then
+            print_step "Satellite post-container setup disabled (MINIRHIS_SAT_POSTCONTAINER_SETUP=0)."
             return 0
         fi
 
@@ -8323,7 +8289,7 @@ EOF
 
         # Phase 1: Reboot the Satellite system
         print_step "  Phase 1/3: Rebooting Satellite host (${sat_target_host})"
-        reboot_cmd="shutdown -r +1 'RHIS post-container reboot' || reboot"
+        reboot_cmd="shutdown -r +1 'MINIRHIS post-container reboot' || reboot"
         
         if [ -r "${ssh_key}" ] && timeout 10 ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" 'echo ready' >/dev/null 2>&1; then
             ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" "${reboot_cmd}" >/dev/null 2>&1 || true
@@ -8394,7 +8360,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         local installer_cmd=""
         local libvirt_prereq_cmd=""
         local provisioning_tags="tags_post_sync,tags_post_publication,tags_provisioning_config,tags_installation_media,tags_operating_systems,tags_activation_keys,tags_domains,tags_subnets,tags_pxe_defaults,tags_compute_resources,tags_compute_profiles,tags_provisioning_templates,tags_templates_sync,tags_hostgroups"
-        local sat_libvirt_url="${RHIS_SAT_LIBVIRT_URL:-qemu+ssh://root@${INTERNAL_GW:-10.168.0.1}/system}"
+        local sat_libvirt_url="${MINIRHIS_SAT_LIBVIRT_URL:-qemu+ssh://root@${INTERNAL_GW:-10.168.0.1}/system}"
         local sat_dns_zone="${SAT_DNS_ZONE:-${DOMAIN:-}}"
         local sat_dns_reverse_zone="${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}"
         local sat_dhcp_range="${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}"
@@ -8413,8 +8379,8 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         local installer_ok=0
         local provisioning_ok=0
 
-        if ! is_enabled "${RHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC:-1}"; then
-            print_step "Satellite post-CaC scenario pass disabled (RHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC=0)."
+        if ! is_enabled "${MINIRHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC:-1}"; then
+            print_step "Satellite post-CaC scenario pass disabled (MINIRHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC=0)."
             return 0
         fi
 
@@ -8436,15 +8402,15 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         installer_cmd="export TERM=\"\${TERM:-dumb}\"; foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization ${sat_org_q} --foreman-initial-location ${sat_loc_q} --foreman-initial-admin-username ${sat_admin_user_q} --foreman-initial-admin-password ${sat_admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface ${sat_service_iface} --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse ${sat_dns_reverse_q} --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface ${sat_service_iface} --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-gateway ${sat_dhcp_gw_q} --foreman-proxy-dhcp-nameservers ${sat_dhcp_nameservers_q} --foreman-proxy-dhcp-range ${sat_dhcp_range_q} --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername ${sat_target_ip_q} --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --register-with-insights"
         libvirt_prereq_cmd="dnf -y install --nogpgcheck libvirt-client >/dev/null 2>&1 || satellite-maintain packages install libvirt-client >/dev/null 2>&1 || true; su foreman -s /bin/bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -b 4096 -N \"\" -f ~/.ssh/id_rsa'; su foreman -s /bin/bash -c 'virsh -c ${sat_libvirt_url} list' || { echo \"WARN: foreman->libvirt connectivity test failed for ${sat_libvirt_url}\"; echo \"Foreman public key (copy to libvirt host authorized_keys):\"; su foreman -s /bin/bash -c 'cat ~/.ssh/id_rsa.pub' || true; true; }"
 
-        print_step "Satellite post-CaC pass: running satellite-installer --scenario satellite with RHIS options"
+        print_step "Satellite post-CaC pass: running satellite-installer --scenario satellite with MINIRHIS options"
 
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
                 -m ansible.builtin.shell \
                 -a "${installer_cmd}" && installer_ok=1
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
                 -m ansible.builtin.shell \
                 -a "${installer_cmd}" && installer_ok=1
@@ -8453,7 +8419,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         if [ "${installer_ok}" -ne 1 ] && [ -n "${root_auth_pass}" ]; then
             print_warning "Satellite installer scenario pass failed with inventory auth; retrying with root auth fallback."
             if [ "$use_interactive_vault_prompt" = "1" ]; then
-                podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -8462,7 +8428,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                     -m ansible.builtin.shell \
                     -a "${installer_cmd}" && installer_ok=1
             else
-                podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -8480,43 +8446,43 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
 
         print_step "Satellite post-CaC pass: applying libvirt/KVM prerequisites for Satellite compute integration"
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
                 -m ansible.builtin.shell \
                 -a "${libvirt_prereq_cmd}" >/dev/null 2>&1 || true
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
                 -m ansible.builtin.shell \
                 -a "${libvirt_prereq_cmd}" >/dev/null 2>&1 || true
         fi
 
-        if ! is_enabled "${RHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO:-1}"; then
-            print_step "Satellite KVM provisioning pass disabled (RHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO=0)."
+        if ! is_enabled "${MINIRHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO:-1}"; then
+            print_step "Satellite KVM provisioning pass disabled (MINIRHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO=0)."
             return 0
         fi
 
         print_step "Satellite post-CaC pass: applying KVM provisioning resources for image-based and kickstart host provisioning"
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                 --limit "scenario_satellite" \
                 --tags "${provisioning_tags}" \
                 --skip-tags "tags_satellite_install,tags_satellite_pre,tags_sync" \
-                "/rhis/rhis-builder-satellite/main.yml" && provisioning_ok=1
+                "/minirhis/minirhis-builder-satellite/main.yml" && provisioning_ok=1
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                 --limit "scenario_satellite" \
                 --tags "${provisioning_tags}" \
                 --skip-tags "tags_satellite_install,tags_satellite_pre,tags_sync" \
-                "/rhis/rhis-builder-satellite/main.yml" && provisioning_ok=1
+                "/minirhis/minirhis-builder-satellite/main.yml" && provisioning_ok=1
         fi
 
         if [ "${provisioning_ok}" -ne 1 ] && [ -n "${root_auth_pass}" ]; then
             print_warning "Satellite KVM provisioning pass failed with inventory auth; retrying with root auth fallback."
             if [ "$use_interactive_vault_prompt" = "1" ]; then
-                podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -8525,9 +8491,9 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                     --limit "scenario_satellite" \
                     --tags "${provisioning_tags}" \
                     --skip-tags "tags_satellite_install,tags_satellite_pre,tags_sync" \
-                    "/rhis/rhis-builder-satellite/main.yml" && provisioning_ok=1
+                    "/minirhis/minirhis-builder-satellite/main.yml" && provisioning_ok=1
             else
-                podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible-playbook ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -8536,7 +8502,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                     --limit "scenario_satellite" \
                     --tags "${provisioning_tags}" \
                     --skip-tags "tags_satellite_install,tags_satellite_pre,tags_sync" \
-                    "/rhis/rhis-builder-satellite/main.yml" && provisioning_ok=1
+                    "/minirhis/minirhis-builder-satellite/main.yml" && provisioning_ok=1
             fi
         fi
 
@@ -8575,16 +8541,16 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         print_step "Pre-flight: verifying RHSM repo entitlements on Satellite host (${SAT_HOSTNAME:-satellite})..."
 
         # First try vault credentials.
-        repos_out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" \
-            "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+        repos_out=$(podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" \
+            "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
             ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
             -m ansible.builtin.shell \
             -a "${check_cmd}" 2>/dev/null) || true
 
         # Fall back to root password if vault auth yielded nothing.
         if [ -z "${repos_out}" ] && [ -n "${root_auth_pass}" ]; then
-            repos_out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" \
-                "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            repos_out=$(podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" \
+                "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${evars} \
                 -e "ansible_user=root" \
                 -e "ansible_password=${root_auth_pass}" \
@@ -8668,12 +8634,12 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         print_step "Ensuring RHSM registration on IdM/Satellite/AAP before config-as-code phases"
 
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "${register_target}" ${inv} "${vault_arg[@]}" ${evars} \
                 -m shell \
                 -a "${reg_shell}"
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "${register_target}" ${inv} "${vault_arg[@]}" ${evars} \
                 -m shell \
                 -a "${reg_shell}"
@@ -8692,11 +8658,11 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         # If inventory auth is not ready yet, skip optional ad-hoc prechecks to
         # avoid noisy UNREACHABLE output and account lockout noise.
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -m ansible.builtin.ping >/dev/null 2>&1
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -m ansible.builtin.ping >/dev/null 2>&1
         fi
@@ -8710,12 +8676,12 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         print_step "Ensuring IdM host can resolve its own FQDN before idm_pre checks"
 
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -m shell \
                 -a "${fqdn_shell}"
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -m shell \
                 -a "${fqdn_shell}"
@@ -8736,12 +8702,12 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         print_step "Pre-flight: ensuring IdM can resolve public internet names (redhat.com)"
 
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -m shell \
                 -a "${net_shell}"
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -m shell \
                 -a "${net_shell}"
@@ -8784,10 +8750,10 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         local _remediate_rc=0
         local _remediate_out=""
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            _remediate_out=$(podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            _remediate_out=$(podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${_rem_evars} -m shell -a "${sat_shell}" 2>&1) || _remediate_rc=$?
         else
-            _remediate_out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            _remediate_out=$(podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${_rem_evars} -m shell -a "${sat_shell}" 2>&1) || _remediate_rc=$?
         fi
 
@@ -8799,7 +8765,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 print_warning "Satellite RHSM remediation with inventory auth failed (rc=${_remediate_rc}); retrying once with root SSH auth fallback."
                 _remediate_rc=0
                 if [ "$use_interactive_vault_prompt" = "1" ]; then
-                    _remediate_out=$(podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    _remediate_out=$(podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                         ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${_rem_evars} \
                         -e "ansible_user=root" \
                         -e "ansible_password=${root_auth_pass}" \
@@ -8807,7 +8773,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                         -e "ansible_become_password=${root_auth_pass}" \
                         -m shell -a "${sat_shell}" 2>&1) || _remediate_rc=$?
                 else
-                    _remediate_out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    _remediate_out=$(podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                         ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${_rem_evars} \
                         -e "ansible_user=root" \
                         -e "ansible_password=${root_auth_pass}" \
@@ -8837,10 +8803,10 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             print_warning "Collecting verbose remediation diagnostics (-vvv)..."
             local _remediate_dbg_out=""
             if [ "$use_interactive_vault_prompt" = "1" ]; then
-                _remediate_dbg_out=$(podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                _remediate_dbg_out=$(podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${_rem_evars} -m shell -a "${sat_shell}" -vvv 2>&1 || true)
             else
-                _remediate_dbg_out=$(podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                _remediate_dbg_out=$(podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "scenario_satellite" ${inv} "${vault_arg[@]}" ${_rem_evars} -m shell -a "${sat_shell}" -vvv 2>&1 || true)
             fi
             print_warning "Verbose remediation output (first 80 lines):"
@@ -8872,7 +8838,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         print_step "Preparing IdM runtime network/DNS state before phase playbook"
 
         if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -e "ansible_user=root" \
                 -e "ansible_password=${root_auth_pass}" \
@@ -8881,7 +8847,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 -m shell \
                 -a "${prep_shell}" >/dev/null 2>&1
         else
-            podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                 ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
                 -e "ansible_user=root" \
                 -e "ansible_password=${root_auth_pass}" \
@@ -8909,7 +8875,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             # Fix: use s/^gpgcheck=.*/gpgcheck=0/ to catch any existing value (not just =1),
             # sed-replace in dnf.conf instead of appending (dnf uses first occurrence wins),
             # and create a drop-in override for both dnf and dnf5 (RHEL 10).
-            local gpg_shell='if [ -d /etc/pki/rpm-gpg ]; then for k in /etc/pki/rpm-gpg/*; do [ -f "$k" ] && rpm --import "$k" 2>/dev/null || true; done; fi; if ls /etc/yum.repos.d/*.repo >/dev/null 2>&1; then sed -i "s/^gpgcheck=.*/gpgcheck=0/" /etc/yum.repos.d/*.repo 2>/dev/null || true; sed -i "s/^repo_gpgcheck=.*/repo_gpgcheck=0/" /etc/yum.repos.d/*.repo 2>/dev/null || true; fi; for _conf in /etc/dnf/dnf.conf /etc/dnf5/dnf.conf; do [ -f "$_conf" ] || continue; sed -i "s/^gpgcheck=.*/gpgcheck=0/" "$_conf" 2>/dev/null || true; grep -q "^gpgcheck=" "$_conf" || printf "\ngpgcheck=0\n" >> "$_conf" 2>/dev/null || true; done; for _d in /etc/dnf/dnf.conf.d /etc/dnf5/dnf.conf.d; do [ -d "$_d" ] || mkdir -p "$_d" 2>/dev/null || true; printf "[main]\ngpgcheck=0\nrepo_gpgcheck=0\nlocalpkg_gpgcheck=0\nexclude=intel-audio-firmware*\n" > "$_d/rhis-disable-gpgcheck.conf" 2>/dev/null || true; done'
+            local gpg_shell='if [ -d /etc/pki/rpm-gpg ]; then for k in /etc/pki/rpm-gpg/*; do [ -f "$k" ] && rpm --import "$k" 2>/dev/null || true; done; fi; if ls /etc/yum.repos.d/*.repo >/dev/null 2>&1; then sed -i "s/^gpgcheck=.*/gpgcheck=0/" /etc/yum.repos.d/*.repo 2>/dev/null || true; sed -i "s/^repo_gpgcheck=.*/repo_gpgcheck=0/" /etc/yum.repos.d/*.repo 2>/dev/null || true; fi; for _conf in /etc/dnf/dnf.conf /etc/dnf5/dnf.conf; do [ -f "$_conf" ] || continue; sed -i "s/^gpgcheck=.*/gpgcheck=0/" "$_conf" 2>/dev/null || true; grep -q "^gpgcheck=" "$_conf" || printf "\ngpgcheck=0\n" >> "$_conf" 2>/dev/null || true; done; for _d in /etc/dnf/dnf.conf.d /etc/dnf5/dnf.conf.d; do [ -d "$_d" ] || mkdir -p "$_d" 2>/dev/null || true; printf "[main]\ngpgcheck=0\nrepo_gpgcheck=0\nlocalpkg_gpgcheck=0\nexclude=intel-audio-firmware*\n" > "$_d/minirhis-disable-gpgcheck.conf" 2>/dev/null || true; done'
 
             [ -n "$root_auth_pass" ] || { print_warning "Skipping IdM GPG pre-flight: ROOT_PASS/ADMIN_PASS is unset."; return 0; }
 
@@ -8965,8 +8931,8 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         local remediate_shell='systemctl enable --now chronyd >/dev/null 2>&1 || true; systemctl enable --now httpd >/dev/null 2>&1 || true; ipactl status >/dev/null 2>&1 || ipactl start >/dev/null 2>&1 || true; systemctl restart httpd pki-tomcatd@pki-tomcat >/dev/null 2>&1 || true; curl -k -sS -o /dev/null -w "HTTP %{http_code}\\n" https://localhost/ipa/ui/ || true'
         local check_shell='code="$(curl -k -sS -o /dev/null -w "%{http_code}" https://localhost/ipa/ui/ 2>/dev/null || true)"; ss -ltn | grep -q ":443\\b" || exit 1; case "$code" in 200|301|302|303|307|308|401|403) echo "IDM_WEB_UI_READY:$code" ;; *) echo "IDM_WEB_UI_NOT_READY:$code"; exit 1 ;; esac'
 
-        timeout="${RHIS_IDM_WEB_UI_TIMEOUT:-900}"
-        interval="${RHIS_IDM_WEB_UI_INTERVAL:-15}"
+        timeout="${MINIRHIS_IDM_WEB_UI_TIMEOUT:-900}"
+        interval="${MINIRHIS_IDM_WEB_UI_INTERVAL:-15}"
         case "${timeout}" in ''|*[!0-9]*) timeout=900 ;; esac
         case "${interval}" in ''|*[!0-9]*) interval=15 ;; esac
         [ "${timeout}" -gt 0 ] || timeout=900
@@ -9084,7 +9050,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             print_warning "dnf upgrade failed with root auth; skipping inventory-credential retry to avoid known admin auth noise."
             print_warning "Root-auth connectivity summary (expected IdM/AAP reachable as root):"
             if [ "$use_interactive_vault_prompt" = "1" ]; then
-                podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "${upgrade_target}" ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -9093,7 +9059,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                     -m ansible.builtin.ping \
                     --one-line 2>/dev/null || true
             else
-                podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                     ansible "${upgrade_target}" ${inv} "${vault_arg[@]}" ${evars} \
                     -e "ansible_user=root" \
                     -e "ansible_password=${root_auth_pass}" \
@@ -9139,7 +9105,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         return 0
     }
 
-    if is_enabled "${RHIS_ENABLE_PRECHECK_ADHOC:-0}"; then
+    if is_enabled "${MINIRHIS_ENABLE_PRECHECK_ADHOC:-0}"; then
         if precheck_auth_ready; then
             ensure_managed_nodes_registered || true
             ensure_idm_fqdn_resolution || true
@@ -9151,7 +9117,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             print_warning "Skipping optional pre-flight ad-hoc probes/upgrades: authenticated SSH is not ready yet."
         fi
     else
-        print_step "Skipping optional pre-flight ad-hoc probes/upgrades (RHIS_ENABLE_PRECHECK_ADHOC=0)."
+        print_step "Skipping optional pre-flight ad-hoc probes/upgrades (MINIRHIS_ENABLE_PRECHECK_ADHOC=0)."
     fi
 
     if [ "${run_idm}" -eq 1 ] || { [ "${run_satellite}" -eq 1 ] && [ "${SATELLITE_PRE_USE_IDM:-false}" = "true" ]; }; then
@@ -9163,11 +9129,11 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
     # ---- Component phase execution ------------------------------------------
     # ── 1. IdM — must be ready first (Satellite/AAP enroll against it) ─────────
     if [ "${run_idm}" -eq 1 ]; then
-    if [ "${RHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
         idm_status="skipped-container"
         any_failed=1
         print_warning "Provisioner container unavailable; skipping IdM phase."
-    elif ! run_phase_playbook_with_auth_fallback "Phase 1/3 — Configuring IdM..." "idm" "/rhis/rhis-builder-idm/main.yml"; then
+    elif ! run_phase_playbook_with_auth_fallback "Phase 1/3 — Configuring IdM..." "idm" "/minirhis/minirhis-builder-idm/main.yml"; then
         idm_auth_fallback_status="${phase_auth_fallback_status}"
         idm_status="failed"
         any_failed=1
@@ -9199,11 +9165,11 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
     remediate_satellite_repo_entitlements || true
     print_step "Pre-flight: collecting Satellite RHSM state"
     dump_satellite_rhsm_diagnostics || true
-    if [ "${RHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
         satellite_status="skipped-container"
         any_failed=1
         print_warning "Provisioner container unavailable; skipping Satellite phase."
-    elif ! run_phase_playbook_with_auth_fallback "Phase 2/3 — Configuring Satellite..." "scenario_satellite" "/rhis/rhis-builder-satellite/main.yml"; then
+    elif ! run_phase_playbook_with_auth_fallback "Phase 2/3 — Configuring Satellite..." "scenario_satellite" "/minirhis/minirhis-builder-satellite/main.yml"; then
         satellite_auth_fallback_status="${phase_auth_fallback_status}"
         satellite_status="failed"
         any_failed=1
@@ -9212,8 +9178,8 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         print_warning "You can re-run manually:"
         print_manual_rerun_template "satellite"
 
-        if is_enabled "${RHIS_LOCAL_ROLE_FALLBACK:-1}"; then
-            print_step "Attempting local Satellite fallback from ${RHIS_LOCAL_ROLE_WORKDIR}"
+        if is_enabled "${MINIRHIS_LOCAL_ROLE_FALLBACK:-1}"; then
+            print_step "Attempting local Satellite fallback from ${MINIRHIS_LOCAL_ROLE_WORKDIR}"
             if run_local_satellite_playbook_fallback; then
                 satellite_status="success-after-local-fallback"
                 satellite_auth_fallback_status="${phase_auth_fallback_status}/local-succeeded"
@@ -9264,12 +9230,12 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         aap_auth_fallback_status="not-needed"
         any_failed=1
         print_warning "AAP internal SSH is still not reachable; skipping AAP config-as-code phase."
-    elif [ "${RHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
+    elif [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
         aap_status="skipped-container"
         aap_auth_fallback_status="not-needed"
         any_failed=1
         print_warning "Provisioner container unavailable; skipping AAP phase."
-    elif ! run_phase_playbook_with_auth_fallback "Phase 3/3 — Configuring AAP..." "aap" "/rhis/rhis-builder-aap/main.yml"; then
+    elif ! run_phase_playbook_with_auth_fallback "Phase 3/3 — Configuring AAP..." "aap" "/minirhis/minirhis-builder-aap/main.yml"; then
         aap_auth_fallback_status="${phase_auth_fallback_status}"
         aap_status="failed"
         any_failed=1
@@ -9287,12 +9253,12 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         print_step "AAP phase skipped by component scope (${component_scope})."
     fi
 
-    if [ "$any_failed" -ne 0 ] && is_enabled "${RHIS_RETRY_FAILED_PHASES_ONCE:-1}"; then
+    if [ "$any_failed" -ne 0 ] && is_enabled "${MINIRHIS_RETRY_FAILED_PHASES_ONCE:-1}"; then
         print_step "Retry mode enabled: re-running only failed phases once"
         any_failed=0
 
         if [ "$idm_status" = "failed" ]; then
-            if { [ "${RHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — IdM" "idm" "/rhis/rhis-builder-idm/main.yml"; then
+            if { [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — IdM" "idm" "/minirhis/minirhis-builder-idm/main.yml"; then
                 idm_status="success-after-retry"
                 print_success "IdM succeeded on retry."
             else
@@ -9304,7 +9270,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         fi
 
         if [ "$satellite_status" = "failed" ]; then
-            if { [ "${RHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — Satellite" "scenario_satellite" "/rhis/rhis-builder-satellite/main.yml"; then
+            if { [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — Satellite" "scenario_satellite" "/minirhis/minirhis-builder-satellite/main.yml"; then
                 satellite_status="success-after-retry"
                 print_success "Satellite succeeded on retry."
             else
@@ -9316,7 +9282,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         fi
 
         if [ "$aap_status" = "failed" ]; then
-            if { [ "${RHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — AAP" "aap" "/rhis/rhis-builder-aap/main.yml"; then
+            if { [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — AAP" "aap" "/minirhis/minirhis-builder-aap/main.yml"; then
                 aap_status="success-after-retry"
                 print_success "AAP succeeded on retry."
             else
@@ -9336,13 +9302,13 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             local _target="$1"
             local _shell="$2"
             local _extra_args="${3:-}"
-            local local_inv="--inventory ${RHIS_INVENTORY_FILE}"
+            local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
             local local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
             local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
             local local_vault_arg=""
 
-            if [ "${RHIS_EXECUTION_MODE:-container}" = "local" ]; then
-                [ -f "${local_cfg}" ] || local_cfg="${RHIS_ANSIBLE_CFG_HOST}"
+            if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+                [ -f "${local_cfg}" ] || local_cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
                 if [ -r "${ANSIBLE_VAULT_PASS_FILE}" ]; then
                     local_vault_arg="--vault-password-file ${ANSIBLE_VAULT_PASS_FILE}"
                 else
@@ -9367,7 +9333,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
 
             if [ -n "${root_auth_pass}" ]; then
                 if [ "$use_interactive_vault_prompt" = "1" ]; then
-                    podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                         ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} \
                         -e "ansible_user=root" \
                         -e "ansible_password=${root_auth_pass}" \
@@ -9375,7 +9341,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                         -e "ansible_become_password=${root_auth_pass}" \
                         -m shell -a "${_shell}" ${_extra_args}
                 else
-                    podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                         ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} \
                         -e "ansible_user=root" \
                         -e "ansible_password=${root_auth_pass}" \
@@ -9385,11 +9351,11 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 fi
             else
                 if [ "$use_interactive_vault_prompt" = "1" ]; then
-                    podman exec -it -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                         ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} \
                         -m shell -a "${_shell}" ${_extra_args}
                 else
-                    podman exec -e "ANSIBLE_CONFIG=${RHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${RHIS_CONTAINER_NAME}" \
+                    podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
                         ansible "${_target}" ${inv} "${vault_arg[@]}" ${evars} \
                         -m shell -a "${_shell}" ${_extra_args}
                 fi
@@ -9407,15 +9373,15 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
 
             _out="$(healthcheck_exec_ansible_shell "${_target}" "${_shell}" "--one-line" 2>&1)" || _rc=$?
 
-            RHIS_HEALTHCHECK_LAST_OUT="${_out}"
-            RHIS_HEALTHCHECK_LAST_LABEL="${_label}"
-            RHIS_HEALTHCHECK_LAST_RC="${_rc}"
+            MINIRHIS_HEALTHCHECK_LAST_OUT="${_out}"
+            MINIRHIS_HEALTHCHECK_LAST_LABEL="${_label}"
+            MINIRHIS_HEALTHCHECK_LAST_RC="${_rc}"
             [ -n "${_out}" ] && printf '%s\n' "${_out}" | head -40
             return ${_rc}
         }
 
-        if ! is_enabled "${RHIS_ENABLE_POST_HEALTHCHECK:-1}"; then
-            print_step "Post-install healthcheck is disabled (RHIS_ENABLE_POST_HEALTHCHECK=0)."
+        if ! is_enabled "${MINIRHIS_ENABLE_POST_HEALTHCHECK:-1}"; then
+            print_step "Post-install healthcheck is disabled (MINIRHIS_ENABLE_POST_HEALTHCHECK=0)."
             return 0
         fi
 
@@ -9430,15 +9396,15 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         else
             local_failures=$((local_failures + 1))
             print_warning "Healthcheck failed: IdM"
-            if is_enabled "${RHIS_HEALTHCHECK_AUTOFIX:-1}"; then
+            if is_enabled "${MINIRHIS_HEALTHCHECK_AUTOFIX:-1}"; then
                 print_step "Healthcheck autofix: IdM service remediation"
                 healthcheck_run_shell "idm" "IdM autofix action" "${idm_fix}" || true
                 if healthcheck_run_shell "idm" "IdM post-autofix verification" "${idm_check}"; then
                     print_success "IdM recovered after autofix."
                     local_failures=$((local_failures - 1))
-                elif is_enabled "${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
+                elif is_enabled "${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
                     print_warning "Healthcheck rerun: IdM component playbook"
-                    if run_phase_playbook_with_auth_fallback "Healthcheck repair — IdM" "idm" "/rhis/rhis-builder-idm/main.yml" && \
+                    if run_phase_playbook_with_auth_fallback "Healthcheck repair — IdM" "idm" "/minirhis/minirhis-builder-idm/main.yml" && \
                        healthcheck_run_shell "idm" "IdM post-rerun verification" "${idm_check}"; then
                         print_success "IdM recovered after targeted component rerun."
                         local_failures=$((local_failures - 1))
@@ -9457,8 +9423,8 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         fi
 
         local sat_retries sat_interval
-        sat_retries="${RHIS_SAT_HEALTHCHECK_RETRIES:-5}"
-        sat_interval="${RHIS_SAT_HEALTHCHECK_INTERVAL:-15}"
+        sat_retries="${MINIRHIS_SAT_HEALTHCHECK_RETRIES:-5}"
+        sat_interval="${MINIRHIS_SAT_HEALTHCHECK_INTERVAL:-15}"
         case "${sat_retries}" in ''|*[!0-9]*) sat_retries=5 ;; esac
         case "${sat_interval}" in ''|*[!0-9]*) sat_interval=15 ;; esac
         [ "${sat_retries}" -gt 0 ] || sat_retries=5
@@ -9473,15 +9439,15 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         else
             local_failures=$((local_failures + 1))
             print_warning "Healthcheck failed: Satellite"
-            if is_enabled "${RHIS_HEALTHCHECK_AUTOFIX:-1}"; then
+            if is_enabled "${MINIRHIS_HEALTHCHECK_AUTOFIX:-1}"; then
                 print_step "Healthcheck autofix: Satellite service remediation"
                 healthcheck_run_shell "scenario_satellite" "Satellite autofix action" "${sat_fix}" || true
                 if healthcheck_run_shell "scenario_satellite" "Satellite post-autofix verification" "${sat_check}"; then
                     print_success "Satellite recovered after autofix."
                     local_failures=$((local_failures - 1))
-                elif is_enabled "${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
+                elif is_enabled "${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
                     print_warning "Healthcheck rerun: Satellite component playbook"
-                    if run_phase_playbook_with_auth_fallback "Healthcheck repair — Satellite" "scenario_satellite" "/rhis/rhis-builder-satellite/main.yml" && \
+                    if run_phase_playbook_with_auth_fallback "Healthcheck repair — Satellite" "scenario_satellite" "/minirhis/minirhis-builder-satellite/main.yml" && \
                        healthcheck_run_shell "scenario_satellite" "Satellite post-rerun verification" "${sat_check}"; then
                         print_success "Satellite recovered after targeted component rerun."
                         local_failures=$((local_failures - 1))
@@ -9506,15 +9472,15 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             else
                 local_failures=$((local_failures + 1))
                 print_warning "Healthcheck failed: AAP"
-                if is_enabled "${RHIS_HEALTHCHECK_AUTOFIX:-1}"; then
+                if is_enabled "${MINIRHIS_HEALTHCHECK_AUTOFIX:-1}"; then
                     print_step "Healthcheck autofix: AAP service remediation"
                     healthcheck_run_shell "aap" "AAP autofix action" "${aap_fix}" || true
                     if healthcheck_run_shell "aap" "AAP post-autofix verification" "${aap_check}"; then
                         print_success "AAP recovered after autofix."
                         local_failures=$((local_failures - 1))
-                    elif is_enabled "${RHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
+                    elif is_enabled "${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
                         print_warning "Healthcheck rerun: AAP component playbook"
-                        if run_phase_playbook_with_auth_fallback "Healthcheck repair — AAP" "aap" "/rhis/rhis-builder-aap/main.yml" && \
+                        if run_phase_playbook_with_auth_fallback "Healthcheck repair — AAP" "aap" "/minirhis/minirhis-builder-aap/main.yml" && \
                            healthcheck_run_shell "aap" "AAP post-rerun verification" "${aap_check}"; then
                             print_success "AAP recovered after targeted component rerun."
                             local_failures=$((local_failures - 1))
@@ -9626,7 +9592,7 @@ setup_virt_manager() {
     read -r -p "Create Satellite/AAP VMs now? [Y/n]: " build_vms
     case "${build_vms:-Y}" in
         Y|y|"")
-            create_rhis_vms || print_warning "VM creation did not complete."
+            create_minirhis_vms || print_warning "VM creation did not complete."
             ;;
         *)
             print_warning "Skipping VM creation."
@@ -9649,9 +9615,9 @@ setup_virt_manager() {
 
     print_success "Virt-Manager setup complete"
 
-    print_step "Configuring RHIS to monitor VMs"
+    print_step "Configuring MINIRHIS to monitor VMs"
 
-    if [ -f "RHIS/config.json" ]; then
+    if [ -f "MINIRHIS/config.json" ]; then
         echo "config.json found. Add the following to your resources:"
         echo ""
         echo '{
@@ -9812,7 +9778,7 @@ _load_env_network_field() {
     return 0
 }
 
-# Load all RHIS credentials from ~/.ansible/conf/env.yml.
+# Load all MINIRHIS credentials from ~/.ansible/conf/env.yml.
 # Variables holding real (non-placeholder) values are kept — CLI preseeds always win.
 # Script-level placeholder defaults (e.g. "example.com", "EXAMPLE.COM") are
 # overridable by vault so a saved real domain/realm is never silenced.
@@ -9917,9 +9883,9 @@ load_ansible_env_file() {
     _load_env_key RHC_AUTO_CONNECT rhc_auto_connect
     _load_env_key RH_ISO_URL       rh_iso_url
     _load_env_key RH9_ISO_URL      rh9_iso_url
-    _load_env_key RHIS_INSTALL_PRODUCT rhis_install_product
-    _load_env_key RHIS_PLATFORM_FAMILY rhis_platform_family
-    _load_env_key RHIS_TARGET_PLATFORM rhis_target_platform
+    _load_env_key MINIRHIS_INSTALL_PRODUCT minirhis_install_product
+    _load_env_key MINIRHIS_PLATFORM_FAMILY minirhis_platform_family
+    _load_env_key MINIRHIS_TARGET_PLATFORM minirhis_target_platform
     _load_env_key SAT_TARGET_PLATFORM sat_target_platform
     _load_env_key AAP_TARGET_PLATFORM aap_target_platform
     _load_env_key IDM_TARGET_PLATFORM idm_target_platform
@@ -9973,7 +9939,7 @@ load_ansible_env_file() {
     fi
 }
 
-# Persist all RHIS credentials to ~/.ansible/conf/env.yml (atomic write, chmod 600).
+# Persist all MINIRHIS credentials to ~/.ansible/conf/env.yml (atomic write, chmod 600).
 write_ansible_env_file() {
     mkdir -p "$ANSIBLE_ENV_DIR" || return 1
     ensure_ansible_vault || return 1
@@ -9982,8 +9948,8 @@ write_ansible_env_file() {
 
     local tmp_env
     tmp_env="$(mktemp "${ANSIBLE_ENV_DIR}/.env.yml.XXXXXX")"
-    cat > "$tmp_env" <<RHIS_ENV_EOF
-# RHIS credentials — written by run_rhis_install_sequence.sh on $(date '+%Y-%m-%d %H:%M')
+    cat > "$tmp_env" <<MINIRHIS_ENV_EOF
+# MINIRHIS credentials — written by run_minirhis_install_sequence.sh on $(date '+%Y-%m-%d %H:%M')
 # Permissions: 600 — do NOT commit this file to version control.
 ---
 admin_user: "${ADMIN_USER:-}"
@@ -10017,7 +9983,7 @@ cdn_organization_id: "${CDN_ORGANIZATION_ID:-}"
 cdn_sat_activation_key: "${CDN_SAT_ACTIVATION_KEY:-}"
 rhc_organization_id: "${RHC_ORGANIZATION_ID:-${CDN_ORGANIZATION_ID:-}}"
 rhc_activation_key: "${RHC_ACTIVATION_KEY:-${CDN_SAT_ACTIVATION_KEY:-}}"
-# Aliases expected by rhis-builder-idm idm_pre role (redhat.rhel_system_roles.rhc)
+# Aliases expected by minirhis-builder-idm idm_pre role (redhat.rhel_system_roles.rhc)
 cdn_organization_vault: "${CDN_ORGANIZATION_ID:-}"
 cdn_activation_key_vault: "${CDN_SAT_ACTIVATION_KEY:-}"
 sat_firewalld_zone: "${SAT_FIREWALLD_ZONE:-public}"
@@ -10037,7 +10003,7 @@ sat_rhel10_appstream_repo: "${SAT_RHEL10_APPSTREAM_REPO:-rhel-10-for-x86_64-apps
 sat_rhel9_baseos_repo: "${SAT_RHEL9_BASEOS_REPO:-rhel-9-for-x86_64-baseos-rpms}"
 sat_rhel9_appstream_repo: "${SAT_RHEL9_APPSTREAM_REPO:-rhel-9-for-x86_64-appstream-rpms}"
 sat_rhel10_gpg_key_name: "${SAT_RHEL10_GPG_KEY_NAME:-RPM-GPG-KEY-redhat-release}"
-# Alias used by rhis-builder host_vars templates ({{ global_admin_password }})
+# Alias used by minirhis-builder host_vars templates ({{ global_admin_password }})
 global_admin_password: "${ADMIN_PASS:-}"
 # Installer/controller username consumed by installer host_vars
 installer_user: "${INSTALLER_USER:-${ADMIN_USER:-admin}}"
@@ -10064,7 +10030,7 @@ idm_domain: "${IDM_DOMAIN:-}"
 idm_realm: "${IDM_REALM:-}"
 idm_admin_pass: "${IDM_ADMIN_PASS:-}"
 idm_ds_pass: "${IDM_DS_PASS:-}"
-idm_admins_group: "${IDM_ADMINS_GROUP:-rhis-admins}"
+idm_admins_group: "${IDM_ADMINS_GROUP:-minirhis-admins}"
 idm_content_managers_group: "${IDM_CONTENT_MANAGERS_GROUP:-content-managers}"
 idm_automation_engineers_group: "${IDM_AUTOMATION_ENGINEERS_GROUP:-automation-engineers}"
 idm_system_services_group: "${IDM_SYSTEM_SERVICES_GROUP:-system-services}"
@@ -10094,12 +10060,12 @@ aap_bundle_url: "${AAP_BUNDLE_URL:-}"
 sat_manifest_path: "${SAT_MANIFEST_PATH:-}"
 rh_iso_url: "${RH_ISO_URL:-}"
 rh9_iso_url: "${RH9_ISO_URL:-}"
-rhis_install_product: "${RHIS_INSTALL_PRODUCT:-}"
-rhis_platform_family: "${RHIS_PLATFORM_FAMILY:-}"
-rhis_target_platform: "${RHIS_TARGET_PLATFORM:-libvirt}"
-sat_target_platform: "${SAT_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM:-libvirt}}"
-aap_target_platform: "${AAP_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM:-libvirt}}"
-idm_target_platform: "${IDM_TARGET_PLATFORM:-${RHIS_TARGET_PLATFORM:-libvirt}}"
+minirhis_install_product: "${MINIRHIS_INSTALL_PRODUCT:-}"
+minirhis_platform_family: "${MINIRHIS_PLATFORM_FAMILY:-}"
+minirhis_target_platform: "${MINIRHIS_TARGET_PLATFORM:-libvirt}"
+sat_target_platform: "${SAT_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
+aap_target_platform: "${AAP_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
+idm_target_platform: "${IDM_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
 libvirt_uri: "${LIBVIRT_URI:-qemu:///system}"
 libvirt_storage_pool: "${LIBVIRT_STORAGE_POOL:-default}"
 libvirt_network: "${LIBVIRT_NETWORK:-default}"
@@ -10141,7 +10107,7 @@ baremetal_iso_url: "${BAREMETAL_ISO_URL:-}"
 pxe_server_url: "${PXE_SERVER_URL:-}"
 sshpass_cmd: "${SSHPASS_CMD:-sshpass}"
 rhc_auto_connect: ${RHC_AUTO_CONNECT:-1}
-RHIS_ENV_EOF
+MINIRHIS_ENV_EOF
     chmod 600 "$tmp_env"
 
     if vault_plaintext_matches_existing "$tmp_env"; then
@@ -10334,7 +10300,7 @@ prompt_all_env_options_once() {
     prompt_with_default SAT_RHEL10_GPG_KEY_NAME "RHEL 10 GPG key name" "${SAT_RHEL10_GPG_KEY_NAME:-RPM-GPG-KEY-redhat-release}" 0 1 || return 1
 
     echo ""
-    echo "=== Advanced RHIS / Satellite Options ==="
+    echo "=== Advanced MINIRHIS / Satellite Options ==="
     prompt_with_default INSTALLER_USER "Installer/controller username" "${INSTALLER_USER:-${USER}}" 0 1 || return 1
     prompt_with_default SAT_INITIAL_ADMIN_PASS "Satellite initial admin password override (blank = Shared Admin Password)" "${SAT_INITIAL_ADMIN_PASS:-}" 1 0 || return 1
     prompt_with_default SATELLITE_DISCONNECTED "Satellite disconnected mode? (1=yes, 0=no)" "${SATELLITE_DISCONNECTED:-false}" 0 1 || return 1
@@ -10352,7 +10318,7 @@ prompt_all_env_options_once() {
     # --- IdM User Groups & Access Control ---
     echo ""
     echo "=== IdM Access Control Configuration ==="
-    prompt_with_default IDM_ADMINS_GROUP "IdM Administrators group name" "${IDM_ADMINS_GROUP:-rhis-admins}" 0 1 || return 1
+    prompt_with_default IDM_ADMINS_GROUP "IdM Administrators group name" "${IDM_ADMINS_GROUP:-minirhis-admins}" 0 1 || return 1
     prompt_with_default IDM_CONTENT_MANAGERS_GROUP "IdM Content Managers group name" "${IDM_CONTENT_MANAGERS_GROUP:-content-managers}" 0 1 || return 1
     prompt_with_default IDM_AUTOMATION_ENGINEERS_GROUP "IdM Automation Engineers group name" "${IDM_AUTOMATION_ENGINEERS_GROUP:-automation-engineers}" 0 1 || return 1
     prompt_with_default IDM_SYSTEM_SERVICES_GROUP "IdM System Services group name" "${IDM_SYSTEM_SERVICES_GROUP:-system-services}" 0 1 || return 1
@@ -10367,7 +10333,7 @@ prompt_all_env_options_once() {
 # Centralized prompt entrypoint used by provisioning flows.
 # Ensures first-run bootstrap and missing-value prompting both execute.
 prompt_use_existing_env() {
-    if [ "${RHIS_PROMPTS_COMPLETED:-0}" = "1" ]; then
+    if [ "${MINIRHIS_PROMPTS_COMPLETED:-0}" = "1" ]; then
         if [ -f "$ANSIBLE_ENV_FILE" ]; then
             load_ansible_env_file || return 1
         fi
@@ -10375,7 +10341,7 @@ prompt_use_existing_env() {
     fi
 
     prompt_all_env_options_once || return 1
-    RHIS_PROMPTS_COMPLETED=1
+    MINIRHIS_PROMPTS_COMPLETED=1
     FORCE_PROMPT_ALL=0
 
     if [ -f "$ANSIBLE_ENV_FILE" ]; then
@@ -10387,7 +10353,7 @@ prompt_use_existing_env() {
 }
 
 prompts_only_workflow() {
-    local selected_product="${RHIS_INSTALL_PRODUCT:-}"
+    local selected_product="${MINIRHIS_INSTALL_PRODUCT:-}"
     local selected_family=""
     local selected_platform=""
 
@@ -10398,8 +10364,8 @@ prompts_only_workflow() {
     fi
     normalize_shared_env_vars
 
-    if [ -n "${CLI_RHIS:-}" ]; then
-        selected_product="rhis"
+    if [ -n "${CLI_MINIRHIS:-}" ]; then
+        selected_product="minirhis"
     elif [ -n "${CLI_SATELLITE:-}" ]; then
         selected_product="satellite"
     elif [ -n "${CLI_IDM:-}" ]; then
@@ -10408,10 +10374,10 @@ prompts_only_workflow() {
         selected_product="aap"
     fi
 
-    if [ -z "${CLI_RHIS:-}${CLI_SATELLITE:-}${CLI_IDM:-}${CLI_AAP:-}" ]; then
-        prompt_install_product_choice selected_product "${selected_product:-rhis}" || return 1
+    if [ -z "${CLI_MINIRHIS:-}${CLI_SATELLITE:-}${CLI_IDM:-}${CLI_AAP:-}" ]; then
+        prompt_install_product_choice selected_product "${selected_product:-minirhis}" || return 1
     fi
-    RHIS_INSTALL_PRODUCT="${selected_product}"
+    MINIRHIS_INSTALL_PRODUCT="${selected_product}"
 
     if [ -n "${CLI_LIBVIRT:-}" ]; then
         selected_platform="libvirt"
@@ -10436,27 +10402,27 @@ prompts_only_workflow() {
     if [ -n "${selected_platform}" ]; then
         selected_family="$(platform_family_for_provider "${selected_platform}")"
     else
-        selected_family="${RHIS_PLATFORM_FAMILY:-$(platform_family_for_provider "${RHIS_TARGET_PLATFORM:-libvirt}")}"
+        selected_family="${MINIRHIS_PLATFORM_FAMILY:-$(platform_family_for_provider "${MINIRHIS_TARGET_PLATFORM:-libvirt}")}"
         prompt_platform_family_choice selected_family "${selected_family:-virtual}" || return 1
         case "${selected_family}" in
             cloud)
-                prompt_cloud_provider_choice selected_platform "${RHIS_TARGET_PLATFORM:-aws}" || return 1
+                prompt_cloud_provider_choice selected_platform "${MINIRHIS_TARGET_PLATFORM:-aws}" || return 1
                 ;;
             baremetal)
                 selected_platform="baremetal"
                 ;;
             *)
-                prompt_virtual_provider_choice selected_platform "${RHIS_TARGET_PLATFORM:-libvirt}" || return 1
+                prompt_virtual_provider_choice selected_platform "${MINIRHIS_TARGET_PLATFORM:-libvirt}" || return 1
                 ;;
         esac
     fi
 
-    RHIS_PLATFORM_FAMILY="${selected_family}"
+    MINIRHIS_PLATFORM_FAMILY="${selected_family}"
     set_platform_targets "${selected_product}" "${selected_platform}"
     prompt_platform_connection_details "${selected_platform}" || return 1
 
     case "${selected_product}" in
-        rhis)
+        minirhis)
             prompt_idm_details || return 1
             prompt_satellite_618_details || return 1
             prompt_aap_details || return 1
@@ -10476,7 +10442,7 @@ prompts_only_workflow() {
             ;;
     esac
 
-    RHIS_PROMPTS_COMPLETED=1
+    MINIRHIS_PROMPTS_COMPLETED=1
     FORCE_PROMPT_ALL=0
     write_ansible_env_file || return 1
 
@@ -10736,7 +10702,7 @@ ensure_ssh_keys() {
         print_step "Generating installer host SSH key pair: ${HOME}/.ssh/id_rsa"
         mkdir -p "${HOME}/.ssh" || return 1
         chmod 700 "${HOME}/.ssh" || true
-        ssh-keygen -q -t rsa -b 4096 -N "" -f "${HOME}/.ssh/id_rsa" -C "rhis-installer-host" || return 1
+        ssh-keygen -q -t rsa -b 4096 -N "" -f "${HOME}/.ssh/id_rsa" -C "minirhis-installer-host" || return 1
         chmod 600 "${HOME}/.ssh/id_rsa" || true
         chmod 644 "${HOME}/.ssh/id_rsa.pub" || true
     fi
@@ -10755,7 +10721,7 @@ ensure_ssh_keys() {
     mkdir -p "${AAP_SSH_KEY_DIR}" || return 1
     chmod 700 "${AAP_SSH_KEY_DIR}"
 
-    ssh-keygen -t rsa -b 4096 -f "${AAP_SSH_PRIVATE_KEY}" -N "" -C "rhis-aap-setup" || return 1
+    ssh-keygen -t rsa -b 4096 -f "${AAP_SSH_PRIVATE_KEY}" -N "" -C "minirhis-aap-setup" || return 1
     chmod 600 "${AAP_SSH_PRIVATE_KEY}"
     chmod 644 "${AAP_SSH_PUBLIC_KEY}"
     print_success "SSH keys generated: ${AAP_SSH_KEY_DIR}"
@@ -10764,17 +10730,17 @@ ensure_ssh_keys() {
 # Collect public SSH keys that should be trusted by freshly installed guests.
 # Sources (best-effort):
 #   1. The installing machine user's existing SSH public keys
-#   2. The RHIS AAP orchestration key generated by ensure_ssh_keys()
-#   3. The RHIS provisioner container root public key, if available
+#   2. The MINIRHIS AAP orchestration key generated by ensure_ssh_keys()
+#   3. The MINIRHIS provisioner container root public key, if available
 collect_bootstrap_public_keys() {
     local key_file
     local container_pub=""
 
-    ensure_rhis_installer_ssh_key >/dev/null 2>&1 || true
+    ensure_minirhis_installer_ssh_key >/dev/null 2>&1 || true
 
     {
         for key_file in \
-            "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" \
+            "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" \
             "${HOME}/.ssh/id_ed25519.pub" \
             "${HOME}/.ssh/id_rsa.pub" \
             "${AAP_SSH_PUBLIC_KEY}"; do
@@ -10782,8 +10748,8 @@ collect_bootstrap_public_keys() {
         done
 
         if command -v podman >/dev/null 2>&1 \
-            && podman container exists "${RHIS_CONTAINER_NAME}" >/dev/null 2>&1; then
-            container_pub="$(podman exec "${RHIS_CONTAINER_NAME}" sh -lc 'cat /root/.ssh/id_ed25519.pub 2>/dev/null || cat /root/.ssh/id_rsa.pub 2>/dev/null || true' 2>/dev/null || true)"
+            && podman container exists "${MINIRHIS_CONTAINER_NAME}" >/dev/null 2>&1; then
+            container_pub="$(podman exec "${MINIRHIS_CONTAINER_NAME}" sh -lc 'cat /root/.ssh/id_ed25519.pub 2>/dev/null || cat /root/.ssh/id_rsa.pub 2>/dev/null || true' 2>/dev/null || true)"
             [ -n "${container_pub}" ] && printf '%s\n' "${container_pub}"
         fi
     } | awk 'NF && !seen[$0]++'
@@ -10838,19 +10804,25 @@ preflight_download_aap_bundle() {
     fi
 
     print_success "AAP bundle staged at ${bundle_dest}"
+    return 0
 }
 
 # Wait for the AAP VM to boot and SSH to be available, checking every 10s up to 10 minutes.
 wait_for_vm_ssh() {
     local vm_name="${1:-aap}"
     local vm_ip
+    local configured_vm_ip=""
+    local discovered_ips=""
+    local preferred_ip=""
     local vm_state
     local ssh_wait_timeout="${AAP_SSH_WAIT_TIMEOUT:-5400}"
     local ssh_wait_interval="${AAP_SSH_WAIT_INTERVAL:-10}"
     local ssh_progress_every="${AAP_SSH_PROGRESS_EVERY:-30}"
-    local ssh_no_progress_timeout="${AAP_SSH_NO_PROGRESS_TIMEOUT:-900}"
+    local ssh_no_progress_timeout="${AAP_SSH_NO_PROGRESS_TIMEOUT:-5400}"
     local ssh_key_auth_failures=0
     local ssh_probe_out=""
+    local callback_probe_ok=0
+    local callback_probe_key=""
     local wait_start=0
     local wait_deadline=0
     local now=0
@@ -10867,6 +10839,21 @@ wait_for_vm_ssh() {
     local last_vm_state=""
     local last_vm_ip=""
     local ssh_port_reachable=0
+    local progress_inline_active=0
+
+    _aap_progress_flush() {
+        if [ "${progress_inline_active}" -eq 1 ]; then
+            printf '\n'
+            progress_inline_active=0
+        fi
+    }
+
+    _aap_progress_render_inline() {
+        local msg="$1"
+        # Keep callback wait updates on one terminal line.
+        printf '\r\033[K[STEP] %s' "$msg"
+        progress_inline_active=1
+    }
 
     if ! is_enabled "${AAP_SSH_CALLBACK_ENABLED:-0}"; then
         print_step "AAP SSH callback probing is disabled for this workflow; skipping wait_for_vm_ssh."
@@ -10876,10 +10863,10 @@ wait_for_vm_ssh() {
     case "${ssh_wait_timeout}" in ''|*[!0-9]*) ssh_wait_timeout=5400 ;; esac
     case "${ssh_wait_interval}" in ''|*[!0-9]*) ssh_wait_interval=10 ;; esac
     case "${ssh_progress_every}" in ''|*[!0-9]*) ssh_progress_every=30 ;; esac
-    case "${ssh_no_progress_timeout}" in ''|*[!0-9]*) ssh_no_progress_timeout=900 ;; esac
+    case "${ssh_no_progress_timeout}" in ''|*[!0-9]*) ssh_no_progress_timeout=3600 ;; esac
     [ "${ssh_wait_interval}" -le 0 ] && ssh_wait_interval=10
     [ "${ssh_progress_every}" -le 0 ] && ssh_progress_every=30
-    [ "${ssh_no_progress_timeout}" -le 0 ] && ssh_no_progress_timeout=900
+    [ "${ssh_no_progress_timeout}" -le 0 ] && ssh_no_progress_timeout=3600
 
     wait_start="$(date +%s)"
     wait_deadline=$(( wait_start + ssh_wait_timeout ))
@@ -10895,6 +10882,7 @@ wait_for_vm_ssh() {
         elapsed=$(( now - wait_start ))
         remaining=$(( wait_deadline - now ))
         if [ "${remaining}" -le 0 ]; then
+            _aap_progress_flush
             print_warning "${vm_name} SSH did not become available within $((ssh_wait_timeout / 60)) minute(s)."
             return 1
         fi
@@ -10902,12 +10890,14 @@ wait_for_vm_ssh() {
         stage=0
         vm_state="$(sudo virsh domstate "${vm_name}" 2>/dev/null | tr -d '[:space:]' || true)"
         if [ "${vm_state}" != "${last_vm_state}" ]; then
+            _aap_progress_flush
             print_step "${vm_name} state transition: ${last_vm_state:-unknown} -> ${vm_state:-unknown}"
             last_vm_state="${vm_state}"
             last_stage_change="${now}"
         fi
 
         if [ "$vm_state" = "shutoff" ] || [ "$vm_state" = "crashed" ] || [ "$vm_state" = "pmsuspended" ]; then
+            _aap_progress_flush
             print_warning "${vm_name} state is ${vm_state}; starting it to continue automated setup"
             sudo virsh start "${vm_name}" >/dev/null 2>&1 || true
             sleep 5
@@ -10917,18 +10907,34 @@ wait_for_vm_ssh() {
             stage=1
         fi
 
-        # Get the VM's IP from virsh
-        vm_ip="$(sudo virsh domifaddr "${vm_name}" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+        case "$vm_name" in
+            aap) configured_vm_ip="${AAP_IP:-}" ;;
+            satellite) configured_vm_ip="${SAT_IP:-}" ;;
+            idm) configured_vm_ip="${IDM_IP:-}" ;;
+            *) configured_vm_ip="" ;;
+        esac
 
+        discovered_ips="$( { timeout 5 sudo -n virsh domifaddr "${vm_name}" 2>/dev/null || timeout 5 virsh domifaddr "${vm_name}" 2>/dev/null; } \
+            | awk '/ipv4/ {print $4}' \
+            | cut -d/ -f1 \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true)"
+
+        # Always prefer the configured MINIRHIS internal IP for callback SSH.
+        # domifaddr output can omit static/internal interfaces early in boot,
+        # which previously caused fallback to the external DHCP address.
+        preferred_ip="${configured_vm_ip}"
+        if [ -z "${preferred_ip}" ]; then
+            preferred_ip="$(printf '%s\n' "${discovered_ips}" | grep -E '^10\.168\.' | head -1 || true)"
+            [ -z "${preferred_ip}" ] && preferred_ip="$(printf '%s\n' "${discovered_ips}" | head -1 || true)"
+        fi
+
+        vm_ip="${preferred_ip}"
         if [ -z "${vm_ip}" ]; then
-            case "$vm_name" in
-                aap) vm_ip="${AAP_IP:-}" ;;
-                satellite) vm_ip="${SAT_IP:-}" ;;
-                idm) vm_ip="${IDM_IP:-}" ;;
-            esac
+            vm_ip="${configured_vm_ip}"
         fi
 
         if [ -n "${vm_ip}" ] && [ "${vm_ip}" != "${last_vm_ip}" ]; then
+            _aap_progress_flush
             print_step "${vm_name} network update: detected IP ${vm_ip}"
             last_vm_ip="${vm_ip}"
             last_stage_change="${now}"
@@ -10937,15 +10943,16 @@ wait_for_vm_ssh() {
         if [ -n "${vm_ip}" ]; then
             stage=2
 
-            # If TCP/22 is open, force public-key auth probe to detect bad key setup quickly.
-            if timeout 2 bash -lc "cat < /dev/tcp/${vm_ip}/22" >/dev/null 2>&1; then
-                stage=3
-                if [ "${ssh_port_reachable}" -eq 0 ]; then
-                    print_success "${vm_name} is reachable on TCP/22 at ${vm_ip}; starting key-auth validation."
-                    ssh_port_reachable=1
-                    last_stage_change="${now}"
-                fi
+            # Probe SSH directly each cycle. TCP prechecks can be flaky while guest networking
+            # and sshd settle, so direct key-auth probe is the source of truth.
+            stage=3
 
+            callback_probe_ok=0
+            callback_probe_key=""
+            ssh_probe_out=""
+            for _probe_key in "${AAP_SSH_PRIVATE_KEY}" "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-}" "${HOME}/.ssh/id_rsa"; do
+                [ -n "${_probe_key}" ] || continue
+                [ -f "${_probe_key}" ] || continue
                 ssh_probe_out="$(timeout 5 ssh \
                     -o BatchMode=yes \
                     -o PreferredAuthentications=publickey \
@@ -10953,28 +10960,41 @@ wait_for_vm_ssh() {
                     -o StrictHostKeyChecking=no \
                     -o UserKnownHostsFile=/dev/null \
                     -o ForwardX11=no \
-                    -i "${AAP_SSH_PRIVATE_KEY}" "root@${vm_ip}" "echo 'SSH ready'" 2>&1 || true)"
-
+                    -i "${_probe_key}" "root@${vm_ip}" "echo 'SSH ready'" 2>&1 || true)"
                 if printf '%s' "${ssh_probe_out}" | grep -q "SSH ready"; then
-                    print_success "${vm_name} SSH is ready at ${vm_ip}"
-                    echo "${vm_ip}"
-                    return 0
+                    callback_probe_ok=1
+                    callback_probe_key="${_probe_key}"
+                    break
                 fi
+            done
 
-                if printf '%s' "${ssh_probe_out}" | grep -Eqi "Permission denied|publickey"; then
-                    ssh_key_auth_failures="$((ssh_key_auth_failures + 1))"
-                    if [ "${ssh_key_auth_failures}" -ge "${AAP_SSH_KEY_FAIL_FAST_ATTEMPTS:-18}" ]; then
-                        print_warning "${vm_name}: SSH port is reachable at ${vm_ip}, but key auth failed ${ssh_key_auth_failures} times."
-                        print_warning "Fail-fast triggered: likely SSH key injection/sshd auth mismatch (not a boot wait issue)."
-                        print_warning "Check /root/.ssh/authorized_keys, sshd settings, and kickstart %post key injection."
-                        return 1
-                    fi
+            if [ "${callback_probe_ok}" -eq 1 ]; then
+                if [ "${ssh_port_reachable}" -eq 0 ]; then
+                    _aap_progress_flush
+                    print_success "${vm_name} is reachable on SSH at ${vm_ip}; starting setup callback."
+                    ssh_port_reachable=1
                 fi
-            else
-                if [ "${ssh_port_reachable}" -eq 1 ]; then
-                    print_warning "${vm_name} TCP/22 is no longer reachable at ${vm_ip}; waiting for recovery."
-                    ssh_port_reachable=0
-                    last_stage_change="${now}"
+                _aap_progress_flush
+                print_success "${vm_name} SSH is ready at ${vm_ip} (key: ${callback_probe_key})"
+                WAIT_FOR_VM_SSH_RESULT="${vm_ip}"
+                return 0
+            fi
+
+            if [ "${ssh_port_reachable}" -eq 1 ]; then
+                _aap_progress_flush
+                print_warning "${vm_name} SSH became unreachable at ${vm_ip}; waiting for recovery."
+                ssh_port_reachable=0
+                last_stage_change="${now}"
+            fi
+
+            if printf '%s' "${ssh_probe_out}" | grep -Eqi "Permission denied|publickey"; then
+                ssh_key_auth_failures="$((ssh_key_auth_failures + 1))"
+                if [ "${ssh_key_auth_failures}" -ge "${AAP_SSH_KEY_FAIL_FAST_ATTEMPTS:-18}" ]; then
+                    _aap_progress_flush
+                    print_warning "${vm_name}: SSH key auth failed ${ssh_key_auth_failures} times at ${vm_ip}."
+                    print_warning "Fail-fast triggered: likely SSH key injection/sshd auth mismatch (not a boot wait issue)."
+                    print_warning "Check /root/.ssh/authorized_keys, sshd settings, and kickstart %post key injection."
+                    return 1
                 fi
             fi
         fi
@@ -10999,14 +11019,20 @@ wait_for_vm_ssh() {
             printf -v bar '%*s' "${filled}" ''
             bar="${bar// /#}"
             printf -v bar '%-20s' "${bar}"
-            print_step "AAP callback wait: [${bar}] ${percent}%% elapsed=${elapsed}s/${ssh_wait_timeout}s remaining~${remaining}s stage=${stage_label}"
+            _aap_progress_render_inline "AAP callback wait: [${bar}] ${percent}%% elapsed=${elapsed}s/${ssh_wait_timeout}s remaining~${remaining}s stage=${stage_label}"
             last_progress_log="${now}"
         fi
 
         if [ $((now - last_stage_change)) -ge "${ssh_no_progress_timeout}" ]; then
-            print_warning "${vm_name} callback wait stalled for ${ssh_no_progress_timeout}s (stage=${stage_label})."
-            print_warning "Fail-fast triggered for troubleshooting. Check VM console, network, and /var/log/anaconda/ on guest."
-            return 1
+            if [ "${stage}" -ge 3 ]; then
+                _aap_progress_flush
+                print_warning "${vm_name} callback wait stalled for ${ssh_no_progress_timeout}s (stage=${stage_label})."
+                print_warning "Fail-fast triggered for troubleshooting. Check VM console, network, and /var/log/anaconda/ on guest."
+                return 1
+            fi
+            # During kickstart/anaconda, it is normal to remain in stage<3 (no SSH yet)
+            # for a long period; keep waiting until overall callback timeout.
+            last_stage_change="${now}"
         fi
 
         sleep "${ssh_wait_interval}"
@@ -11019,46 +11045,142 @@ run_aap_setup_on_vm() {
     local vm_name="${1:-aap}"
     local vm_ip
     local installer_inventory
+    local bundle_url_runtime="${AAP_BUNDLE_EFFECTIVE_URL:-${AAP_BUNDLE_URL:-}}"
+    local callback_ssh_key=""
+    local local_bundle_source=""
 
     if ! is_enabled "${AAP_SSH_CALLBACK_ENABLED:-0}"; then
         print_step "AAP SSH callback is disabled; skipping run_aap_setup_on_vm."
         return 0
     fi
 
-    vm_ip="$(wait_for_vm_ssh "${vm_name}")" || {
+    WAIT_FOR_VM_SSH_RESULT=""
+    wait_for_vm_ssh "${vm_name}" || {
         print_warning "Cannot reach ${vm_name} via SSH. Setup not attempted."
         return 1
     }
+    vm_ip="${WAIT_FOR_VM_SSH_RESULT}"
+
+    if [ -z "${vm_ip}" ]; then
+        print_warning "${vm_name} SSH callback returned no VM IP. Setup not attempted."
+        return 1
+    fi
 
     installer_inventory="$(aap_installer_inventory_filename)"
 
+    # Select a callback SSH key that can authenticate to root on the AAP VM.
+    for _probe_key in "${AAP_SSH_PRIVATE_KEY}" "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-}" "${HOME}/.ssh/id_rsa"; do
+        [ -n "${_probe_key}" ] || continue
+        [ -f "${_probe_key}" ] || continue
+        if timeout 6 ssh -o BatchMode=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no \
+             -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no \
+             -i "${_probe_key}" "root@${vm_ip}" "echo callback-key-ok" >/dev/null 2>&1; then
+            callback_ssh_key="${_probe_key}"
+            break
+        fi
+    done
+
+    if [ -z "${callback_ssh_key}" ]; then
+        print_warning "No callback SSH key can authenticate to root@${vm_ip}."
+        print_warning "Checked keys: ${AAP_SSH_PRIVATE_KEY}, ${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-'(unset)'}, ${HOME}/.ssh/id_rsa"
+        return 1
+    fi
+
+    # Prefer staging a locally cached bundle to avoid CDN/token failures on guest.
+    if [ -f "${AAP_BUNDLE_DIR:-}/aap-bundle.tar.gz" ]; then
+        local_bundle_source="${AAP_BUNDLE_DIR}/aap-bundle.tar.gz"
+    else
+        local_bundle_source="$(ls -1t "${HOME}"/Downloads/ansible-automation-platform-containerized-setup-bundle-*.tar.gz 2>/dev/null | head -n 1 || true)"
+    fi
+
+    if [ -n "${local_bundle_source}" ] && [ -f "${local_bundle_source}" ]; then
+        print_step "Staging local AAP bundle on ${vm_name}: ${local_bundle_source}"
+        if ! scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no \
+            -i "${callback_ssh_key}" "${local_bundle_source}" "root@${vm_ip}:/home/admin/aap-setup/aap-bundle.tar.gz" >/dev/null 2>&1; then
+            print_warning "Could not stage local bundle to ${vm_name}; callback will use URL fallback if needed."
+        fi
+    fi
+
     print_step "Running AAP containerized installer via SSH on ${vm_name} (${vm_ip})..."
+    print_step "  Callback SSH key: ${callback_ssh_key}"
     print_step "  Installer command: ansible-playbook -i ${installer_inventory} ansible.containerized_installer.install"
     print_step "  Output will be logged to: ${AAP_SETUP_LOG_LOCAL}"
 
     # SSH in and run the collection playbook entrypoint with the selected inventory.
-    {
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting AAP setup on ${vm_ip}"
+    # Use a heredoc to avoid complex quote escaping and preserve robust failure handling.
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting AAP setup on ${vm_ip}" | tee -a "${AAP_SETUP_LOG_LOCAL}"
+    if ! (
+        set -o pipefail
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no \
-            -i "${AAP_SSH_PRIVATE_KEY}" "root@${vm_ip}" \
-            "set -euo pipefail
-             cd /root/aap-setup
+            -i "${callback_ssh_key}" "root@${vm_ip}" \
+            "BUNDLE_URL='${bundle_url_runtime}' INSTALLER_INVENTORY='${installer_inventory}' RH_USER_REMOTE='${RH_USER:-}' RH_PASS_REMOTE='${RH_PASS:-}' bash -s" <<'EOF_REMOTE' 2>&1 | tee -a "${AAP_SETUP_LOG_LOCAL}"
+set -euo pipefail
+cd /home/admin/aap-setup
 
-             command -v ansible-playbook >/dev/null 2>&1 || dnf install -y --nogpgcheck ansible-core
+if [ ! -f ansible.containerized_installer.install.yml ] && [ ! -f setup.sh ]; then
+    if [ -f /home/admin/aap-setup/aap-bundle.tar.gz ]; then
+        echo "[aap-install] extracting staged local bundle from /home/admin/aap-setup/aap-bundle.tar.gz"
+        tar -xzf /home/admin/aap-setup/aap-bundle.tar.gz -C /home/admin/aap-setup --strip-components=1
+    else
+        echo "[aap-install] bundle not found in /home/admin/aap-setup; downloading fallback bundle now"
+        if [ -z "${BUNDLE_URL}" ]; then
+            echo "[aap-install] ERROR: AAP_BUNDLE_URL is empty"
+            exit 1
+        fi
+        curl -fL --retry 5 --retry-delay 15 --connect-timeout 30 --max-time 7200 "${BUNDLE_URL}" -o /home/admin/aap-setup/aap-bundle.tar.gz
+        tar -xzf /home/admin/aap-setup/aap-bundle.tar.gz -C /home/admin/aap-setup --strip-components=1
+    fi
 
-             if [ ! -f \"${installer_inventory}\" ]; then
-                 echo \"[aap-install] ERROR: expected inventory file not found: ${installer_inventory}\"
-                 ls -la
-                 exit 1
-             fi
+    if [ ! -f setup.sh ] && [ ! -d /home/admin/aap-setup/collections/ansible_collections/ansible/containerized_installer ]; then
+        echo "[aap-install] ERROR: bundle extraction did not produce expected installer assets"
+        ls -la /home/admin/aap-setup
+        exit 1
+    fi
+fi
 
-             echo \"[aap-install] running ansible-playbook -i ${installer_inventory} ansible.containerized_installer.install\"
-             exec ansible-playbook -i \"${installer_inventory}\" ansible.containerized_installer.install 2>&1" || {
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] AAP setup FAILED on ${vm_ip}"
-                return 1
-            }
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] AAP setup completed successfully on ${vm_ip}"
-    } | tee -a "${AAP_SETUP_LOG_LOCAL}" || return 1
+command -v ansible-playbook >/dev/null 2>&1 || dnf install -y --nogpgcheck ansible-core
+
+if ! dnf -q list podman crun slirp4netns fuse-overlayfs >/dev/null 2>&1; then
+    echo "[aap-install] required container runtime packages are not available; attempting registration/package enablement"
+    if ! subscription-manager identity >/dev/null 2>&1; then
+        if [ -n "${RH_USER_REMOTE:-}" ] && [ -n "${RH_PASS_REMOTE:-}" ]; then
+            subscription-manager register --username "${RH_USER_REMOTE}" --password "${RH_PASS_REMOTE}" --force || true
+            subscription-manager refresh || true
+            subscription-manager attach --auto || true
+        else
+            echo "[aap-install] WARNING: RH credentials are unavailable; cannot auto-register this host"
+        fi
+    fi
+    dnf install -y --nogpgcheck podman crun slirp4netns fuse-overlayfs || true
+fi
+
+if ! dnf -q list podman crun slirp4netns fuse-overlayfs >/dev/null 2>&1; then
+    echo "[aap-install] ERROR: required packages still unavailable (podman/crun/slirp4netns/fuse-overlayfs)"
+    dnf repolist --enabled || true
+    exit 1
+fi
+
+if [ ! -f "${INSTALLER_INVENTORY}" ]; then
+    echo "[aap-install] ERROR: expected inventory file not found: ${INSTALLER_INVENTORY}"
+    ls -la
+    exit 1
+fi
+
+echo "[aap-install] running ansible-playbook -i ${INSTALLER_INVENTORY} ansible.containerized_installer.install"
+if [ -f /home/admin/aap-setup/collections/ansible_collections/ansible/containerized_installer/roles/preflight/tasks/nodes.yml ]; then
+    sed -i '0,/ansible_user_uid != 0/s//ansible_user_uid >= 0/' \
+        /home/admin/aap-setup/collections/ansible_collections/ansible/containerized_installer/roles/preflight/tasks/nodes.yml || true
+    echo "[aap-install] relaxed non-root preflight assertion for callback run"
+fi
+
+ansible-playbook -i "${INSTALLER_INVENTORY}" ansible.containerized_installer.install
+EOF_REMOTE
+    ); then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] AAP setup FAILED on ${vm_ip}" | tee -a "${AAP_SETUP_LOG_LOCAL}"
+        return 1
+    fi
+
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] AAP setup completed successfully on ${vm_ip}" | tee -a "${AAP_SETUP_LOG_LOCAL}"
 
     print_success "AAP setup completed on ${vm_name}. Full log: ${AAP_SETUP_LOG_LOCAL}"
 }
@@ -11111,10 +11233,10 @@ create_aap_credentials() {
         ssh_key_json="$(jq -Rs . < "${AAP_SSH_PRIVATE_KEY}")"
         http_code="$(curl -sk -u "$auth" -X POST "${base}/credentials/" \
             -H "Content-Type: application/json" \
-            -d "{\"name\":\"RHIS SSH Machine Credential\",\"credential_type\":1,\"inputs\":{\"username\":\"root\",\"ssh_key_data\":${ssh_key_json}}}" \
+            -d "{\"name\":\"MINIRHIS SSH Machine Credential\",\"credential_type\":1,\"inputs\":{\"username\":\"root\",\"ssh_key_data\":${ssh_key_json}}}" \
             -o /dev/null -w "%{http_code}")"
         case "$http_code" in
-            200|201) print_success "Created: RHIS SSH Machine Credential" ;;
+            200|201) print_success "Created: MINIRHIS SSH Machine Credential" ;;
             *) print_warning "Machine credential: HTTP ${http_code} (may already exist)" ;;
         esac
     fi
@@ -11386,11 +11508,6 @@ generate_satellite_618_kickstart() {
     local ks_hosts_mapping
     local ks_trust_bootstrap_keys
     local ks_creator_baseline
-    local ks_services_directive
-    local ks_preflight
-    local ks_installer_log_capture
-    local ks_post_install_baseline
-    local ks_ready_marker
     local ks_perf_network_snapshot
     local ks_runtime_exports
     local installer_user_q admin_user_q admin_pass_q rh_user_q rh_pass_q domain_q host_int_ip_q
@@ -11424,22 +11541,17 @@ generate_satellite_618_kickstart() {
         "rhel-9-for-x86_64-appstream-rpms" \
         "satellite-6.18-for-rhel-9-x86_64-rpms" \
         "satellite-maintenance-6.18-for-rhel-9-x86_64-rpms"
-    ks_nogpg_policy="${RHIS_KS_NOGPG_POLICY}"
-    ks_ssh_baseline="${RHIS_KS_SSH_BASELINE}"
-    ks_user_sudo_bootstrap="${RHIS_KS_USER_SUDO_BOOTSTRAP}"
-    ks_rhsm_register="${RHIS_KS_RHSM_REGISTER}"
-    ks_rhc_connect="${RHIS_KS_RHC_CONNECT}"
-    ks_repo_enable_verify="${RHIS_KS_REPO_ENABLE_VERIFY}"
+    ks_nogpg_policy="${MINIRHIS_KS_NOGPG_POLICY}"
+    ks_ssh_baseline="${MINIRHIS_KS_SSH_BASELINE}"
+    ks_user_sudo_bootstrap="${MINIRHIS_KS_USER_SUDO_BOOTSTRAP}"
+    ks_rhsm_register="${MINIRHIS_KS_RHSM_REGISTER}"
+    ks_rhc_connect="${MINIRHIS_KS_RHC_CONNECT}"
+    ks_repo_enable_verify="${MINIRHIS_KS_REPO_ENABLE_VERIFY}"
     ks_satellite_package_install="$(kickstart_satellite_package_install_block)"
-    ks_nm_dual_nic="${RHIS_KS_NM_DUAL_NIC}"
+    ks_nm_dual_nic="${MINIRHIS_KS_NM_DUAL_NIC}"
     ks_hosts_mapping="$(kickstart_hosts_mapping_block "${SAT_IP}" "${SAT_HOSTNAME}" "${SAT_HOSTNAME%%.*}" "${AAP_IP}" "${AAP_HOSTNAME}" "${AAP_HOSTNAME%%.*}" "${IDM_IP}" "${IDM_HOSTNAME}" "${IDM_HOSTNAME%%.*}")"
-    ks_trust_bootstrap_keys="${RHIS_KS_TRUST_BOOTSTRAP_KEYS}"
-    ks_creator_baseline="${RHIS_KS_CREATOR_BASELINE}"
-    ks_services_directive="${RHIS_KS_SERVICES_DIRECTIVE}"
-    ks_preflight="${RHIS_KS_PREFLIGHT}"
-    ks_installer_log_capture="${RHIS_KS_INSTALLER_LOG_CAPTURE}"
-    ks_post_install_baseline="${RHIS_KS_POST_INSTALL_BASELINE}"
-    ks_ready_marker="${RHIS_KS_READY_MARKER}"
+    ks_trust_bootstrap_keys="${MINIRHIS_KS_TRUST_BOOTSTRAP_KEYS}"
+    ks_creator_baseline="${MINIRHIS_KS_CREATOR_BASELINE}"
     ks_perf_network_snapshot="$(kickstart_perf_network_snapshot_block)"
     cdn_org_clean="${CDN_ORGANIZATION_ID:-}"
     cdn_org_clean="${cdn_org_clean#\'}"
@@ -11475,7 +11587,7 @@ generate_satellite_618_kickstart() {
     sat_rhel10_gpg_key_name_q="$(printf '%q' "${sat_rhel10_gpg_key_name}")"
     bootstrap_keys_block="${bootstrap_ssh_keys}"
     ks_runtime_exports="$(cat <<EOF
-# RHIS runtime values injected at kickstart generation time
+# MINIRHIS runtime values injected at kickstart generation time
 ADMIN_USER=${admin_user_q}
 ADMIN_PASS=${admin_pass_q}
 INSTALLER_USER=${installer_user_q}
@@ -11491,13 +11603,13 @@ SAT_RHEL9_BASEOS_REPO=${sat_rhel9_baseos_repo_q}
 SAT_RHEL9_APPSTREAM_REPO=${sat_rhel9_appstream_repo_q}
 SAT_RHEL10_GPG_KEY_NAME=${sat_rhel10_gpg_key_name_q}
 RHC_AUTO_CONNECT=${RHC_AUTO_CONNECT:-1}
-RHIS_DEFER_COMPONENT_INSTALL=${RHIS_DEFER_COMPONENT_INSTALL:-1}
-RHIS_TEMP_ENABLE_RC_LOCAL_EXEC=${RHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}
-bootstrap_ssh_keys="\$(cat <<'RHIS_BOOTSTRAP_KEYS'
+MINIRHIS_DEFER_COMPONENT_INSTALL=${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}
+MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC=${MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}
+bootstrap_ssh_keys="\$(cat <<'MINIRHIS_BOOTSTRAP_KEYS'
 ${bootstrap_keys_block}
-RHIS_BOOTSTRAP_KEYS
+MINIRHIS_BOOTSTRAP_KEYS
 )"
-export ADMIN_USER ADMIN_PASS INSTALLER_USER RH_USER RH_PASS DOMAIN HOST_INT_IP CDN_ORGANIZATION_ID CDN_SAT_ACTIVATION_KEY SAT_RHEL10_BASEOS_REPO SAT_RHEL10_APPSTREAM_REPO SAT_RHEL9_BASEOS_REPO SAT_RHEL9_APPSTREAM_REPO SAT_RHEL10_GPG_KEY_NAME RHC_AUTO_CONNECT RHIS_DEFER_COMPONENT_INSTALL bootstrap_ssh_keys
+export ADMIN_USER ADMIN_PASS INSTALLER_USER RH_USER RH_PASS DOMAIN HOST_INT_IP CDN_ORGANIZATION_ID CDN_SAT_ACTIVATION_KEY SAT_RHEL10_BASEOS_REPO SAT_RHEL10_APPSTREAM_REPO SAT_RHEL9_BASEOS_REPO SAT_RHEL9_APPSTREAM_REPO SAT_RHEL10_GPG_KEY_NAME RHC_AUTO_CONNECT MINIRHIS_DEFER_COMPONENT_INSTALL bootstrap_ssh_keys
 EOF
 )"
 
@@ -11513,7 +11625,6 @@ keyboard us
 lang en_US.UTF-8
 selinux --permissive
 firewall --disabled
-${ks_services_directive}
 bootloader --append="net.ifnames=0 biosdevname=0"
 
 rootpw --iscrypted "${root_pass_hash}"
@@ -11527,11 +11638,6 @@ HEADER
 
     build_internal_kickstart_network_line "eth1" "${sat_int_mac}" "${SAT_IP}" "${SAT_NETMASK}" "${SAT_GW}" "${SAT_HOSTNAME}" >> "$tmp_ks"
     echo "" >> "$tmp_ks"
-
-    cat >> "$tmp_ks" <<PRECHECK
-${ks_preflight}
-
-PRECHECK
 
     # --- Partitioning (DEMO vs production best-practice) ---
     if is_demo; then
@@ -11555,7 +11661,7 @@ DEMO_PART
         print_step "Satellite kickstart: production LVM layout without dedicated /var/lib/pulp (uses /var)"
         cat >> "$tmp_ks" <<'STD_PART'
 # Best Practice Partitioning for Satellite 6.18 (LVM)
-    # Recommended: 8 vCPU, 32 GB RAM, 500+ GB raw storage
+    # Recommended: 8 vCPU, 32 GB RAM, 150+ GB raw storage
 zerombr
 clearpart --all --initlabel
 part biosboot --fstype="biosboot" --size=1
@@ -11604,11 +11710,6 @@ EXTRA_PKGS
 
 PKGS_END
 
-    cat >> "$tmp_ks" <<INSTALL_LOGS
-${ks_installer_log_capture}
-
-INSTALL_LOGS
-
     # --- Post-install (variable expansion required) ---
     cat >> "$tmp_ks" <<POSTEOF
 %post --log=/root/ks-post.log
@@ -11616,13 +11717,11 @@ set -euo pipefail
 set -x  # trace every command; all output captured in /root/ks-post.log
 
 # Phase logger: writes to ks-post.log AND /dev/console (watch live: virsh console <vm>)
-ks_log() { local ts; ts=\$(date +%H:%M:%S 2>/dev/null || echo "--:--:--"); printf '\n[RHIS %s] %s\n' "\$ts" "\$*" | tee /dev/console 2>/dev/null || true; }
+ks_log() { local ts; ts=\$(date +%H:%M:%S 2>/dev/null || echo "--:--:--"); printf '\n[MINIRHIS %s] %s\n' "\$ts" "\$*" | tee /dev/console 2>/dev/null || true; }
 trap 'ec=\$?; ks_log "FAILED at line \${LINENO} (exit code \${ec}) -- see /root/ks-post.log"; exit \$ec' ERR
-ks_log "=== RHIS %post: satellite: STARTED ==="
+ks_log "=== MINIRHIS %post: satellite: STARTED ==="
 
 ${ks_runtime_exports}
-
-${ks_post_install_baseline}
 
 ${ks_nogpg_policy}
 
@@ -11638,7 +11737,7 @@ ${ks_user_sudo_bootstrap}
 
 ${ks_trust_bootstrap_keys}
 
-if [ "${RHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
+if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
     ks_log "Deferring RHSM/RHC/repo enablement to post-boot config-as-code"
 else
 ${ks_rhsm_register}
@@ -11656,7 +11755,7 @@ ${ks_creator_baseline}
 ks_log "Phase 3.5: Set hostname"
 hostnamectl set-hostname "${SAT_HOSTNAME}"
 
-if [ "${RHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
+if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
     ks_log "Satellite component install is deferred to post-boot config-as-code"
 else
 
@@ -11702,19 +11801,19 @@ bash tools/setup_hammer_cli.sh || true
 # Grant all wheel-group users a valid Satellite admin role so they can run
 # hammer commands without sudo. Keep this block shell-only in %post.
 echo "Granting Satellite administrative role to wheel-group users..."
-_rhis_sat_role=""
+_minirhis_sat_role=""
 for _role in "System Administrator" "Administrator" "Organization Administrator" "Organization Admin" "Manager"; do
     if hammer role info --name "\${_role}" >/dev/null 2>&1; then
-        _rhis_sat_role="\${_role}"
+        _minirhis_sat_role="\${_role}"
         break
     fi
 done
 
-if [ -n "\${_rhis_sat_role}" ]; then
+if [ -n "\${_minirhis_sat_role}" ]; then
     getent group wheel | awk -F: '{print $4}' | tr ',' '\n' | sed '/^$/d' | while read -r _wuser; do
-        hammer user add-role --login "\${_wuser}" --role "\${_rhis_sat_role}" >/dev/null 2>&1 \
-            && echo "  Granted \${_rhis_sat_role} to \${_wuser}" \
-            || echo "  ℹ Could not assign \${_rhis_sat_role} to \${_wuser} via hammer"
+        hammer user add-role --login "\${_wuser}" --role "\${_minirhis_sat_role}" >/dev/null 2>&1 \
+            && echo "  Granted \${_minirhis_sat_role} to \${_wuser}" \
+            || echo "  ℹ Could not assign \${_minirhis_sat_role} to \${_wuser} via hammer"
     done
 else
     echo "  ⚠ No known admin role name found on this Satellite; skipping automatic hammer role assignment."
@@ -12079,43 +12178,43 @@ echo "  ✓ Host Groups: DEV and PROD groups for both RHEL versions"
 echo "  ✓ Image Mode: Ready for image-based provisioning"
 echo "  ✓ DNS/DHCP/TFTP: All enabled via foreman-proxy on eth1"
 
-# 5.2 RHIS CMDB single-pane dashboard (Satellite + AAP + IdM + RHIS container endpoint)
+# 5.2 MINIRHIS CMDB single-pane dashboard (Satellite + AAP + IdM + MINIRHIS container endpoint)
 dnf install -y --nogpgcheck python3-pip sshpass
 python3 -m pip install --upgrade pip setuptools wheel || true
 python3 -m pip install ansible-cmdb || true
 
-# Install RHIS Python and Ansible Galaxy requirements on the Satellite host
-_rhis_req_txt="${RHIS_DIR:-/rhis}/container/requirements.txt"
-_rhis_req_yml="${RHIS_DIR:-/rhis}/container/requirements.yml"
+# Install MINIRHIS Python and Ansible Galaxy requirements on the Satellite host
+_minirhis_req_txt="${MINIRHIS_DIR:-/minirhis}/container/requirements.txt"
+_minirhis_req_yml="${MINIRHIS_DIR:-/minirhis}/container/requirements.yml"
 
-if [ -f "${_rhis_req_txt}" ]; then
-    echo "Installing Python requirements from ${_rhis_req_txt}..."
-    python3 -m pip install --upgrade -r "${_rhis_req_txt}" || \
+if [ -f "${_minirhis_req_txt}" ]; then
+    echo "Installing Python requirements from ${_minirhis_req_txt}..."
+    python3 -m pip install --upgrade -r "${_minirhis_req_txt}" || \
         echo "  ⚠ Some Python requirements failed to install; check versions for this Python runtime."
 else
-    echo "  ⚠ requirements.txt not found at ${_rhis_req_txt}; skipping Python requirements install."
+    echo "  ⚠ requirements.txt not found at ${_minirhis_req_txt}; skipping Python requirements install."
 fi
 
-if [ -f "${_rhis_req_yml}" ]; then
-    echo "Installing Ansible collections from ${_rhis_req_yml}..."
-    ansible-galaxy collection install -r "${_rhis_req_yml}" --force 2>&1 || \
-        echo "  ⚠ Some Ansible collections failed to install; install manually: ansible-galaxy collection install -r ${_rhis_req_yml}"
+if [ -f "${_minirhis_req_yml}" ]; then
+    echo "Installing Ansible collections from ${_minirhis_req_yml}..."
+    ansible-galaxy collection install -r "${_minirhis_req_yml}" --force 2>&1 || \
+        echo "  ⚠ Some Ansible collections failed to install; install manually: ansible-galaxy collection install -r ${_minirhis_req_yml}"
 else
-    echo "  ⚠ requirements.yml not found at ${_rhis_req_yml}; skipping Ansible collection install."
+    echo "  ⚠ requirements.yml not found at ${_minirhis_req_yml}; skipping Ansible collection install."
 fi
 
-mkdir -p /etc/ansible /var/lib/rhis-cmdb/facts /var/www/rhis-cmdb
+mkdir -p /etc/ansible /var/lib/minirhis-cmdb/facts /var/www/minirhis-cmdb
 
-cat > /usr/local/bin/rhis-cmdb-refresh.sh <<CMDB_REFRESH
+cat > /usr/local/bin/minirhis-cmdb-refresh.sh <<CMDB_REFRESH
 #!/usr/bin/env bash
 set -euo pipefail
 
-INV=/etc/ansible/rhis_inventory.ini
-FACTS=/var/lib/rhis-cmdb/facts
-OUT=/var/www/rhis-cmdb/index.html
+INV=/etc/ansible/minirhis_inventory.ini
+FACTS=/var/lib/minirhis-cmdb/facts
+OUT=/var/www/minirhis-cmdb/index.html
 
 cat > "\${INV}" <<INV_EOF
-[rhis_linux]
+[minirhis_linux]
 ${SAT_HOSTNAME} ansible_host=${SAT_IP}
 ${AAP_HOSTNAME} ansible_host=${AAP_IP}
 ${IDM_HOSTNAME} ansible_host=${IDM_IP}
@@ -12130,23 +12229,23 @@ INV_EOF
 
 mkdir -p "\${FACTS}"
 
-# Gather facts from RHIS nodes (best effort so dashboard always refreshes)
-ansible -i "\${INV}" rhis_linux -m setup --tree "\${FACTS}" || true
+# Gather facts from MINIRHIS nodes (best effort so dashboard always refreshes)
+ansible -i "\${INV}" minirhis_linux -m setup --tree "\${FACTS}" || true
 
-# Add synthetic container health node so RHIS container shows in the same pane
+# Add synthetic container health node so MINIRHIS container shows in the same pane
 container_status="down"
 if curl -ksSf --max-time 5 "http://${HOST_INT_IP}:3000/" >/dev/null 2>&1; then
     container_status="up"
 fi
 
-cat > "\${FACTS}/rhis-container" <<JSON
+cat > "\${FACTS}/minirhis-container" <<JSON
 {
     "ansible_facts": {
-        "nodename": "rhis-container",
-        "fqdn": "rhis-container",
+        "nodename": "minirhis-container",
+        "fqdn": "minirhis-container",
         "default_ipv4": {"address": "${HOST_INT_IP}"},
-        "rhis_container_endpoint": "http://${HOST_INT_IP}:3000",
-        "rhis_container_status": "\${container_status}"
+        "minirhis_container_endpoint": "http://${HOST_INT_IP}:3000",
+        "minirhis_container_status": "\${container_status}"
     },
     "changed": false
 }
@@ -12155,41 +12254,41 @@ JSON
 ansible-cmdb -t html_fancy "\${FACTS}" > "\${OUT}"
 CMDB_REFRESH
 
-chmod 0755 /usr/local/bin/rhis-cmdb-refresh.sh
+chmod 0755 /usr/local/bin/minirhis-cmdb-refresh.sh
 
-cat > /etc/systemd/system/rhis-cmdb-refresh.service <<'CMDB_REFRESH_SVC'
+cat > /etc/systemd/system/minirhis-cmdb-refresh.service <<'CMDB_REFRESH_SVC'
 [Unit]
-Description=Refresh RHIS ansible-cmdb dashboard data
+Description=Refresh MINIRHIS ansible-cmdb dashboard data
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/rhis-cmdb-refresh.sh
+ExecStart=/usr/local/bin/minirhis-cmdb-refresh.sh
 CMDB_REFRESH_SVC
 
-cat > /etc/systemd/system/rhis-cmdb-refresh.timer <<'CMDB_REFRESH_TIMER'
+cat > /etc/systemd/system/minirhis-cmdb-refresh.timer <<'CMDB_REFRESH_TIMER'
 [Unit]
-Description=Periodic RHIS ansible-cmdb refresh timer
+Description=Periodic MINIRHIS ansible-cmdb refresh timer
 
 [Timer]
 OnBootSec=2min
 OnUnitActiveSec=10min
-Unit=rhis-cmdb-refresh.service
+Unit=minirhis-cmdb-refresh.service
 
 [Install]
 WantedBy=timers.target
 CMDB_REFRESH_TIMER
 
-cat > /etc/systemd/system/rhis-cmdb-http.service <<'CMDB_HTTP_SVC'
+cat > /etc/systemd/system/minirhis-cmdb-http.service <<'CMDB_HTTP_SVC'
 [Unit]
-Description=RHIS CMDB Dashboard HTTP Server
-After=network-online.target rhis-cmdb-refresh.service
+Description=MINIRHIS CMDB Dashboard HTTP Server
+After=network-online.target minirhis-cmdb-refresh.service
 Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/var/www/rhis-cmdb
+WorkingDirectory=/var/www/minirhis-cmdb
 ExecStart=/usr/bin/python3 -m http.server 18080 --bind 0.0.0.0
 Restart=always
 RestartSec=5
@@ -12199,17 +12298,15 @@ WantedBy=multi-user.target
 CMDB_HTTP_SVC
 
 systemctl daemon-reload
-systemctl enable --now rhis-cmdb-refresh.timer
-systemctl start rhis-cmdb-refresh.service || true
-systemctl enable --now rhis-cmdb-http.service
+systemctl enable --now minirhis-cmdb-refresh.timer
+systemctl start minirhis-cmdb-refresh.service || true
+systemctl enable --now minirhis-cmdb-http.service
 
 firewall-cmd --permanent --add-port=18080/tcp || true
 firewall-cmd --reload || true
 fi
 
 ${ks_perf_network_snapshot}
-
-${ks_ready_marker}
 
 echo "Post-install configuration complete."
 %end
@@ -12220,7 +12317,7 @@ POSTEOF
         rm -rf "$tmpdir"
         return 1
     }
-    ks_changed="${RHIS_LAST_WRITE_CHANGED:-0}"
+    ks_changed="${MINIRHIS_LAST_WRITE_CHANGED:-0}"
 
     if [ "$ks_changed" = "0" ] && [ -f "$OEMDRV_ISO" ]; then
         rm -rf "$tmpdir"
@@ -12334,10 +12431,10 @@ create_satellite_vm_only() {
         sat_disk="150G"; sat_ram=24576; sat_vcpu=8
     else
         print_step "Standard mode: production/best-practice Satellite VM specifications"
-        sat_disk="500G"; sat_ram=32768; sat_vcpu=8
+        sat_disk="150G"; sat_ram=32768; sat_vcpu=8
     fi
 
-    cleanup_rhis_lock_files || true
+    cleanup_minirhis_lock_files || true
     prune_local_ssh_trust_for_component "satellite" || true
     ensure_virtualization_tools || return 1
     ensure_iso_vars || return 1
@@ -12350,7 +12447,7 @@ create_satellite_vm_only() {
     print_phase 2 3 "Create Satellite VM"
     create_vm_if_missing "satellite" "${VM_DIR}/satellite.qcow2" "$sat_disk" "$sat_ram" "$sat_vcpu" "${KS_DIR}/satellite.ks" "hd:LABEL=OEMDRV:/ks.cfg" "${SAT_ISO_PATH}" || return 1
 
-    if should_launch_vm_console_monitors; then
+    if ! is_noninteractive; then
         launch_single_vm_console_monitor_auto "satellite" || true
     fi
 
@@ -12372,10 +12469,10 @@ create_idm_vm_only() {
         idm_disk="30G"; idm_ram=4096; idm_vcpu=2
     else
         print_step "Standard mode: production/best-practice IdM VM specifications"
-        idm_disk="50G"; idm_ram=8192; idm_vcpu=4
+        idm_disk="60G"; idm_ram=16384; idm_vcpu=4
     fi
 
-    cleanup_rhis_lock_files || true
+    cleanup_minirhis_lock_files || true
     prune_local_ssh_trust_for_component "idm" || true
     ensure_virtualization_tools || return 1
     ensure_iso_vars || return 1
@@ -12388,7 +12485,7 @@ create_idm_vm_only() {
     print_phase 2 3 "Create IdM VM"
     create_vm_if_missing "idm" "${VM_DIR}/idm.qcow2" "$idm_disk" "$idm_ram" "$idm_vcpu" "${KS_DIR}/idm.ks" || return 1
 
-    if should_launch_vm_console_monitors; then
+    if ! is_noninteractive; then
         launch_single_vm_console_monitor_auto "idm" || true
     fi
 
@@ -12410,10 +12507,10 @@ create_aap_vm_only() {
         aap_disk="50G"; aap_ram=8152; aap_vcpu=4
     else
         print_step "Standard mode: production/best-practice AAP VM specifications"
-        aap_disk="100G"; aap_ram=32768; aap_vcpu=8
+        aap_disk="50G"; aap_ram=16384; aap_vcpu=8
     fi
 
-    cleanup_rhis_lock_files || true
+    cleanup_minirhis_lock_files || true
     prune_local_ssh_trust_for_component "aap" || true
     ensure_virtualization_tools || return 1
     ensure_iso_vars || return 1
@@ -12428,15 +12525,15 @@ create_aap_vm_only() {
         return 1
     }
 
-    preflight_download_aap_bundle || print_warning "AAP bundle preflight skipped. Ensure aap-bundle.tar.gz is in ${AAP_BUNDLE_DIR} before the VM runs %post."
-    if [ -d "${AAP_BUNDLE_DIR}" ]; then
-        serve_aap_bundle || print_warning "Could not start AAP bundle HTTP server; AAP %post bundle download may fail."
+    if [ -z "${AAP_BUNDLE_URL:-}" ]; then
+        print_warning "AAP_BUNDLE_URL is required for AAP VM bundle download to /home/admin on the guest."
+        return 1
     fi
 
     print_phase 2 3 "Create AAP VM"
     create_vm_if_missing "aap" "${VM_DIR}/aap.qcow2" "$aap_disk" "$aap_ram" "$aap_vcpu" "${KS_DIR}/aap.ks" || return 1
 
-    if should_launch_vm_console_monitors; then
+    if ! is_noninteractive; then
         launch_single_vm_console_monitor_auto "aap" || true
     fi
 
@@ -12552,7 +12649,7 @@ aap_installer_inventory_filename() {
     esac
 }
 
-_rhis_show_about_inventory() {
+_minirhis_show_about_inventory() {
     cat <<'ABOUT_INV'
 
 +------------------------------------------------------------------------+
@@ -12602,7 +12699,7 @@ _rhis_show_about_inventory() {
     1. Provision the required libvirt VMs via Virt-Manager (menu 3/4/5):
          Gateway x2, Controller x2, Hub x2, EDA x2, Execution x3, Redis x6
     2. Ensure all FQDNs resolve in IdM DNS before running AAP installation.
-    3. rhis-builder renders inventory.j2 into /root/aap-setup/inventory
+    3. minirhis-builder renders inventory.j2 into /home/admin/aap-setup/inventory
        on the AAP host during kickstart %%post.
     4. Run the AAP containerized installer from the bundle defined in
        AAP_BUNDLE_URL; the rendered inventory drives the full install.
@@ -12620,7 +12717,7 @@ _rhis_show_about_inventory() {
 ABOUT_INV
 }
 
-_rhis_show_about_inventory_growth() {
+_minirhis_show_about_inventory_growth() {
     cat <<'ABOUT_GROWTH'
 
 +------------------------------------------------------------------------+
@@ -12668,8 +12765,8 @@ _rhis_show_about_inventory_growth() {
   HOW TO SET UP
     1. Provision a single AAP VM (16+ vCPU, 32+ GB RAM recommended)
        to host the full containerized stack.
-    2. rhis-builder renders inventory-growth.j2 into
-       /root/aap-setup/inventory on the AAP host during kickstart %%post.
+     2. minirhis-builder renders inventory-growth.j2 into
+         /home/admin/aap-setup/inventory on the AAP host during kickstart %%post.
     3. ansible_connection=local is used -- the installer runs directly
        on the target host; no remote SSH is needed for deployment.
     4. Run the AAP containerized installer from the bundle defined in
@@ -12694,11 +12791,14 @@ select_aap_inventory_templates() {
     if is_demo; then
         AAP_INVENTORY_TEMPLATE="DEMO-inventory.j2"
         AAP_INVENTORY_GROWTH_TEMPLATE="${AAP_INVENTORY_GROWTH_TEMPLATE:-inventory-growth.j2}"
+        AAP_TOPOLOGY="standalone"
         ensure_aap_pg_database_if_needed || return 1
         echo ""
         echo "  [DEMO] This item was skipped because --DEMO was chosen."
         echo "         The smallest model (DEMO-inventory.j2) will be created"
         echo "         for Demo, PoC, or Educational purposes."
+        echo "         Note: DEMO inventory only affects the AAP installer profile."
+        echo "               Full MiniRHIS still runs 3 servers: IdM + Satellite + AAP."
         return 0
     fi
 
@@ -12708,10 +12808,11 @@ select_aap_inventory_templates() {
         return 0
     fi
 
-    # In non-interactive mode, provide deterministic defaults.
+    # In non-interactive mode, default MiniRHIS to single-node standalone AAP.
     if is_noninteractive; then
-        AAP_INVENTORY_TEMPLATE="${AAP_INVENTORY_TEMPLATE:-inventory.j2}"
+        AAP_INVENTORY_TEMPLATE="${AAP_INVENTORY_TEMPLATE:-inventory-growth.j2}"
         AAP_INVENTORY_GROWTH_TEMPLATE="${AAP_INVENTORY_GROWTH_TEMPLATE:-inventory-growth.j2}"
+        AAP_TOPOLOGY="${AAP_TOPOLOGY:-standalone}"
         ensure_aap_pg_database_if_needed || return 1
         return 0
     fi
@@ -12744,22 +12845,24 @@ select_aap_inventory_templates() {
             1)
                 AAP_INVENTORY_TEMPLATE="inventory.j2"
                 AAP_INVENTORY_GROWTH_TEMPLATE="${AAP_INVENTORY_GROWTH_TEMPLATE:-inventory-growth.j2}"
+                AAP_TOPOLOGY="enterprise"
                 ensure_aap_pg_database_if_needed || return 1
                 print_success "Selected: inventory.j2 (Enterprise / Multi-Node)"
                 return 0
                 ;;
             2)
-                _rhis_show_about_inventory
+                _minirhis_show_about_inventory
                 ;;
             3)
                 AAP_INVENTORY_TEMPLATE="inventory-growth.j2"
                 AAP_INVENTORY_GROWTH_TEMPLATE="inventory-growth.j2"
+                AAP_TOPOLOGY="standalone"
                 ensure_aap_pg_database_if_needed || return 1
                 print_success "Selected: inventory-growth.j2 (Growth / Single-Node)"
                 return 0
                 ;;
             4)
-                _rhis_show_about_inventory_growth
+                _minirhis_show_about_inventory_growth
                 ;;
             *)
                 print_warning "Invalid choice '${inv_choice}'. Please enter 0, 1, 2, 3, or 4."
@@ -12853,6 +12956,7 @@ generate_aap_kickstart() {
     local aap_prefix
     local root_pass_hash admin_pass_hash
     local aap_bundle_url_e
+    local aap_bundle_url_runtime
     local bootstrap_ssh_keys
     local ks_nogpg_policy
     local ks_ssh_baseline
@@ -12864,11 +12968,6 @@ generate_aap_kickstart() {
     local ks_hosts_mapping
     local ks_trust_bootstrap_keys
     local ks_creator_baseline
-    local ks_services_directive
-    local ks_preflight
-    local ks_installer_log_capture
-    local ks_post_install_baseline
-    local ks_ready_marker
     local ks_perf_network_snapshot
     local ks_runtime_exports
 
@@ -12890,21 +12989,16 @@ generate_aap_kickstart() {
         0 0 "AAP" \
         "rhel-10-for-x86_64-baseos-rpms" \
         "rhel-10-for-x86_64-appstream-rpms"
-    ks_nogpg_policy="${RHIS_KS_NOGPG_POLICY}"
-    ks_ssh_baseline="${RHIS_KS_SSH_BASELINE}"
-    ks_user_sudo_bootstrap="${RHIS_KS_USER_SUDO_BOOTSTRAP}"
-    ks_rhsm_register="${RHIS_KS_RHSM_REGISTER}"
-    ks_rhc_connect="${RHIS_KS_RHC_CONNECT}"
-    ks_repo_enable_verify="${RHIS_KS_REPO_ENABLE_VERIFY}"
-    ks_nm_dual_nic="${RHIS_KS_NM_DUAL_NIC}"
+    ks_nogpg_policy="${MINIRHIS_KS_NOGPG_POLICY}"
+    ks_ssh_baseline="${MINIRHIS_KS_SSH_BASELINE}"
+    ks_user_sudo_bootstrap="${MINIRHIS_KS_USER_SUDO_BOOTSTRAP}"
+    ks_rhsm_register="${MINIRHIS_KS_RHSM_REGISTER}"
+    ks_rhc_connect="${MINIRHIS_KS_RHC_CONNECT}"
+    ks_repo_enable_verify="${MINIRHIS_KS_REPO_ENABLE_VERIFY}"
+    ks_nm_dual_nic="${MINIRHIS_KS_NM_DUAL_NIC}"
     ks_hosts_mapping="$(kickstart_hosts_mapping_block "{{SAT_IP}}" "{{SAT_HOSTNAME}}" "{{SAT_SHORT}}" "{{AAP_IP}}" "{{AAP_HOSTNAME}}" "{{AAP_SHORT}}" "{{IDM_IP}}" "{{IDM_HOSTNAME}}" "{{IDM_SHORT}}")"
-    ks_trust_bootstrap_keys="${RHIS_KS_TRUST_BOOTSTRAP_KEYS}"
-    ks_creator_baseline="${RHIS_KS_CREATOR_BASELINE}"
-    ks_services_directive="${RHIS_KS_SERVICES_DIRECTIVE}"
-    ks_preflight="${RHIS_KS_PREFLIGHT}"
-    ks_installer_log_capture="${RHIS_KS_INSTALLER_LOG_CAPTURE}"
-    ks_post_install_baseline="${RHIS_KS_POST_INSTALL_BASELINE}"
-    ks_ready_marker="${RHIS_KS_READY_MARKER}"
+    ks_trust_bootstrap_keys="${MINIRHIS_KS_TRUST_BOOTSTRAP_KEYS}"
+    ks_creator_baseline="${MINIRHIS_KS_CREATOR_BASELINE}"
     ks_perf_network_snapshot="$(kickstart_perf_network_snapshot_block "net.core.somaxconn = 4096")"
 
     # Read the host's public key for SSH callback orchestration
@@ -12919,7 +13013,8 @@ generate_aap_kickstart() {
     select_aap_inventory_templates || return 1
     aap_inventory_content="$(render_aap_inventory_template "${AAP_INVENTORY_TEMPLATE}")" || return 1
     aap_inventory_growth_content="$(render_aap_inventory_template "${AAP_INVENTORY_GROWTH_TEMPLATE}")" || return 1
-    aap_bundle_url_e="$(sed_escape_replacement "${AAP_BUNDLE_URL:-}")"
+    aap_bundle_url_runtime="${AAP_BUNDLE_EFFECTIVE_URL:-${AAP_BUNDLE_URL:-}}"
+    aap_bundle_url_e="$(sed_escape_replacement "${aap_bundle_url_runtime}")"
 
     tmp_ks="$(mktemp)"
 
@@ -12931,7 +13026,6 @@ keyboard us
 lang en_US.UTF-8
 selinux --permissive
 firewall --disabled
-${ks_services_directive}
 bootloader --append="net.ifnames=0 biosdevname=0"
 
 rootpw --iscrypted "${root_pass_hash}"
@@ -12945,11 +13039,6 @@ HEADER
 
     build_internal_kickstart_network_line "eth1" "${aap_int_mac}" "${AAP_IP}" "${AAP_NETMASK}" "${AAP_GW}" "${AAP_HOSTNAME}" >> "$tmp_ks"
     echo "" >> "$tmp_ks"
-
-    cat >> "$tmp_ks" <<PRECHECK
-${ks_preflight}
-
-PRECHECK
 
     # --- Partitioning (DEMO vs production best-practice) ---
     if is_demo; then
@@ -12969,7 +13058,7 @@ DEMO_PART
         print_step "AAP kickstart: production/best-practice LVM layout"
         cat >> "$tmp_ks" <<'STD_PART'
 # Best Practice Partitioning for AAP 2.6 (LVM)
-# Recommended: 8-16 vCPU, 32 GB RAM, 100+ GB raw storage
+# Requirements: 8 vCPU, 16 GB RAM, 50 GB raw storage minimum
 zerombr
 clearpart --all --initlabel
 part biosboot --fstype="biosboot" --size=1
@@ -13008,25 +13097,18 @@ zip
 
 PKGS
 
-    cat >> "$tmp_ks" <<INSTALL_LOGS
-${ks_installer_log_capture}
-
-INSTALL_LOGS
-
         # --- Post-install: write kickstart %post and substitute placeholders ---
         cat >> "$tmp_ks" <<POSTEOF
 %post --log=/root/ks-post.log
 set -euo pipefail
 set -x  # trace every command; all output captured in /root/ks-post.log
 
-    # Phase logger: writes to ks-post.log AND /dev/console (watch live: virsh console <vm>)
-    ks_log() { local ts; ts=\$(date +%H:%M:%S 2>/dev/null || echo "--:--:--"); printf '\n[RHIS %s] %s\n' "\$ts" "\$*" | tee /dev/console 2>/dev/null || true; }
-    trap 'ec=\$?; ks_log "FAILED at line \${LINENO} (exit code \${ec}) -- see /root/ks-post.log"; exit \$ec' ERR
-    ks_log "=== RHIS %post: aap: STARTED ==="
+# Phase logger: writes to ks-post.log AND /dev/console (watch live: virsh console <vm>)
+ks_log() { local ts; ts=\$(date +%H:%M:%S 2>/dev/null || echo "--:--:--"); printf '\n[MINIRHIS %s] %s\n' "\$ts" "\$*" | tee /dev/console 2>/dev/null || true; }
+trap 'ec=\$?; ks_log "FAILED at line \${LINENO} (exit code \${ec}) -- see /root/ks-post.log"; exit \$ec' ERR
+ks_log "=== MINIRHIS %post: aap: STARTED ==="
 
-    ${ks_runtime_exports}
-
-${ks_post_install_baseline}
+${ks_runtime_exports}
 
 ${ks_nogpg_policy}
 
@@ -13040,7 +13122,7 @@ ${ks_user_sudo_bootstrap}
 
 ${ks_trust_bootstrap_keys}
 
-if [ "${RHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
+if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
     ks_log "Deferring RHSM/RHC/repo enablement to post-boot config-as-code"
 else
 ${ks_rhsm_register}
@@ -13052,41 +13134,93 @@ fi
 
 ${ks_creator_baseline}
 
-# 4. Download the AAP bundle
-#    Primary: local host HTTP server started by run_rhis_install_sequence.sh
-#    Fallback: configured AAP_BUNDLE_URL (if provided and reachable)
-mkdir -p /root/aap-setup
-echo "Bundle download starting at $(date)" >> /var/log/aap-setup-ready.log
+# 4. Download the AAP bundle in %post; install first-boot retry service on failure.
+mkdir -p /home/admin/aap-setup
+chown -R admin:admin /home/admin || true
+bundle_dir="/home/admin/aap-setup"
+bundle_tarball="\${bundle_dir}/aap-bundle.tar.gz"
+_bundle_ok=0
+echo "Bundle download starting at \$(date)" >> /var/log/aap-setup-ready.log
 
-bundle_download_ok=0
-for src in "http://{{HOST_INT_IP}}:8080/aap-bundle.tar.gz" "{{AAP_BUNDLE_URL}}"; do
-    [ -n "$src" ] || continue
-    case "$src" in
-        http://*|https://*)
-            echo "Attempting AAP bundle download from: $src" >> /var/log/aap-setup-ready.log
-            if curl -fL --retry 5 --retry-delay 15 "$src" -o /root/aap-bundle.tar.gz; then
-                bundle_download_ok=1
-                echo "AAP bundle download succeeded from: $src" >> /var/log/aap-setup-ready.log
-                break
+if [ -z "{{AAP_BUNDLE_URL}}" ]; then
+    echo "WARNING: AAP_BUNDLE_URL is empty — skipping %post download; first-boot service will retry." >> /var/log/aap-setup-ready.log
+else
+    echo "Attempting AAP bundle download from: {{AAP_BUNDLE_URL}}" >> /var/log/aap-setup-ready.log
+    if curl -fL --retry 3 --retry-delay 15 --connect-timeout 30 --max-time 7200 \
+            "{{AAP_BUNDLE_URL}}" -o "\${bundle_tarball}" >> /var/log/aap-setup-ready.log 2>&1; then
+        if tar -xzf "\${bundle_tarball}" -C "\${bundle_dir}" --strip-components=1 \
+                >> /var/log/aap-setup-ready.log 2>&1; then
+            if [ -f "\${bundle_dir}/ansible.containerized_installer.install.yml" ] || \
+               [ -f "\${bundle_dir}/setup.sh" ]; then
+                _bundle_ok=1
+                echo "Bundle downloaded and extracted successfully in %post." >> /var/log/aap-setup-ready.log
+            else
+                echo "WARNING: Extraction succeeded but installer entrypoint not found; first-boot will retry." >> /var/log/aap-setup-ready.log
+                rm -f "\${bundle_tarball}"
             fi
-            ;;
-    esac
-done
-
-if [ "$bundle_download_ok" -ne 1 ]; then
-    echo "ERROR: AAP bundle download failed from both local HTTP and configured fallback URL." >> /var/log/aap-setup-ready.log
-    exit 1
+        else
+            echo "WARNING: Bundle extraction failed in %post; first-boot will retry." >> /var/log/aap-setup-ready.log
+            rm -f "\${bundle_tarball}"
+        fi
+    else
+        echo "WARNING: Bundle download failed in %post; first-boot will retry." >> /var/log/aap-setup-ready.log
+    fi
 fi
 
-tar -xzf /root/aap-bundle.tar.gz -C /root/aap-setup --strip-components=1
-rm -f /root/aap-bundle.tar.gz
-if ! find /root/aap-setup -mindepth 1 -maxdepth 1 | grep -q .; then
-    echo "ERROR: AAP bundle extraction failed (extracted directory is empty)."
+# If %post download did not succeed, install a first-boot one-shot systemd service to retry.
+if [ "\${_bundle_ok}" = "0" ]; then
+    echo "Installing aap-bundle-fetch.service first-boot fallback." >> /var/log/aap-setup-ready.log
+    mkdir -p /etc/systemd/system /usr/local/bin
+    cat > /etc/systemd/system/aap-bundle-fetch.service <<'SVCEOF'
+[Unit]
+Description=AAP Bundle First-Boot Download
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/home/admin/aap-setup/ansible.containerized_installer.install.yml
+ConditionPathExists=!/home/admin/aap-setup/setup.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/aap-bundle-fetch.sh
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+    cat > /usr/local/bin/aap-bundle-fetch.sh <<'FETCHEOF'
+#!/bin/bash
+set -euo pipefail
+AAP_BUNDLE_URL="{{AAP_BUNDLE_URL}}"
+bundle_dir="/home/admin/aap-setup"
+bundle_tarball="${bundle_dir}/aap-bundle.tar.gz"
+log="/var/log/aap-setup-ready.log"
+echo "[$(date)] aap-bundle-fetch: first-boot retry starting" >> "${log}"
+mkdir -p "${bundle_dir}"
+chown admin:admin "${bundle_dir}"
+if [ -z "${AAP_BUNDLE_URL}" ]; then
+    echo "[$(date)] ERROR: AAP_BUNDLE_URL is empty in first-boot service." >> "${log}"
     exit 1
+fi
+echo "[$(date)] Downloading from: ${AAP_BUNDLE_URL}" >> "${log}"
+curl -fL --retry 5 --retry-delay 30 --connect-timeout 60 --max-time 7200 \
+    "${AAP_BUNDLE_URL}" -o "${bundle_tarball}" >> "${log}" 2>&1
+echo "[$(date)] Extracting bundle..." >> "${log}"
+tar -xzf "${bundle_tarball}" -C "${bundle_dir}" --strip-components=1 >> "${log}" 2>&1
+chown -R admin:admin "${bundle_dir}"
+echo "[$(date)] Bundle fetch complete. Disabling first-boot service." >> "${log}"
+systemctl disable aap-bundle-fetch.service || true
+FETCHEOF
+    chmod 755 /usr/local/bin/aap-bundle-fetch.sh
+    systemctl enable aap-bundle-fetch.service || \
+        ln -sf /etc/systemd/system/aap-bundle-fetch.service \
+               /etc/systemd/system/multi-user.target.wants/aap-bundle-fetch.service
+    echo "aap-bundle-fetch.service enabled; will retry bundle download at first boot." >> /var/log/aap-setup-ready.log
 fi
 if [ "${DEMO_MODE:-0}" = "1" ]; then
     echo "AAP installer inventory selected: DEMO-inventory" >> /var/log/aap-setup-ready.log
-elif [ -f /root/aap-setup/inventory-growth ]; then
+elif [ -f /home/admin/aap-setup/inventory-growth ]; then
     echo "AAP installer inventory available: inventory-growth" >> /var/log/aap-setup-ready.log
 else
     echo "AAP installer inventory selected: inventory" >> /var/log/aap-setup-ready.log
@@ -13114,7 +13248,7 @@ SSH_KEYS
 fi
 
 # Log setup readiness for debugging
-echo "[aap-setup] Bundle ready at /root/aap-setup on $(date)" >> /var/log/aap-setup-ready.log
+echo "[aap-setup] Bundle ready at /home/admin/aap-setup on $(date)" >> /var/log/aap-setup-ready.log
 
 # 6. Automation Hub credentials so the containerized installer can pull collections
 cat > /root/.ansible.cfg <<ANSIBLECFG
@@ -13129,35 +13263,35 @@ ANSIBLECFG
 chmod 600 /root/.ansible.cfg
 
 # 7. Installer inventories rendered from Jinja2 templates selected at prompt/CLI
-cat > /root/aap-setup/inventory <<INVENTORY
+cat > /home/admin/aap-setup/inventory <<INVENTORY
 ${aap_inventory_content}
 INVENTORY
-chmod 600 /root/aap-setup/inventory
+chmod 600 /home/admin/aap-setup/inventory
 if [ "${DEMO_MODE:-0}" = "1" ]; then
-    cp -f /root/aap-setup/inventory /root/aap-setup/DEMO-inventory
-    chmod 600 /root/aap-setup/DEMO-inventory
+    cp -f /home/admin/aap-setup/inventory /home/admin/aap-setup/DEMO-inventory
+    chmod 600 /home/admin/aap-setup/DEMO-inventory
 fi
 
-cat > /root/aap-setup/inventory-growth <<INVENTORY_GROWTH
+cat > /home/admin/aap-setup/inventory-growth <<INVENTORY_GROWTH
 ${aap_inventory_growth_content}
 INVENTORY_GROWTH
-chmod 600 /root/aap-setup/inventory-growth
-if [ ! -s /root/aap-setup/inventory ] || [ ! -s /root/aap-setup/inventory-growth ]; then
+chmod 600 /home/admin/aap-setup/inventory-growth
+if [ ! -s /home/admin/aap-setup/inventory ] || [ ! -s /home/admin/aap-setup/inventory-growth ]; then
     echo "ERROR: AAP inventory rendering failed (inventory files missing/empty)."
     exit 1
 fi
 
-echo "Rendered AAP inventory file: /root/aap-setup/inventory"
-echo "Preview (first 20 lines, passwords masked):"
-sed -E 's/([A-Za-z0-9_]*password[[:space:]]*=[[:space:]]*).*/\1***REDACTED***/I' /root/aap-setup/inventory | head -n 20 || true
+chown -R admin:admin /home/admin/aap-setup || true
 
-echo "Rendered AAP inventory file: /root/aap-setup/inventory-growth"
+echo "Rendered AAP inventory file: /home/admin/aap-setup/inventory"
 echo "Preview (first 20 lines, passwords masked):"
-sed -E 's/([A-Za-z0-9_]*password[[:space:]]*=[[:space:]]*).*/\1***REDACTED***/I' /root/aap-setup/inventory-growth | head -n 20 || true
+sed -E 's/([A-Za-z0-9_]*password[[:space:]]*=[[:space:]]*).*/\1***REDACTED***/I' /home/admin/aap-setup/inventory | head -n 20 || true
+
+echo "Rendered AAP inventory file: /home/admin/aap-setup/inventory-growth"
+echo "Preview (first 20 lines, passwords masked):"
+sed -E 's/([A-Za-z0-9_]*password[[:space:]]*=[[:space:]]*).*/\1***REDACTED***/I' /home/admin/aap-setup/inventory-growth | head -n 20 || true
 
 ${ks_perf_network_snapshot}
-
-${ks_ready_marker}
 %end
 POSTEOF
 
@@ -13229,11 +13363,6 @@ generate_idm_kickstart() {
     local ks_hosts_mapping
     local ks_trust_bootstrap_keys
     local ks_creator_baseline
-    local ks_services_directive
-    local ks_preflight
-    local ks_installer_log_capture
-    local ks_post_install_baseline
-    local ks_ready_marker
     local ks_perf_network_snapshot
     local ks_runtime_exports
 
@@ -13256,22 +13385,18 @@ generate_idm_kickstart() {
         "${idm_ext_mac}" "${idm_int_mac}" "${IDM_IP}" "${idm_prefix}" "${IDM_GW}" \
         0 1 "IdM" \
         "rhel-10-for-x86_64-baseos-rpms" \
-        "rhel-10-for-x86_64-appstream-rpms"
-    ks_nogpg_policy="${RHIS_KS_NOGPG_POLICY}"
-    ks_ssh_baseline="${RHIS_KS_SSH_BASELINE}"
-    ks_user_sudo_bootstrap="${RHIS_KS_USER_SUDO_BOOTSTRAP}"
-    ks_rhsm_register="${RHIS_KS_RHSM_REGISTER}"
-    ks_rhc_connect="${RHIS_KS_RHC_CONNECT}"
-    ks_repo_enable_verify="${RHIS_KS_REPO_ENABLE_VERIFY}"
-    ks_nm_dual_nic="${RHIS_KS_NM_DUAL_NIC}"
+        "rhel-10-for-x86_64-appstream-rpms" \
+        "idm-for-rhel-10-x86_64-rpms"
+    ks_nogpg_policy="${MINIRHIS_KS_NOGPG_POLICY}"
+    ks_ssh_baseline="${MINIRHIS_KS_SSH_BASELINE}"
+    ks_user_sudo_bootstrap="${MINIRHIS_KS_USER_SUDO_BOOTSTRAP}"
+    ks_rhsm_register="${MINIRHIS_KS_RHSM_REGISTER}"
+    ks_rhc_connect="${MINIRHIS_KS_RHC_CONNECT}"
+    ks_repo_enable_verify="${MINIRHIS_KS_REPO_ENABLE_VERIFY}"
+    ks_nm_dual_nic="${MINIRHIS_KS_NM_DUAL_NIC}"
     ks_hosts_mapping="$(kickstart_hosts_mapping_block "${SAT_IP}" "${SAT_HOSTNAME}" "${SAT_HOSTNAME%%.*}" "${AAP_IP}" "${AAP_HOSTNAME}" "${AAP_HOSTNAME%%.*}" "${IDM_IP}" "${IDM_HOSTNAME}" "${IDM_HOSTNAME%%.*}")"
-    ks_trust_bootstrap_keys="${RHIS_KS_TRUST_BOOTSTRAP_KEYS}"
-    ks_creator_baseline="${RHIS_KS_CREATOR_BASELINE}"
-    ks_services_directive="${RHIS_KS_SERVICES_DIRECTIVE}"
-    ks_preflight="${RHIS_KS_PREFLIGHT}"
-    ks_installer_log_capture="${RHIS_KS_INSTALLER_LOG_CAPTURE}"
-    ks_post_install_baseline="${RHIS_KS_POST_INSTALL_BASELINE}"
-    ks_ready_marker="${RHIS_KS_READY_MARKER}"
+    ks_trust_bootstrap_keys="${MINIRHIS_KS_TRUST_BOOTSTRAP_KEYS}"
+    ks_creator_baseline="${MINIRHIS_KS_CREATOR_BASELINE}"
     ks_perf_network_snapshot="$(kickstart_perf_network_snapshot_block)"
 
     tmp_ks="$(mktemp)"
@@ -13284,7 +13409,6 @@ keyboard us
 lang en_US.UTF-8
 selinux --permissive
 firewall --disabled
-${ks_services_directive}
 bootloader --append="net.ifnames=0 biosdevname=0"
 
 rootpw --iscrypted "${root_pass_hash}"
@@ -13298,11 +13422,6 @@ HEADER
     # --- eth1 (always static for internal provisioning/management network) ---
     build_internal_kickstart_network_line "eth1" "${idm_int_mac}" "${IDM_IP}" "${IDM_NETMASK}" "${IDM_GW}" "${IDM_HOSTNAME}" >> "$tmp_ks"
     echo "" >> "$tmp_ks"
-
-    cat >> "$tmp_ks" <<PRECHECK
-${ks_preflight}
-
-PRECHECK
 
     # --- Partitioning (DEMO vs production best-practice) ---
     if is_demo; then
@@ -13322,7 +13441,7 @@ DEMO_PART
         print_step "IdM kickstart: production/best-practice LVM layout"
         cat >> "$tmp_ks" <<'STD_PART'
 # Best Practice Partitioning for Red Hat IdM (LVM)
-# Recommended: 4 vCPU, 8-16 GB RAM, 50 GB raw storage
+# Requirements: 4 vCPU, 16 GB RAM, 60 GB raw storage minimum
 zerombr
 clearpart --all --initlabel
 part biosboot --fstype="biosboot" --size=1
@@ -13364,11 +13483,6 @@ bind-dyndb-ldap
 
 PKGS
 
-    cat >> "$tmp_ks" <<INSTALL_LOGS
-${ks_installer_log_capture}
-
-INSTALL_LOGS
-
     # --- Post-install (variable expansion required) ---
     cat >> "$tmp_ks" <<POSTEOF
 %post --log=/root/ks-post.log
@@ -13376,13 +13490,11 @@ set -euo pipefail
 set -x  # trace every command; all output captured in /root/ks-post.log
 
 # Phase logger: writes to ks-post.log AND /dev/console (watch live: virsh console <vm>)
-ks_log() { local ts; ts=\$(date +%H:%M:%S 2>/dev/null || echo "--:--:--"); printf '\n[RHIS %s] %s\n' "\$ts" "\$*" | tee /dev/console 2>/dev/null || true; }
+ks_log() { local ts; ts=\$(date +%H:%M:%S 2>/dev/null || echo "--:--:--"); printf '\n[MINIRHIS %s] %s\n' "\$ts" "\$*" | tee /dev/console 2>/dev/null || true; }
 trap 'ec=\$?; ks_log "FAILED at line \${LINENO} (exit code \${ec}) -- see /root/ks-post.log"; exit \$ec' ERR
-ks_log "=== RHIS %post: idm: STARTED ==="
+ks_log "=== MINIRHIS %post: idm: STARTED ==="
 
 ${ks_runtime_exports}
-
-${ks_post_install_baseline}
 
 ${ks_nogpg_policy}
 
@@ -13396,7 +13508,7 @@ ${ks_user_sudo_bootstrap}
 
 ${ks_trust_bootstrap_keys}
 
-if [ "${RHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
+if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
     ks_log "Deferring RHSM/RHC/repo enablement to post-boot config-as-code"
 else
 ${ks_rhsm_register}
@@ -13409,7 +13521,7 @@ ${ks_creator_baseline}
 # 3. Hostname
 hostnamectl set-hostname "${IDM_HOSTNAME}"
 
-if [ "${RHIS_DEFER_COMPONENT_INSTALL:-1}" != "1" ]; then
+if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}" != "1" ]; then
 # 4. Repositories
 ${ks_repo_enable_verify}
 fi
@@ -13421,7 +13533,7 @@ if ! rpm -q ipa-server ipa-server-dns bind-dyndb-ldap >/dev/null 2>&1; then
     exit 1
 fi
 
-if [ "${RHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
+if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}" = "1" ]; then
     ks_log "IdM component install is deferred to post-boot config-as-code"
 else
 
@@ -13462,9 +13574,9 @@ if [ "${IDM_ENABLE_HBAC_RULES:-1}" = "1" ]; then
     ipa hbacsvc-add aap-api 2>/dev/null || echo "  ℹ AAP API HBAC service already exists"
 
     # HBAC rule for admins to all systems
-    ipa hbacrule-add --usercat=all --hostcat=all rhis-admin-all-access 2>/dev/null || echo "  ℹ rhis-admin-all-access rule already exists"
-    ipa hbacrule-add-service rhis-admin-all-access --hbacsvcs=ssh 2>/dev/null || echo "  ℹ SSH service already added to rule"
-    ipa hbacrule-add-user rhis-admin-all-access --groups="${IDM_ADMINS_GROUP:-rhis-admins}" 2>/dev/null || echo "  ℹ ${IDM_ADMINS_GROUP:-rhis-admins} already in rule"
+    ipa hbacrule-add --usercat=all --hostcat=all minirhis-admin-all-access 2>/dev/null || echo "  ℹ minirhis-admin-all-access rule already exists"
+    ipa hbacrule-add-service minirhis-admin-all-access --hbacsvcs=ssh 2>/dev/null || echo "  ℹ SSH service already added to rule"
+    ipa hbacrule-add-user minirhis-admin-all-access --groups="${IDM_ADMINS_GROUP:-minirhis-admins}" 2>/dev/null || echo "  ℹ ${IDM_ADMINS_GROUP:-minirhis-admins} already in rule"
 
     # HBAC rule for automation group to automation hosts
     ipa hbacrule-add --usercat=all automation-host-access 2>/dev/null || echo "  ℹ automation-host-access rule already exists"
@@ -13475,10 +13587,10 @@ fi
 echo "Configuring IdM sudo rules for infrastructure automation..."
 
 if [ "${IDM_ENABLE_SUDO_RULES:-1}" = "1" ]; then
-    # Sudo rule for RHIS admins (full sudo access)
-    ipa sudorule-add rhis-admins-all --hostcat=all --runasusercat=all 2>/dev/null || echo "  ℹ rhis-admins-all sudo rule already exists"
-    ipa sudorule-add-user rhis-admins-all --groups="${IDM_ADMINS_GROUP:-rhis-admins}" 2>/dev/null || echo "  ℹ ${IDM_ADMINS_GROUP:-rhis-admins} group already added"
-    ipa sudorule-add-allow-command rhis-admins-all --allow-cmds=ALL 2>/dev/null || echo "  ℹ ALL commands already allowed"
+    # Sudo rule for MINIRHIS admins (full sudo access)
+    ipa sudorule-add minirhis-admins-all --hostcat=all --runasusercat=all 2>/dev/null || echo "  ℹ minirhis-admins-all sudo rule already exists"
+    ipa sudorule-add-user minirhis-admins-all --groups="${IDM_ADMINS_GROUP:-minirhis-admins}" 2>/dev/null || echo "  ℹ ${IDM_ADMINS_GROUP:-minirhis-admins} group already added"
+    ipa sudorule-add-allow-command minirhis-admins-all --allow-cmds=ALL 2>/dev/null || echo "  ℹ ALL commands already allowed"
 
     # Sudo rule for content managers (restricted commands)
     ipa sudorule-add content-manager-provision --hostcat=all 2>/dev/null || echo "  ℹ content-manager-provision sudo rule already exists"
@@ -13505,8 +13617,8 @@ ipa dnsconfig-mod --forwarder=8.8.8.8 2>/dev/null || echo "  ℹ DNS forwarders 
 echo "Setting up IdM SSH key management..."
 
 # Create SSH public key object store
-mkdir -p /var/lib/rhis-ssh-keys
-chmod 0755 /var/lib/rhis-ssh-keys
+mkdir -p /var/lib/minirhis-ssh-keys
+chmod 0755 /var/lib/minirhis-ssh-keys
 
 # Enable SSH key authentication in IdM user accounts
 ipa config-mod --enable-sid || echo "  ℹ SID already enabled"
@@ -13535,10 +13647,10 @@ klist -e 2>/dev/null | grep -q "krbtgt/${IDM_REALM}" && echo "✓ Kerberos realm
 echo "Preparing IdM integration data for Satellite..."
 
 # Create integration config export
-mkdir -p /etc/rhis-integration
-cat > /etc/rhis-integration/idm-config.sh <<'IDM_CONFIG'
+mkdir -p /etc/minirhis-integration
+cat > /etc/minirhis-integration/idm-config.sh <<'IDM_CONFIG'
 #!/bin/bash
-# IdM Configuration for RHIS Integration
+# IdM Configuration for MINIRHIS Integration
 export IDM_DOMAIN="${IDM_DOMAIN}"
 export IDM_REALM="${IDM_REALM}"
 export IDM_HOSTNAME="${IDM_HOSTNAME}"
@@ -13554,7 +13666,7 @@ export AAP_LDAP_BIND_DN="uid=aap-svc,cn=users,cn=accounts,\${SAT_LDAP_BASE_DN}"
 export AAP_LDAP_START_TLS=true
 IDM_CONFIG
 
-chmod 0640 /etc/rhis-integration/idm-config.sh
+chmod 0640 /etc/minirhis-integration/idm-config.sh
 
 # --- 5.1.11 Certificate Management for TLS/SSL ---
 echo "Verifying TLS certificate configuration..."
@@ -13564,8 +13676,8 @@ if [ -f /etc/ipa/ca.crt ]; then
     echo "✓ IdM CA certificate present: /etc/ipa/ca.crt"
     
     # Export CA cert for use by other components
-    mkdir -p /usr/local/share/ca-certificates/rhis
-    cp /etc/ipa/ca.crt /usr/local/share/ca-certificates/rhis/idm-ca.crt
+    mkdir -p /usr/local/share/ca-certificates/minirhis
+    cp /etc/ipa/ca.crt /usr/local/share/ca-certificates/minirhis/idm-ca.crt
     update-ca-trust 2>/dev/null || update-ca-certificates 2>/dev/null || true
     echo "✓ IdM CA installed in system trust store"
 else
@@ -13588,8 +13700,8 @@ nslookup -type=SRV _kerberos._tcp.${IDM_DOMAIN} ${IDM_IP} 2>/dev/null | grep -q 
 curl -ksSf -u admin:${IDM_ADMIN_PASS} https://${IDM_HOSTNAME}/ipa/json 2>/dev/null && echo "✓ IdM JSON API responding" || echo "⚠ IdM JSON API check skipped"
 
 echo "=== IDM SERVER POST-INSTALL CONFIGURATION COMPLETE ==="
-echo "  ✓ User Groups: rhis-admins, content-managers, automation-engineers, system-services"
-echo "  ✓ Users: satellite-svc, aap-svc, rhis-operator"
+echo "  ✓ User Groups: minirhis-admins, content-managers, automation-engineers, system-services"
+echo "  ✓ Users: satellite-svc, aap-svc, minirhis-operator"
 echo "  ✓ Password Policy: 12-char min, 365-day expiry, quality enforcement"
 echo "  ✓ HBAC Rules: SSH access control for admins and automation"
 echo "  ✓ SUDO Rules: Full admin access, limited content manager access"
@@ -13598,12 +13710,10 @@ echo "  ✓ SSH Keys: Key management infrastructure ready"
 echo "  ✓ Kerberos: Realm ${IDM_REALM} active"
 echo "  ✓ LDAP: Configured with replication parameters"
 echo "  ✓ TLS/SSL: CA certificate installed in system trust"
-echo "  ✓ Integration: Satellite/AAP config exported to /etc/rhis-integration/"
+echo "  ✓ Integration: Satellite/AAP config exported to /etc/minirhis-integration/"
 fi
 
 ${ks_perf_network_snapshot}
-
-${ks_ready_marker}
 %end
 POSTEOF
 
@@ -13628,13 +13738,13 @@ validate_kickstart_integrity() {
 
     if ! awk '
         BEGIN { post_open=0; post_count=0; post_closed=0; rc=0 }
-        /^%post([[:space:]]|$)/ {
+        /^[[:space:]]*%post([[:space:]]|$)/ {
             if (post_open) rc=1
             post_open=1
             post_count++
             next
         }
-        /^%end([[:space:]]|$)/ {
+        /^[[:space:]]*%end([[:space:]]|$)/ {
             if (post_open) {
                 post_open=0
                 post_closed++
@@ -13649,34 +13759,6 @@ validate_kickstart_integrity() {
         }
     ' "$ks_file"; then
         print_warning "${label} validation failed: %post/%end mismatch in ${ks_file}"
-        return 1
-    fi
-
-    if ! awk '
-        BEGIN {
-            in_packages=0
-            saw_packages=0
-            saw_base=0
-            saw_core=0
-        }
-        /^%packages([[:space:]]|$)/ {
-            in_packages=1
-            saw_packages=1
-            next
-        }
-        /^%end([[:space:]]|$)/ {
-            if (in_packages) in_packages=0
-            next
-        }
-        in_packages {
-            if ($0 ~ /^[[:space:]]*@Base([[:space:]]|$)/) saw_base=1
-            if ($0 ~ /^[[:space:]]*@Core([[:space:]]|$)/) saw_core=1
-        }
-        END {
-            if (!saw_packages || !saw_base || !saw_core) exit 1
-        }
-    ' "$ks_file"; then
-        print_warning "${label} validation failed: %packages must include both @Base and @Core in ${ks_file}"
         return 1
     fi
 
@@ -13743,11 +13825,11 @@ create_libvirt_storage_pool() {
 
 launch_vm_console_popup() {
     local vm_name="${1:-}"
-    local viewer_log="/tmp/rhis-virt-viewer-${vm_name}.log"
+    local viewer_log="/tmp/minirhis-virt-viewer-${vm_name}.log"
 
     [ -n "${vm_name}" ] || return 0
 
-    case "$(echo "${RHIS_AUTO_OPEN_VM_CONSOLE:-1}" | tr '[:upper:]' '[:lower:]')" in
+    case "$(echo "${MINIRHIS_AUTO_OPEN_VM_CONSOLE:-1}" | tr '[:upper:]' '[:lower:]')" in
         0|false|no|off)
             return 0
             ;;
@@ -13796,7 +13878,6 @@ create_vm_if_missing() {
 
 	if sudo virsh dominfo "$vm_name" >/dev/null 2>&1; then
 		print_warning "VM already exists: $vm_name (skipping)"
-        retrofit_vm_serial_console_if_missing "$vm_name" || true
 		return 0
 	fi
 
@@ -13844,8 +13925,6 @@ create_vm_if_missing() {
         --disk "path=$disk_path,format=qcow2,bus=virtio,${disk_perf_flags}"
         --network "network=external,model=virtio${external_mac:+,mac=${external_mac}}"
         --network "network=internal,model=virtio${internal_mac:+,mac=${internal_mac}}"
-        --serial pty
-        --console pty,target_type=serial
         --graphics "vnc,listen=127.0.0.1"
         --video vga
         --location "${install_iso_path}"
@@ -13883,11 +13962,11 @@ demokill_cleanup() {
 
     print_step "DEMOKILL: stop console monitors"
     stop_vm_console_monitors || true
-    force_kill_rhis_leftovers || true
+    force_kill_minirhis_leftovers || true
 
     print_step "DEMOKILL: remove provisioner container"
-    podman rm -f "${RHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
-    sudo podman rm -f "${RHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
+    podman rm -f "${MINIRHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
+    sudo podman rm -f "${MINIRHIS_CONTAINER_NAME}" >/dev/null 2>&1 || true
 
     local vm
     local -a demo_vms=("satellite" "aap" "idm")
@@ -13899,7 +13978,7 @@ demokill_cleanup() {
             print_step "DEMOKILL: undefine VM $vm"
             sudo virsh undefine "$vm" --nvram >/dev/null 2>&1 || sudo virsh undefine "$vm" >/dev/null 2>&1 || true
         else
-            [ "${RHIS_DEMOKILL_COMPACT:-1}" = "1" ] || print_step "VM not defined (skipping): $vm"
+            [ "${MINIRHIS_DEMOKILL_COMPACT:-1}" = "1" ] || print_step "VM not defined (skipping): $vm"
         fi
     done
 
@@ -13917,7 +13996,7 @@ demokill_cleanup() {
     sudo rm -rf "${AAP_BUNDLE_DIR}" || true
 
     print_step "DEMOKILL: clean lock files"
-    cleanup_rhis_lock_files || true
+    cleanup_minirhis_lock_files || true
 
     print_step "DEMOKILL: remove temp/cache artifacts"
     sudo rm -f \
@@ -13974,7 +14053,7 @@ demokill_cleanup() {
     print_success "DEMOKILL complete"
 }
 
-cleanup_rhis_lock_files() {
+cleanup_minirhis_lock_files() {
     local -a lock_candidates
     local -a lock_globs
     local -a existing_locks
@@ -14025,11 +14104,11 @@ cleanup_rhis_lock_files() {
     done
 
     if [ "${#existing_locks[@]}" -eq 0 ]; then
-        print_step "No RHIS lock files found"
+        print_step "No MINIRHIS lock files found"
         return 0
     fi
 
-    print_warning "Found ${#existing_locks[@]} RHIS lock file(s); removing..."
+    print_warning "Found ${#existing_locks[@]} MINIRHIS lock file(s); removing..."
     for lock_path in "${existing_locks[@]}"; do
         print_step "Removing lock: $lock_path"
         sudo rm -f "$lock_path" || true
@@ -14038,7 +14117,7 @@ cleanup_rhis_lock_files() {
     return 0
 }
 
-create_rhis_vms() {
+create_minirhis_vms() {
     print_phase 1 8 "Provision VM artifacts and prerequisites"
     print_step "Preparing Satellite / AAP / IdM qcow2 VMs"
     prompt_use_existing_env
@@ -14048,26 +14127,22 @@ create_rhis_vms() {
     local sat_disk sat_ram sat_vcpu
     local aap_disk aap_ram aap_vcpu
     local idm_disk idm_ram idm_vcpu
-    local idm_preexisting=0
-    local idm_running_before=0
-    local idm_headstart_required=0
-    local idm_start_delay=0
     local ssh_mesh_bootstrap_ok=0
 
     if is_demo; then
-        print_step "DEMO mode: reduced VM specifications (PoC/learning environment)"
+        print_step "DEMO mode: reduced per-node VM specs for MiniRHIS 3-node stack (IdM + Satellite + AAP)"
         sat_disk="150G"; sat_ram=24576; sat_vcpu=8
         aap_disk="50G";  aap_ram=8152;  aap_vcpu=4
         idm_disk="30G";  idm_ram=4096;  idm_vcpu=2
     else
         print_step "Standard mode: production/best-practice VM specifications"
-        sat_disk="500G"; sat_ram=32768; sat_vcpu=8
-        aap_disk="100G"; aap_ram=32768; aap_vcpu=8
-        idm_disk="50G";  idm_ram=8192;  idm_vcpu=4
+        sat_disk="150G"; sat_ram=32768; sat_vcpu=8
+        aap_disk="50G";  aap_ram=16384; aap_vcpu=8
+        idm_disk="60G";  idm_ram=16384; idm_vcpu=4
     fi
 
     print_warning "Pre-flight lock check: stale lock files can block provisioning."
-    cleanup_rhis_lock_files || true
+    cleanup_minirhis_lock_files || true
     prune_local_ssh_trust_for_component "all" || true
 
     ensure_virtualization_tools || return 1
@@ -14080,62 +14155,51 @@ create_rhis_vms() {
     fix_qemu_permissions
     create_libvirt_storage_pool || return 1
 
-    write_kickstarts || return 1
-
     # Pre-flight: ensure SSH keys exist for post-boot AAP callback orchestration
     ensure_ssh_keys || {
         print_warning "Failed to generate SSH keys; AAP callback orchestration will not work."
         return 1
     }
 
-    # Pre-flight: download the AAP bundle tarball to AAP_BUNDLE_DIR on the host.
-    # The VM will curl it from there during %post via the HTTP server below.
-    preflight_download_aap_bundle || print_warning "AAP bundle preflight skipped. Ensure aap-bundle.tar.gz is in ${AAP_BUNDLE_DIR} before the VM runs %post."
+    # Resolve the bundle source used by kickstart and callback fallback.
+    # Preferred path: pre-download once on installer host and serve locally to
+    # avoid expiring signed CDN URLs during long guest installs.
+    AAP_BUNDLE_EFFECTIVE_URL="${AAP_BUNDLE_URL:-}"
+    if preflight_download_aap_bundle; then
+        if serve_aap_bundle; then
+            AAP_BUNDLE_EFFECTIVE_URL="http://${HOST_INT_IP}:8080/aap-bundle.tar.gz"
+            print_step "AAP bundle source set to local HTTP mirror: ${AAP_BUNDLE_EFFECTIVE_URL}"
+        else
+            print_warning "Local AAP bundle HTTP server did not start; using direct URL fallback."
+        fi
+    else
+        print_warning "AAP bundle preflight download failed; using direct URL from AAP_BUNDLE_URL during guest install."
+    fi
+
+    # Pre-flight guard: we still require a usable bundle URL path.
+    if [ -z "${AAP_BUNDLE_EFFECTIVE_URL:-}" ]; then
+        print_warning "AAP bundle source is empty. Set AAP_BUNDLE_URL in ${ANSIBLE_ENV_FILE} or pre-stage ${AAP_BUNDLE_DIR}/aap-bundle.tar.gz."
+        return 1
+    fi
+
+    write_kickstarts || return 1
 
     # Build-order requirement: IdM must come first, then Satellite, then AAP.
-    if sudo virsh dominfo "idm" >/dev/null 2>&1; then
-        idm_preexisting=1
-        if sudo virsh domstate "idm" 2>/dev/null | tr '[:upper:]' '[:lower:]' | grep -q '^running'; then
-            idm_running_before=1
-        fi
-    fi
     create_vm_if_missing "idm"           "${VM_DIR}/idm.qcow2"           "$idm_disk" "$idm_ram" "$idm_vcpu" "${KS_DIR}/idm.ks" || return 1
 
-    if [ "${idm_preexisting}" -eq 0 ]; then
-        idm_headstart_required=1
-    elif [ "${idm_running_before}" -eq 0 ]; then
-        print_step "Starting existing IdM VM first so it can get a head start before Satellite and AAP"
-        sudo virsh start "idm" >/dev/null 2>&1 || true
-        idm_headstart_required=1
-    fi
-
-    if should_launch_vm_console_monitors; then
+    if ! is_noninteractive; then
         launch_single_vm_console_monitor_auto "idm" || true
-    fi
-
-    if [ "${idm_headstart_required}" -eq 1 ]; then
-        idm_start_delay="${RHIS_IDM_START_DELAY:-240}"
-        if [ "${idm_start_delay}" -gt 0 ] 2>/dev/null; then
-            print_step "IdM was started first; waiting ${idm_start_delay}s before starting Satellite and AAP."
-            sleep "${idm_start_delay}"
-        fi
     fi
 
     create_vm_if_missing "satellite" "${VM_DIR}/satellite.qcow2" "$sat_disk" "$sat_ram" "$sat_vcpu" "${KS_DIR}/satellite.ks" "hd:LABEL=OEMDRV:/ks.cfg" "${SAT_ISO_PATH}" || return 1
 
-    if should_launch_vm_console_monitors; then
+    if ! is_noninteractive; then
         launch_single_vm_console_monitor_auto "satellite" || true
-    fi
-
-    # Start the HTTP server before the AAP VM boots so the bundle is available
-    # when anaconda runs %post.
-    if [ -d "${AAP_BUNDLE_DIR}" ]; then
-        serve_aap_bundle || print_warning "Could not start AAP bundle HTTP server; AAP %post bundle download will fail."
     fi
 
     create_vm_if_missing "aap"        "${VM_DIR}/aap.qcow2"        "$aap_disk" "$aap_ram" "$aap_vcpu" "${KS_DIR}/aap.ks" || return 1
 
-    if should_launch_vm_console_monitors; then
+    if ! is_noninteractive; then
         launch_single_vm_console_monitor_auto "aap" || true
     fi
 
@@ -14146,17 +14210,15 @@ create_rhis_vms() {
 
     # Individual console monitors already launched per-VM above; launch fallback
     # for any missed or orphaned consoles if needed
-    if should_launch_vm_console_monitors; then
+    if ! is_noninteractive; then
         launch_vm_console_monitors_auto || true
     fi
 
-    if [ "${AAP_HTTP_PID:-0}" -gt 0 ] 2>/dev/null; then
-        print_step "AAP callback is deferred until the AAP configuration phase so IdM/Satellite can proceed first."
-    fi
+    print_step "AAP callback is deferred until the AAP configuration phase so IdM/Satellite can proceed first."
 
-    ensure_rhis_vms_powered_on
+    ensure_minirhis_vms_powered_on
     wait_for_post_vm_settle || true
-    sync_rhis_external_hosts_entries || true
+    sync_minirhis_external_hosts_entries || true
 
     # Post-provision host-access guarantees:
     # - installer host user has passwordless sudo
@@ -14166,33 +14228,33 @@ create_rhis_vms() {
 
     # As soon as VMs first come up, bootstrap SSH trust mesh before config-as-code.
     print_phase 3 8 "SSH mesh bootstrap"
-    if setup_rhis_ssh_mesh; then
+    if setup_minirhis_ssh_mesh; then
         ssh_mesh_bootstrap_ok=1
     else
-        if is_enabled "${RHIS_ALLOW_DEFERRED_SSH_MESH:-0}"; then
-            print_warning "SSH mesh bootstrap did not complete cleanly; deferred mode enabled (RHIS_ALLOW_DEFERRED_SSH_MESH=1), will retry after config-as-code once nodes are fully initialized."
+        if is_enabled "${MINIRHIS_ALLOW_DEFERRED_SSH_MESH:-0}"; then
+            print_warning "SSH mesh bootstrap did not complete cleanly; deferred mode enabled (MINIRHIS_ALLOW_DEFERRED_SSH_MESH=1), will retry after config-as-code once nodes are fully initialized."
         else
             print_warning "SSH mesh bootstrap is required before continuing. Aborting now."
-            print_warning "If you intentionally want deferred behavior, set RHIS_ALLOW_DEFERRED_SSH_MESH=1 and re-run."
+            print_warning "If you intentionally want deferred behavior, set MINIRHIS_ALLOW_DEFERRED_SSH_MESH=1 and re-run."
             stop_vm_power_watchdog || true
             return 1
         fi
     fi
     print_phase 4 8 "SSH mesh validation"
     if [ "${ssh_mesh_bootstrap_ok}" -eq 1 ]; then
-        validate_rhis_ssh_mesh || print_warning "SSH mesh validation reported failures; continuing."
+        validate_minirhis_ssh_mesh || print_warning "SSH mesh validation reported failures; continuing."
     else
         print_step "Skipping early SSH mesh validation because bootstrap was deferred."
     fi
 
     # Trigger config-as-code via the provisioner container after SSH baseline is in place.
     print_phase 5 8 "Config-as-code orchestration"
-    run_rhis_config_as_code || print_warning "Config-as-code phase did not complete cleanly. VMs are running; re-run manually if needed."
+    run_minirhis_config_as_code || print_warning "Config-as-code phase did not complete cleanly. VMs are running; re-run manually if needed."
 
     if [ "${ssh_mesh_bootstrap_ok}" -eq 0 ]; then
         print_step "Retrying deferred SSH mesh bootstrap/validation after config-as-code..."
-        if setup_rhis_ssh_mesh; then
-            validate_rhis_ssh_mesh || print_warning "Deferred SSH mesh validation still reported failures; continuing."
+        if setup_minirhis_ssh_mesh; then
+            validate_minirhis_ssh_mesh || print_warning "Deferred SSH mesh validation still reported failures; continuing."
         else
             print_warning "Deferred SSH mesh bootstrap still did not complete cleanly; continuing."
         fi
@@ -14202,28 +14264,20 @@ create_rhis_vms() {
     print_phase 6 8 "Root password normalization"
     fix_vm_root_passwords || print_warning "Root password fix step did not complete cleanly; continuing."
     print_phase 7 8 "Final health summary"
-    print_rhis_health_summary
-    # Reboot all RHIS VMs to ensure a clean post-install state before finalizing.
-    reboot_all_rhis_vms || print_warning "Reboot of RHIS VMs did not complete cleanly; continuing."
-    revert_rc_local_nonexec_on_rhis_vms || print_warning "Post-install rc.local permission reversion reported issues; continuing."
+    print_minirhis_health_summary
+    # Reboot all MINIRHIS VMs to ensure a clean post-install state before finalizing.
+    reboot_all_minirhis_vms || print_warning "Reboot of MINIRHIS VMs did not complete cleanly; continuing."
+    revert_rc_local_nonexec_on_minirhis_vms || print_warning "Post-install rc.local permission reversion reported issues; continuing."
     print_phase 8 8 "Workflow complete"
-
-    print_step "Next steps — use the standard entry points to rebuild or rerun workflows:"
-    print_warning "  Full stack:          ./MiniRHIS.sh --rhis"
-    print_warning "  Satellite only:      ./MiniRHIS.sh --satellite"
-    print_warning "  IdM only:            ./MiniRHIS.sh --idm"
-    print_warning "  AAP only:            ./MiniRHIS.sh --aap"
-    print_warning "  Demo full stack:     ./MiniRHIS.sh --DEMO --rhis"
 }
 
-# Fix the OS root password on all RHIS VMs using virsh set-user-password (via qemu-guest-agent).
+# Fix the OS root password on all MINIRHIS VMs using virsh set-user-password (via qemu-guest-agent).
 # Called after VMs are powered on so the guest agent is running.
 fix_vm_root_passwords() {
     local vm new_pass
     local -a vms=("satellite" "aap" "idm")
 
     # Re-load the vault so we always use the latest ADMIN_PASS value
-    # Force-clear ADMIN_PASS so load_ansible_env_file picks up the updated vault
     ADMIN_PASS=""
     read_ansible_env_content 2>/dev/null || true
     load_ansible_env_file 2>/dev/null || true
@@ -14231,6 +14285,13 @@ fix_vm_root_passwords() {
 
     new_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
 
+    # ── Ansible-first path ────────────────────────────────────────────────
+    if run_local_role "minirhis_vm_lifecycle" "installer" \
+            --extra-vars "minirhis_vm_action=set_passwords admin_pass=${new_pass}" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_vm_lifecycle unavailable; running bash fallback for fix_vm_root_passwords"
+    # ── Bash fallback ─────────────────────────────────────────────────────
     print_step "Setting root password on all VMs via qemu-guest-agent (virsh set-user-password)"
     for vm in "${vms[@]}"; do
         if ! sudo virsh dominfo "$vm" >/dev/null 2>&1; then
@@ -14245,11 +14306,19 @@ fix_vm_root_passwords() {
     done
 }
 
-reboot_all_rhis_vms() {
+reboot_all_minirhis_vms() {
     local vm
     local -a vms=("satellite" "aap" "idm")
 
-    print_step "Rebooting all RHIS VMs"
+    # ── Ansible-first path ────────────────────────────────────────────────
+    if run_local_role "minirhis_vm_lifecycle" "installer" \
+            --extra-vars "minirhis_vm_action=reboot" 2>/dev/null; then
+        wait_for_post_vm_settle || print_warning "Post-reboot settle checks reported issues"
+        return 0
+    fi
+    print_warning "Ansible role minirhis_vm_lifecycle unavailable; running bash fallback for reboot_all_minirhis_vms"
+    # ── Bash fallback ─────────────────────────────────────────────────────
+    print_step "Rebooting all MINIRHIS VMs"
     for vm in "${vms[@]}"; do
         if ! sudo virsh dominfo "$vm" >/dev/null 2>&1; then
             print_warning "VM not defined or libvirt cannot access: $vm; skipping"
@@ -14268,11 +14337,11 @@ reboot_all_rhis_vms() {
     # Allow guests to come back up and perform a light settle
     sleep 15
     wait_for_post_vm_settle || print_warning "Post-reboot settle checks reported issues"
-    print_success "Reboot command issued for RHIS VMs"
+    print_success "Reboot command issued for MINIRHIS VMs"
     return 0
 }
 
-revert_rc_local_nonexec_on_rhis_vms() {
+revert_rc_local_nonexec_on_minirhis_vms() {
     local scope="${1:-all}"
     local root_pass admin_user admin_pass
     local node_label node_ip
@@ -14280,16 +14349,30 @@ revert_rc_local_nonexec_on_rhis_vms() {
     local reverted=0
     local -a target_nodes=()
 
-    if ! is_enabled "${RHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL:-1}"; then
-        print_step "Skipping rc.local permission reversion (RHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL=${RHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL})."
+    if ! is_enabled "${MINIRHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL:-1}"; then
+        print_step "Skipping rc.local permission reversion (MINIRHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL=${MINIRHIS_REVERT_RC_LOCAL_NONEXEC_AFTER_INSTALL})."
         return 0
     fi
 
+    # ── Ansible-first path ────────────────────────────────────────────────
+    # Determine which Ansible limit group to use based on scope argument.
+    local _ansible_limit
+    case "${scope}" in
+        satellite) _ansible_limit="scenario_satellite" ;;
+        idm)       _ansible_limit="idm" ;;
+        aap)       _ansible_limit="aap" ;;
+        *)         _ansible_limit="scenario_satellite:aap:idm" ;;
+    esac
+    if run_local_role "minirhis_vm_hardening" "${_ansible_limit}" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_vm_hardening unavailable; running bash fallback for revert_rc_local_nonexec_on_minirhis_vms"
+    # ── Bash fallback ─────────────────────────────────────────────────────
     root_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
     admin_user="${ADMIN_USER:-admin}"
     admin_pass="${ADMIN_PASS:-}"
 
-    print_step "Post-install hardening: reverting /etc/rc.d/rc.local to non-executable on RHIS nodes"
+    print_step "Post-install hardening: reverting /etc/rc.d/rc.local to non-executable on MINIRHIS nodes"
     remote_cmd='if [ -f /etc/rc.d/rc.local ]; then chmod 0644 /etc/rc.d/rc.local || true; fi'
     remote_cmd_via_sudo="sudo -n bash -lc '$(printf '%s' "${remote_cmd}" | sed "s/'/'\\''/g")'"
 
@@ -14326,13 +14409,29 @@ revert_rc_local_nonexec_on_rhis_vms() {
     done
 
     if [ "${reverted}" -gt 0 ]; then
-        print_success "rc.local hardening complete on ${reverted} RHIS node(s)."
+        print_success "rc.local hardening complete on ${reverted} MINIRHIS node(s)."
     fi
     return 0
 }
 
-setup_rhis_ssh_mesh() {
-    local mesh_scope="${1:-${RHIS_SSH_MESH_SCOPE:-all}}"
+setup_minirhis_ssh_mesh() {
+    local mesh_scope="${1:-${MINIRHIS_SSH_MESH_SCOPE:-all}}"
+
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    # The Ansible role handles full pairwise key distribution.  The scope
+    # argument is mapped to an inventory limit so per-node runs still work.
+    local _ansible_limit
+    case "${mesh_scope}" in
+        satellite) _ansible_limit="installer:scenario_satellite" ;;
+        idm)       _ansible_limit="installer:idm" ;;
+        aap)       _ansible_limit="installer:aap" ;;
+        *)         _ansible_limit="installer:scenario_satellite:aap:idm" ;;
+    esac
+    if run_local_role "minirhis_ssh_mesh" "${_ansible_limit}" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_ssh_mesh unavailable; running bash fallback for setup_minirhis_ssh_mesh"
+    # ── Bash fallback (original implementation) ─────────────────────────────
     local root_pass installer_user installer_pass mesh_user mesh_pass ip pub login_user login_pass
     local ssh_bootstrap_retries ssh_bootstrap_delay
     local local_installer_pub=""
@@ -14348,9 +14447,9 @@ setup_rhis_ssh_mesh() {
     installer_pass="${ADMIN_PASS:-}"
     mesh_user="${ADMIN_USER:-admin}"
     mesh_pass="${ADMIN_PASS:-}"
-    ssh_bootstrap_retries="${RHIS_SSH_BOOTSTRAP_RETRIES:-45}"
-    ssh_bootstrap_delay="${RHIS_SSH_BOOTSTRAP_DELAY:-10}"
-    if is_enabled "${RHIS_REQUIRE_ROOT_SSH_MESH:-0}"; then
+    ssh_bootstrap_retries="${MINIRHIS_SSH_BOOTSTRAP_RETRIES:-45}"
+    ssh_bootstrap_delay="${MINIRHIS_SSH_BOOTSTRAP_DELAY:-10}"
+    if is_enabled "${MINIRHIS_REQUIRE_ROOT_SSH_MESH:-0}"; then
         root_mesh_required=1
     fi
     if [ -z "$installer_pass" ] && [ -z "$root_pass" ]; then
@@ -14385,12 +14484,12 @@ setup_rhis_ssh_mesh() {
             ;;
     esac
 
-    # Rebuilds rotate SSH host keys on RHIS nodes; keep installer known_hosts clean.
-    refresh_rhis_known_hosts || true
+    # Rebuilds rotate SSH host keys on MINIRHIS nodes; keep installer known_hosts clean.
+    refresh_minirhis_known_hosts || true
 
-    # Ensure dedicated, persistent installer-host RHIS key exists.
-    if ! ensure_rhis_installer_ssh_key; then
-        print_warning "Could not prepare dedicated RHIS installer SSH key at ${RHIS_INSTALLER_SSH_PRIVATE_KEY}."
+    # Ensure dedicated, persistent installer-host MINIRHIS key exists.
+    if ! ensure_minirhis_installer_ssh_key; then
+        print_warning "Could not prepare dedicated MINIRHIS installer SSH key at ${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}."
         return 1
     fi
 
@@ -14399,15 +14498,15 @@ setup_rhis_ssh_mesh() {
     chmod 700 "${HOME}/.ssh" >/dev/null 2>&1 || true
     touch "${HOME}/.ssh/authorized_keys" >/dev/null 2>&1 || true
     chmod 600 "${HOME}/.ssh/authorized_keys" >/dev/null 2>&1 || true
-    if [ -f "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" ]; then
-        cat "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" >> "${HOME}/.ssh/authorized_keys"
+    if [ -f "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" ]; then
+        cat "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" >> "${HOME}/.ssh/authorized_keys"
         sort -u "${HOME}/.ssh/authorized_keys" -o "${HOME}/.ssh/authorized_keys" || true
-        local_installer_pub="$(cat "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" 2>/dev/null || true)"
+        local_installer_pub="$(cat "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" 2>/dev/null || true)"
     fi
 
     # Explicit self trust requested: install-host user -> 127.0.0.1
-    if command -v ssh-copy-id >/dev/null 2>&1 && [ -n "${installer_pass}" ] && [ -f "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" ]; then
-        sshpass -p "${installer_pass}" ssh-copy-id -i "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" \
+    if command -v ssh-copy-id >/dev/null 2>&1 && [ -n "${installer_pass}" ] && [ -f "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" ]; then
+        sshpass -p "${installer_pass}" ssh-copy-id -i "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" \
             -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
             "${installer_user}@127.0.0.1" >/dev/null 2>&1 || true
     fi
@@ -14431,23 +14530,7 @@ Host *
 EOF
 chown "$target_user:$target_user" "$target_home/.ssh/config"; chmod 600 "$target_home/.ssh/config"; cat "$target_home/.ssh/id_rsa.pub" >> "$target_home/.ssh/authorized_keys"; sort -u "$target_home/.ssh/authorized_keys" -o "$target_home/.ssh/authorized_keys"'
 
-    # Helper: render a compact in-place progress bar directly to /dev/tty so it
-    # does not pollute the tee'd log file with dozens of overwrite lines.
-    # Usage: _ssh_bootstrap_bar <ip> <attempt> <total> <delay_s>
-    _ssh_bootstrap_bar() {
-        local _ip="$1" _att="$2" _tot="$3" _dly="$4"
-        local _bar_width=24 _elapsed _filled _empty _bar _pct
-        _elapsed=$(( (_att - 1) * _dly ))
-        _filled=$(( _att * _bar_width / _tot ))
-        _empty=$(( _bar_width - _filled ))
-        _pct=$(( _att * 100 / _tot ))
-        _bar="$(printf '%0.s#' $(seq 1 ${_filled} 2>/dev/null))$(printf '%0.s-' $(seq 1 ${_empty} 2>/dev/null))"
-        printf '\r\033[K[STEP] SSH bootstrap %-17s  [%s] %3d%%  %d/%d  (~%ds elapsed)' \
-            "${_ip}" "${_bar}" "${_pct}" "${_att}" "${_tot}" "${_elapsed}" \
-            >/dev/tty 2>/dev/null || true
-    }
-
-    print_step "Bootstrapping admin SSH config/keys on RHIS nodes (${mesh_user})"
+    print_step "Bootstrapping admin SSH config/keys on MINIRHIS nodes (${mesh_user})"
     for ip in "${node_ips[@]}"; do
         local _bootstrap_ok=0
         local _attempt
@@ -14464,24 +14547,23 @@ chown "$target_user:$target_user" "$target_home/.ssh/config"; chmod 600 "$target
                 break
             fi
 
-            _ssh_bootstrap_bar "${ip}" "${_attempt}" "${ssh_bootstrap_retries}" "${ssh_bootstrap_delay}"
+            if [ "${_attempt}" -eq 1 ] || [ $(( _attempt % 6 )) -eq 0 ]; then
+                print_step "SSH bootstrap waiting on ${ip} (attempt ${_attempt}/${ssh_bootstrap_retries})..."
+            fi
             sleep "${ssh_bootstrap_delay}"
         done
 
-        # Clear the progress bar line and emit a normal log-friendly result line.
-        printf '\r\033[K' >/dev/tty 2>/dev/null || true
         if [ "${_bootstrap_ok}" -ne 1 ]; then
             print_warning "SSH bootstrap failed for ${ip} as ${mesh_user} and root after ${ssh_bootstrap_retries} attempts."
             return 1
         fi
-        print_success "SSH bootstrap complete for ${ip}"
     done
 
     # Ensure root keypair exists on every node.
     bootstrap_root_cmd='set -e; install -d -m 700 /root/.ssh; if [ ! -f /root/.ssh/id_rsa ]; then ssh-keygen -q -t rsa -b 4096 -N "" -f /root/.ssh/id_rsa; fi; touch /root/.ssh/authorized_keys; [ -f /root/.ssh/id_rsa.pub ] && cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys; sort -u /root/.ssh/authorized_keys -o /root/.ssh/authorized_keys; chmod 600 /root/.ssh/id_rsa 2>/dev/null || true; chmod 644 /root/.ssh/id_rsa.pub 2>/dev/null || true; chmod 600 /root/.ssh/authorized_keys'
     bootstrap_root_via_mesh_cmd="sudo -n bash -lc '$(printf '%s' "${bootstrap_root_cmd}" | sed "s/'/'\\''/g")'"
     read_root_pub_via_mesh_cmd="sudo -n cat /root/.ssh/id_rsa.pub"
-    print_step "Bootstrapping root SSH keys on RHIS nodes"
+    print_step "Bootstrapping root SSH keys on MINIRHIS nodes"
     for ip in "${node_ips[@]}"; do
         if [ -n "$root_pass" ]; then
             if sshpass -p "$root_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 root@"$ip" "$bootstrap_root_cmd" >/dev/null 2>&1; then
@@ -14548,10 +14630,10 @@ chown "$target_user:$target_user" "$target_home/.ssh/config"; chmod 600 "$target
     sort -u "${HOME}/.ssh/authorized_keys" -o "${HOME}/.ssh/authorized_keys" || true
     chmod 600 "${HOME}/.ssh/authorized_keys" || true
 
-    # Explicit install-host key push to root on each RHIS node.
+    # Explicit install-host key push to root on each MINIRHIS node.
     # Installer-host user key is intentionally restricted to root
     # on managed nodes because those nodes only expose admin/root accounts.
-    if [ -n "${local_installer_pub}" ] && [ -f "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" ]; then
+    if [ -n "${local_installer_pub}" ] && [ -f "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" ]; then
         local i push_ip push_name pub_b64
         pub_b64="$(printf '%s' "${local_installer_pub}" | base64 -w0 2>/dev/null || true)"
         for i in "${!node_ips[@]}"; do
@@ -14560,7 +14642,7 @@ chown "$target_user:$target_user" "$target_home/.ssh/config"; chmod 600 "$target
 
             # install-host key -> root
             if command -v ssh-copy-id >/dev/null 2>&1 && [ -n "${root_pass}" ]; then
-                sshpass -p "${root_pass}" ssh-copy-id -i "${RHIS_INSTALLER_SSH_PUBLIC_KEY}" \
+                sshpass -p "${root_pass}" ssh-copy-id -i "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY}" \
                     -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 \
                     "root@${push_ip}" >/dev/null 2>&1 || true
             fi
@@ -14627,14 +14709,14 @@ chown "$target_user:$target_user" "$target_home/.ssh/config"; chmod 600 "$target
     fi
 
     if [ "${root_mesh_failures}" -gt 0 ]; then
-        print_warning "RHIS SSH mesh configured with ${root_mesh_failures} root-mesh issue(s). Admin mesh is active; root mesh is best-effort."
+        print_warning "MINIRHIS SSH mesh configured with ${root_mesh_failures} root-mesh issue(s). Admin mesh is active; root mesh is best-effort."
     else
-        print_success "RHIS SSH mesh configured: ${mesh_user} and root SSH trust established across RHIS nodes; install-host user key is trusted by root on each node."
+        print_success "MINIRHIS SSH mesh configured: ${mesh_user} and root SSH trust established across MINIRHIS nodes; install-host user key is trusted by root on each node."
     fi
     return 0
 }
 
-validate_rhis_ssh_mesh() {
+validate_minirhis_ssh_mesh() {
     local root_pass installer_user installer_pass mesh_user mesh_pass
     local src_name src_ip dst_name dst_ip
     local validation_cmd
@@ -14657,7 +14739,7 @@ validate_rhis_ssh_mesh() {
         "${IDM_HOSTNAME}:${IDM_IP}"
     )
 
-    print_step "Validating RHIS SSH mesh (${mesh_user}-to-${mesh_user} key auth across all nodes)"
+    print_step "Validating MINIRHIS SSH mesh (${mesh_user}-to-${mesh_user} key auth across all nodes)"
     for src in "${node_specs[@]}"; do
         src_name="${src%%:*}"
         src_ip="${src##*:}"
@@ -14665,10 +14747,10 @@ validate_rhis_ssh_mesh() {
             dst_name="${dst%%:*}"
             dst_ip="${dst##*:}"
             validation_cmd="ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -o ConnectTimeout=8 ${mesh_user}@${dst_ip} 'echo ok:${dst_name}'"
-            # Try with RHIS installer key first (installer host key is pushed to each node's authorized_keys
+            # Try with MINIRHIS installer key first (installer host key is pushed to each node's authorized_keys
             # during mesh setup to root only, so this path is typically not used for node-to-node admin mesh.
-            if [ -f "${RHIS_INSTALLER_SSH_PRIVATE_KEY:-}" ] && \
-               ssh -i "${RHIS_INSTALLER_SSH_PRIVATE_KEY}" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ${mesh_user}@"$src_ip" "$validation_cmd" >/dev/null 2>&1; then
+            if [ -f "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-}" ] && \
+               ssh -i "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ${mesh_user}@"$src_ip" "$validation_cmd" >/dev/null 2>&1; then
                 print_step "SSH mesh OK: ${src_name} -> ${dst_name}"
             elif [ -n "$mesh_pass" ] && sshpass -p "$mesh_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ${mesh_user}@"$src_ip" "$validation_cmd" >/dev/null 2>&1; then
                 print_step "SSH mesh OK: ${src_name} -> ${dst_name}"
@@ -14682,7 +14764,7 @@ validate_rhis_ssh_mesh() {
     done
 
     if [ -n "$root_pass" ]; then
-        print_step "Validating RHIS root SSH mesh (root-to-root key auth across all nodes)"
+        print_step "Validating MINIRHIS root SSH mesh (root-to-root key auth across all nodes)"
         for src in "${node_specs[@]}"; do
             src_name="${src%%:*}"
             src_ip="${src##*:}"
@@ -14705,14 +14787,21 @@ validate_rhis_ssh_mesh() {
         return 1
     fi
 
-    print_success "SSH mesh validation complete: admin and root SSH trust is functional across RHIS nodes."
+    print_success "SSH mesh validation complete: admin and root SSH trust is functional across MINIRHIS nodes."
     return 0
 }
 
-ensure_rhis_vms_powered_on() {
+ensure_minirhis_vms_powered_on() {
     local vm state
     local -a vms=("satellite" "aap" "idm")
 
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    if run_local_role "minirhis_vm_lifecycle" "installer" \
+            --extra-vars "minirhis_vm_action=power_on" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_vm_lifecycle unavailable; running bash fallback for ensure_minirhis_vms_powered_on"
+    # ── Bash fallback ───────────────────────────────────────────────────────
     print_step "Ensuring Satellite/AAP/IdM are ON and autostart-enabled"
     for vm in "${vms[@]}"; do
         if ! sudo virsh dominfo "$vm" >/dev/null 2>&1; then
@@ -14733,7 +14822,7 @@ ensure_rhis_vms_powered_on() {
 
 ensure_local_installer_user_passwordless_sudo() {
     local current_user="${USER:-$(whoami)}"
-    local sudoers_file="/etc/sudoers.d/90-rhis-${current_user}-nopasswd"
+    local sudoers_file="/etc/sudoers.d/90-minirhis-${current_user}-nopasswd"
 
     if [ "$(id -u)" -eq 0 ]; then
         return 0
@@ -14777,7 +14866,7 @@ ensure_host_installer_keys_on_satellite() {
 
     [ -n "${sat_ip}" ] || return 1
 
-    for key_file in "${HOME}/.ssh/id_ed25519.pub" "${HOME}/.ssh/id_rsa.pub" "${RHIS_INSTALLER_SSH_PUBLIC_KEY:-}"; do
+    for key_file in "${HOME}/.ssh/id_ed25519.pub" "${HOME}/.ssh/id_rsa.pub" "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY:-}"; do
         [ -n "${key_file}" ] || continue
         [ -r "${key_file}" ] || continue
         key_content="$(cat "${key_file}" 2>/dev/null || true)"
@@ -14836,12 +14925,12 @@ setup_virt_manager() {
 
     if is_noninteractive; then
         build_vms="Y"
-        print_step "NONINTERACTIVE mode: defaulting to create IdM/Satellite/AAP VMs now."
+        print_step "NONINTERACTIVE mode: defaulting to create Satellite/AAP/IdM VMs now."
     else
-        read -r -p "Create IdM/Satellite/AAP VMs now? [Y/n]: " build_vms
+        read -r -p "Create Satellite/AAP VMs now? [Y/n]: " build_vms
     fi
     case "${build_vms:-Y}" in
-        Y|y|"") create_rhis_vms || print_warning "VM creation did not complete." ;;
+        Y|y|"") create_minirhis_vms || print_warning "VM creation did not complete." ;;
         *) print_warning "Skipping VM creation." ;;
     esac
 
@@ -14849,6 +14938,12 @@ setup_virt_manager() {
 }
 
 ensure_libvirtd() {
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    if run_local_role "minirhis_host_setup" "installer" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_host_setup unavailable; running bash fallback for ensure_libvirtd"
+    # ── Bash fallback ───────────────────────────────────────────────────────
 	if ! command -v libvirtd >/dev/null 2>&1; then
 		print_warning "libvirtd not found. Installing..."
         sudo dnf install -y --nogpgcheck libvirt libvirt-daemon
@@ -14871,6 +14966,12 @@ ensure_libvirtd() {
 # that group. This function is conservative and will only act when sudo is
 # available and the operations succeed; otherwise it prints guidance.
 ensure_libvirt_access() {
+    # ── Ansible-first path ──────────────────────────────────────────────────
+    if run_local_role "minirhis_host_setup" "installer" 2>/dev/null; then
+        return 0
+    fi
+    print_warning "Ansible role minirhis_host_setup unavailable; running bash fallback for ensure_libvirt_access"
+    # ── Bash fallback ───────────────────────────────────────────────────────
     print_step "Verifying libvirt access for user: ${USER:-$(whoami)}"
 
     if virsh --connect qemu:///system list --all >/dev/null 2>&1; then
@@ -14998,14 +15099,14 @@ ensure_iso_tools() {
 ensure_workspace_runtime_layout() {
     # Defensive guard: if early variable init is changed, keep runtime layout paths sane.
     SCRIPT_DIR="${SCRIPT_DIR:-$(pwd)}"
-    RHIS_INVENTORY_DIR="${RHIS_INVENTORY_DIR:-${SCRIPT_DIR}/container/vars/external_inventory}"
-    RHIS_INVENTORY_FILE="${RHIS_INVENTORY_FILE:-${RHIS_INVENTORY_DIR}/hosts.yml}"
-    RHIS_CONTAINER_INVENTORY_FILE="${RHIS_CONTAINER_INVENTORY_FILE:-/rhis/vars/external_inventory/$(basename "${RHIS_INVENTORY_FILE}")}"
-    RHIS_HOST_VARS_DIR="${RHIS_HOST_VARS_DIR:-${SCRIPT_DIR}/host_vars}"
+    MINIRHIS_INVENTORY_DIR="${MINIRHIS_INVENTORY_DIR:-${SCRIPT_DIR}/container/vars/external_inventory}"
+    MINIRHIS_INVENTORY_FILE="${MINIRHIS_INVENTORY_FILE:-${MINIRHIS_INVENTORY_DIR}/hosts.yml}"
+    MINIRHIS_CONTAINER_INVENTORY_FILE="${MINIRHIS_CONTAINER_INVENTORY_FILE:-/minirhis/vars/external_inventory/$(basename "${MINIRHIS_INVENTORY_FILE}")}"
+    MINIRHIS_HOST_VARS_DIR="${MINIRHIS_HOST_VARS_DIR:-${SCRIPT_DIR}/host_vars}"
 
-    print_step "Ensuring generated RHIS runtime layout exists under ${SCRIPT_DIR}"
+    print_step "Ensuring generated MINIRHIS runtime layout exists under ${SCRIPT_DIR}"
 
-    mkdir -p "${RHIS_INVENTORY_DIR}" "${RHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/container/roles" "${SCRIPT_DIR}/docs" || return 1
+    mkdir -p "${MINIRHIS_INVENTORY_DIR}" "${MINIRHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/container/roles" "${SCRIPT_DIR}/docs" || return 1
 
         # First-run bootstrap for required non-markdown artifacts. These are
         # created only when missing and never overwritten.
@@ -15099,9 +15200,9 @@ EOF
         fi
 
     # Placeholders are intentionally minimal; real content is generated on run.
-    [ -f "${RHIS_INVENTORY_DIR}/README.md" ] || printf '%s\n' "# Generated by rhis_install.sh" > "${RHIS_INVENTORY_DIR}/README.md"
-    [ -f "${RHIS_HOST_VARS_DIR}/README.md" ] || printf '%s\n' "# Generated by rhis_install.sh" > "${RHIS_HOST_VARS_DIR}/README.md"
-    [ -f "${SCRIPT_DIR}/docs/README.md" ] || printf '%s\n' "# Generated by rhis_install.sh" > "${SCRIPT_DIR}/docs/README.md"
+    [ -f "${MINIRHIS_INVENTORY_DIR}/README.md" ] || printf '%s\n' "# Generated by minirhis_install.sh" > "${MINIRHIS_INVENTORY_DIR}/README.md"
+    [ -f "${MINIRHIS_HOST_VARS_DIR}/README.md" ] || printf '%s\n' "# Generated by minirhis_install.sh" > "${MINIRHIS_HOST_VARS_DIR}/README.md"
+    [ -f "${SCRIPT_DIR}/docs/README.md" ] || printf '%s\n' "# Generated by minirhis_install.sh" > "${SCRIPT_DIR}/docs/README.md"
 
     return 0
 }
@@ -15119,12 +15220,12 @@ ensure_platform_packages_for_virt_manager() {
         virt-viewer \
         python3-pip || return 1
 
-    # Keep pip path available for optional Python helpers used by RHIS flows.
+    # Keep pip path available for optional Python helpers used by MINIRHIS flows.
     python3 -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1 || true
     return 0
 }
 
-rhis_required_ansible_collections() {
+minirhis_required_ansible_collections() {
     cat <<'EOF'
 ansible.posix
 community.general
@@ -15148,7 +15249,7 @@ check_missing_installer_host_ansible_collections() {
     local timeout_sec=20
     local collection_list_cache=""
 
-    mapfile -t collections < <(rhis_required_ansible_collections)
+    mapfile -t collections < <(minirhis_required_ansible_collections)
 
     if ! command -v ansible-galaxy >/dev/null 2>&1; then
         print_warning "ansible-galaxy is not installed yet; collection visibility check skipped."
@@ -15200,8 +15301,8 @@ ensure_installer_host_ansible_collections() {
         sudo dnf install -y --nogpgcheck ansible-core || return 1
     fi
 
-    generate_rhis_ansible_cfg || true
-    cfg="${RHIS_ANSIBLE_CFG_HOST}"
+    generate_minirhis_ansible_cfg || true
+    cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
 
     # Install consolidated container requirements in the same startup phase as
     # collection verification so all dependencies are aligned.
@@ -15262,7 +15363,7 @@ ensure_installer_host_ansible_collections() {
 
     # Required collections (normalized, unique, and alphabetically sorted).
     # NOTE: `eda_configuration` has been normalized to `infra.eda_configuration`.
-    mapfile -t collections < <(rhis_required_ansible_collections)
+    mapfile -t collections < <(minirhis_required_ansible_collections)
 
     # Cache collection list once with timeout to avoid repeated Galaxy queries
     print_step "Querying local Ansible collection cache (timeout: ${timeout_sec}s)..."
@@ -15306,76 +15407,15 @@ ensure_installer_host_ansible_collections() {
 # 3. Fallback 2: Try: dnf install -y --skip-broken --allowerasing --best
 # 4. Fallback 3: dnf with base package without version
 # Returns 0 on any success; warns on all failures but doesn't exit
-python_requirement_is_installed() {
-    local pkg_base="$1"
-    local min_version="${2:-}"
-
-    [ -n "${pkg_base}" ] || return 1
-    if ! command -v python3 >/dev/null 2>&1; then
-        return 1
-    fi
-
-    timeout 15 python3 - "${pkg_base}" "${min_version}" >/dev/null 2>&1 <<'PY'
-import importlib.metadata as md
-import re
-import sys
-
-needle = sys.argv[1].strip().lower().replace("_", "-")
-min_version = (sys.argv[2].strip() if len(sys.argv) > 2 else "")
-if not needle:
-    raise SystemExit(1)
-
-def parse_numeric(ver: str):
-    nums = [int(n) for n in re.findall(r"\d+", ver or "")]
-    return nums
-
-def is_ge(installed: str, required: str):
-    a = parse_numeric(installed)
-    b = parse_numeric(required)
-    if not a or not b:
-        return False
-    length = max(len(a), len(b))
-    a.extend([0] * (length - len(a)))
-    b.extend([0] * (length - len(b)))
-    return a >= b
-
-for dist in md.distributions():
-    name = (dist.metadata.get("Name") or "").strip().lower().replace("_", "-")
-    if name == needle:
-        if not min_version:
-            raise SystemExit(0)
-        installed_version = (dist.version or "").strip()
-        raise SystemExit(0 if is_ge(installed_version, min_version) else 1)
-
-raise SystemExit(1)
-PY
-}
-
-extract_min_version_constraint() {
-    local pkg_spec="$1"
-    printf '%s' "${pkg_spec}" | sed -nE 's/.*>=\s*([^,; ]+).*/\1/p'
-}
-
 install_package_with_fallback() {
     local pkg_spec="$1"
-    local pkg_base pkg_min_version timeout_sec=60
+    local pkg_base pkg_version timeout_sec=60
     local use_pip=1
 
     # Extract base package name (before any version specifier like ==, >=, <=, ~=)
-    pkg_base="$(printf '%s' "${pkg_spec}" | sed -E 's/[><=!~].*//' | sed -E 's/\[.*\]//' | xargs)"
-    pkg_min_version="$(extract_min_version_constraint "${pkg_spec}")"
+    pkg_base="$(printf '%s' "${pkg_spec}" | sed -E 's/[><=!~].*//')"
 
     if [ -z "${pkg_spec}" ]; then
-        return 0
-    fi
-
-    # Skip install/upgrade when package is present and satisfies >= constraint (if provided).
-    if python_requirement_is_installed "${pkg_base}" "${pkg_min_version}"; then
-        if [ -n "${pkg_min_version}" ]; then
-            print_step "✓ Already installed (meets >=${pkg_min_version}): ${pkg_spec}"
-        else
-            print_step "✓ Already installed (skip): ${pkg_spec}"
-        fi
         return 0
     fi
 
@@ -15456,7 +15496,7 @@ install_dnf_package_with_fallback() {
 }
 
 main() {
-    init_rhis_run_logging
+    init_minirhis_run_logging
     print_minirhis_header
 
     parse_args "$@"
@@ -15469,7 +15509,7 @@ main() {
 
     # Show entry menu in interactive mode with no explicit action flag set.
     if ! is_noninteractive && \
-       [ -z "${CLI_DEMOKILL:-}${CLI_GENERATE_ENV:-}${CLI_VALIDATE:-}${CLI_STATUS:-}${CLI_TEST:-}${CLI_RHIS:-}${CLI_IDM:-}${CLI_SATELLITE:-}${CLI_AAP:-}${CLI_CAC:-}" ]; then
+       [ -z "${CLI_DEMOKILL:-}${CLI_GENERATE_ENV:-}${CLI_VALIDATE:-}${CLI_STATUS:-}${CLI_TEST:-}${CLI_MINIRHIS:-}${CLI_IDM:-}${CLI_SATELLITE:-}${CLI_AAP:-}" ]; then
         show_entry_menu
     fi
 
@@ -15479,7 +15519,7 @@ main() {
         demokill_cleanup || { print_warning "DEMOKILL failed"; exit 1; }
         print_success "Run complete"
         # Optional terminal reset for users who explicitly want it.
-        if is_enabled "${RHIS_DEMOKILL_RESET_TERMINAL:-0}"; then
+        if is_enabled "${MINIRHIS_DEMOKILL_RESET_TERMINAL:-0}"; then
             command -v reset >/dev/null 2>&1 && reset || true
         fi
         exit 0
@@ -15511,32 +15551,17 @@ main() {
     if [ -n "${CLI_STATUS:-}" ]; then
         print_phase 1 1 "Read-only status snapshot"
         print_runtime_configuration
-        print_rhis_health_summary
-        RHIS_DASHBOARD_SINGLE_SHOT=1
+        print_minirhis_health_summary
+        MINIRHIS_DASHBOARD_SINGLE_SHOT=1
         show_live_status_dashboard || true
-        RHIS_DASHBOARD_SINGLE_SHOT=0
+        MINIRHIS_DASHBOARD_SINGLE_SHOT=0
         print_success "Status snapshot complete"
         exit 0
     fi
 
-    # CLI-only fast path: --cac / --cac-idm / --cac-satellite / --cac-aap
-    # Skip all VM-creation setup (libvirt, ISO tools, etc.) because the nodes are
-    # already running.  Jump straight into config-as-code orchestration.
-    if [ -n "${CLI_CAC:-}" ]; then
-        print_runtime_configuration
-        RHIS_COMPONENT_SCOPE="${CLI_CAC_SCOPE:-all}" run_rhis_config_as_code
-        _cac_rc=$?
-        if [ "${_cac_rc}" -eq 0 ]; then
-            print_success "Config-as-code complete"
-        else
-            print_warning "Config-as-code did not finish cleanly (exit ${_cac_rc})"
-        fi
-        exit "${_cac_rc}"
-    fi
-
     # Component-specific CLI workflows: only prompt for component-specific vars
-    # Note: --rhis (full stack) is treated as non-component mode
-    if [ -z "$CLI_IDM" ] && [ -z "$CLI_SATELLITE" ] && [ -z "$CLI_AAP" ] || [ -n "$CLI_RHIS" ]; then
+    # Note: --minirhis (full stack) is treated as non-component mode
+    if [ -z "$CLI_IDM" ] && [ -z "$CLI_SATELLITE" ] && [ -z "$CLI_AAP" ] || [ -n "$CLI_MINIRHIS" ]; then
         # Full stack or menu-driven mode: prompt for all values
         prompt_all_env_options_once
     else
@@ -15551,7 +15576,7 @@ main() {
             prompt_all_env_options_once
         fi
     fi
-    RHIS_PROMPTS_COMPLETED=1
+    MINIRHIS_PROMPTS_COMPLETED=1
     FORCE_PROMPT_ALL=0
     normalize_shared_env_vars
     retire_preseed_env_file
@@ -15577,34 +15602,11 @@ main() {
     ensure_installer_host_ansible_collections || print_warning "Installer-host collection install encountered issues; continuing."
 
     if [ -n "${CLI_TEST:-}" ]; then
-        if rhis_run_test_suite; then
+        if minirhis_run_test_suite; then
             print_success "Run complete"
             exit 0
         fi
         exit 1
-    fi
-
-    # Direct CLI workflows: skip the menu system but keep normal prompting unless
-    # the user explicitly requested --non-interactive.
-    if [ -n "${CLI_RHIS:-}" ]; then
-        run_container_config_only || { print_warning "RHIS Full Stack workflow failed"; exit 1; }
-        print_success "Run complete"
-        exit 0
-    fi
-    if [ -n "${CLI_SATELLITE:-}" ]; then
-        install_satellite_only || { print_warning "Satellite-only workflow failed"; exit 1; }
-        print_success "Run complete"
-        exit 0
-    fi
-    if [ -n "${CLI_IDM:-}" ]; then
-        install_idm_only || { print_warning "IdM-only workflow failed"; exit 1; }
-        print_success "Run complete"
-        exit 0
-    fi
-    if [ -n "${CLI_AAP:-}" ]; then
-        install_aap_only || { print_warning "AAP-only workflow failed"; exit 1; }
-        print_success "Run complete"
-        exit 0
     fi
 
 	while true; do
@@ -15617,7 +15619,7 @@ main() {
                 ;;
         esac
 
-        if is_enabled "${RHIS_GUIDED_SCOPE_FLOW:-0}"; then
+        if is_enabled "${MINIRHIS_GUIDED_SCOPE_FLOW:-0}"; then
             run_guided_scope_workflow
             case "$?" in
                 0)
@@ -15640,7 +15642,7 @@ main() {
 		case "$choice" in
             1)
                 select_stack_sizing_profile || { print_warning "Could not determine sizing profile"; exit 1; }
-                run_container_config_only || { print_warning "RHIS Full Stack workflow failed"; exit 1; }
+                run_container_config_only || { print_warning "MINIRHIS Full Stack workflow failed"; exit 1; }
                 ;;
             2) show_standalone_components_submenu || { print_warning "Standalone components submenu failed"; exit 1; } ;;
             3) configure_platform_selection || { print_warning "Platform selection failed"; exit 1; } ;;

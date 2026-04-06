@@ -3,7 +3,7 @@ If we are not building with IdM, we need to add any alternate CA certs to the co
 If we cannot, we need to set validate_certs to false.
 
 Extend the Container ENTRYPOINT to accept:
-- project         - which rhis-builder repository we want to invoke
+- project         - which minirhis-builder repository we want to invoke
 - play            - [ main | run_role | run_task | run_role_task ]
 - role_name       - required when play is run_role or run_role_task
 - task_name       - required when play is run_task or run_role_task

@@ -128,7 +128,7 @@ container/vars/ssh/known_hosts
 container/vars/vault/.vaultpass.txt
 container/vars/vault/.vaultpass.container*
 container/vars/vault/env.yml
-container/vars/vault/rhis-ansible.cfg
+container/vars/vault/minirhis-ansible.cfg
 container/vars/vault/ansible-provisioner.log
 container/vars/vault/manifest.zip
 container/vars/vault/facts-cache/
@@ -141,7 +141,7 @@ container/version25.txt
 failed_packages.txt
 
 # Local helper scripts
-.sync-rhis.sh
+.sync-minirhis.sh
 .GitHubRepoManager.sh
 tools/hammer_time.sh
 

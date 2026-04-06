@@ -1,5 +1,5 @@
 ---
-# Consolidated Ansible requirements for all RHIS container roles
+# Consolidated Ansible requirements for all MINIRHIS container roles
 # This file includes all collections needed by satellite, idm, and aap builders
 #
 # Usage: ansible-galaxy collection install -r requirements.yml

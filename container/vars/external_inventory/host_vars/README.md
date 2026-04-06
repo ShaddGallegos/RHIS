@@ -1,6 +1,6 @@
 # host_vars — Ansible Inventory-Relative Host Variables
 
-These files are **auto-generated** by `MiniRHIS.sh` (`generate_rhis_host_vars()`)
+These files are **auto-generated** by `MiniRHIS.sh` (`generate_minirhis_host_vars()`)
 and placed here so Ansible discovers them automatically when using the inventory
 file at `container/vars/external_inventory/hosts.yml`.
 

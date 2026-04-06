@@ -6,4 +6,4 @@
 ansible_user: "{{ installer_user }}"
 # aap_remote_user is the admin account on the remote AAP VM, not the local operator
 aap_remote_user: "{{ admin_user | default('admin') }}"
-ansible_ssh_private_key_file: "{{ rhis_installer_ssh_private_key_file | default('/home/' ~ installer_user ~ '/.ssh/rhis-installer/id_rsa') }}"
+ansible_ssh_private_key_file: "{{ minirhis_installer_ssh_private_key_file | default('/home/' ~ installer_user ~ '/.ssh/minirhis-installer/id_rsa') }}"

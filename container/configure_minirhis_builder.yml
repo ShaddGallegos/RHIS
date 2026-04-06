@@ -1,51 +1,51 @@
 ---
 
-- name: "Configure rhis-builder projects"
+- name: "Configure minirhis-builder projects"
   hosts: localhost
   gather_facts: false
   vars:
-    rhis_root_dir: "/rhis"
-    default_inventory_link: "/rhis/vars/external_inventory"
-    default_external_tasks_link: "/rhis/vars/external_tasks"
-    default_files_link: "/rhis/vars/files"
-    default_group_link: "/rhis/vars/group_vars"
-    default_host_link: "/rhis/vars/host_vars"
-    default_template_link: "/rhis/vars/templates"
-    default_vars_link: "/rhis/vars/vars"
-    default_vault_link: "/rhis/vars/vault"
+    minirhis_root_dir: "/minirhis"
+    default_inventory_link: "/minirhis/vars/external_inventory"
+    default_external_tasks_link: "/minirhis/vars/external_tasks"
+    default_files_link: "/minirhis/vars/files"
+    default_group_link: "/minirhis/vars/group_vars"
+    default_host_link: "/minirhis/vars/host_vars"
+    default_template_link: "/minirhis/vars/templates"
+    default_vars_link: "/minirhis/vars/vars"
+    default_vault_link: "/minirhis/vars/vault"
     project_list:
-      - name: "rhis-builder-idm"
-        repo: "https://github.com/parmstro/rhis-builder-idm.git"
+      - name: "minirhis-builder-idm"
+        repo: "https://github.com/parmstro/minirhis-builder-idm.git"
         purge: true
-      - name: "rhis-builder-satellite"
-        repo: "https://github.com/parmstro/rhis-builder-satellite.git"
+      - name: "minirhis-builder-satellite"
+        repo: "https://github.com/parmstro/minirhis-builder-satellite.git"
         purge: true
-      - name: "rhis-builder-pipelines"
-        repo: "https://github.com/parmstro/rhis-builder-pipelines.git"
+      - name: "minirhis-builder-pipelines"
+        repo: "https://github.com/parmstro/minirhis-builder-pipelines.git"
         purge: true
-      - name: "rhis-builder-aap"
-        repo: "https://github.com/parmstro/rhis-builder-aap.git"
+      - name: "minirhis-builder-aap"
+        repo: "https://github.com/parmstro/minirhis-builder-aap.git"
         purge: true
-      - name: "rhis-builder-day-2-ops"
-        repo: "https://github.com/parmstro/rhis-builder-day-2-ops.git"
+      - name: "minirhis-builder-day-2-ops"
+        repo: "https://github.com/parmstro/minirhis-builder-day-2-ops.git"
         purge: true
-      - name: "rhis-builder-nbde"
-        repo: "https://github.com/parmstro/rhis-builder-nbde.git"
+      - name: "minirhis-builder-nbde"
+        repo: "https://github.com/parmstro/minirhis-builder-nbde.git"
         purge: true
-      - name: "rhis-builder-imagebuilder"
-        repo: "https://github.com/parmstro/rhis-builder-imagebuilder.git"
+      - name: "minirhis-builder-imagebuilder"
+        repo: "https://github.com/parmstro/minirhis-builder-imagebuilder.git"
         purge: true
-      - name: "rhis-builder-yubi"
-        repo: "https://github.com/parmstro/rhis-builder-yubi.git"
+      - name: "minirhis-builder-yubi"
+        repo: "https://github.com/parmstro/minirhis-builder-yubi.git"
         purge: true
-      - name: "rhis-builder-convert2rhel"
-        repo: "https://github.com/parmstro/rhis-builder-convert2rhel.git"
+      - name: "minirhis-builder-convert2rhel"
+        repo: "https://github.com/parmstro/minirhis-builder-convert2rhel.git"
         purge: true
-      - name: "rhis-builder-ansible-ee"
-        repo: "https://github.com/parmstro/rhis-builder-ansible-ee.git"
+      - name: "minirhis-builder-ansible-ee"
+        repo: "https://github.com/parmstro/minirhis-builder-ansible-ee.git"
         purge: true
-      - name: "rhis-builder-quadlet-deploy"
-        repo: "https://github.com/parmstro/rhis-builder-quadlet-deploy.git"
+      - name: "minirhis-builder-quadlet-deploy"
+        repo: "https://github.com/parmstro/minirhis-builder-quadlet-deploy.git"
         purge: true
 
   tasks:
@@ -53,7 +53,7 @@
     - name: "Clone each of the project to the container"  # noqa git[latest]  we always want the latest main when we build the container.
       ansible.builtin.git:
         repo: "{{ project.repo }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}"
         clone: true
         version: "main"
       loop: "{{ project_list }}"
@@ -63,7 +63,7 @@
     - name: "Delete any inventory for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/inventory"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/inventory"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -73,7 +73,7 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_inventory_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/inventory"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/inventory"
         state: link
         mode: "0644"
       loop: "{{ project_list }}"
@@ -83,7 +83,7 @@
     - name: "Delete any external_tasks directory for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/external_tasks"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/external_tasks"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -93,7 +93,7 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_external_tasks_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/external_tasks"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/external_tasks"
         state: link
         mode: "0644"
       loop: "{{ project_list }}"
@@ -103,7 +103,7 @@
     - name: "Delete the files directories for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/files"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/files"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -113,7 +113,7 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_files_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/files"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/files"
         state: link
         mode: "0644"
       loop: "{{ project_list }}"
@@ -123,7 +123,7 @@
     - name: "Delete the group_vars directories for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/group_vars"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/group_vars"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -133,7 +133,7 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_group_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/group_vars"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/group_vars"
         state: link
         mode: "0644"
       loop: "{{ project_list }}"
@@ -143,7 +143,7 @@
     - name: "Delete the host_vars directories for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/host_vars"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/host_vars"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -153,7 +153,7 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_host_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/host_vars"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/host_vars"
         state: link
         mode: "0644"
       loop: "{{ project_list }}"
@@ -163,7 +163,7 @@
     - name: "Delete the templates directories for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/templates"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/templates"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -173,7 +173,7 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_template_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/templates"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/templates"
         state: link
         mode: "0644"
         force: true
@@ -184,7 +184,7 @@
     - name: "Delete any vars directory for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/vars"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/vars"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -194,7 +194,7 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_vars_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/vars"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/vars"
         state: link
         mode: "0644"
       loop: "{{ project_list }}"
@@ -204,7 +204,7 @@
     - name: "Delete any vault directory for each project"
       when: project.purge
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/{{ project.name }}/vault"
+        path: "{{ minirhis_root_dir }}/{{ project.name }}/vault"
         state: absent
       loop: "{{ project_list }}"
       loop_control:
@@ -214,19 +214,19 @@
       when: project.purge
       ansible.builtin.file:
         src: "{{ default_vault_link }}"
-        dest: "{{ rhis_root_dir }}/{{ project.name }}/vault"
+        dest: "{{ minirhis_root_dir }}/{{ project.name }}/vault"
         state: link
         mode: "0644"
       loop: "{{ project_list }}"
       loop_control:
         loop_var: project
 
-    - name: "Delete any vault files for rhis-builder-inventory"
+    - name: "Delete any vault files for minirhis-builder-inventory"
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/rhis-builder-inventory/vault"
+        path: "{{ minirhis_root_dir }}/minirhis-builder-inventory/vault"
         state: absent
 
-    - name: "Delete any vault files for rhis-builder-inventory"
+    - name: "Delete any vault files for minirhis-builder-inventory"
       ansible.builtin.file:
-        path: "{{ rhis_root_dir }}/rhis-builder-pipelines/vmware/vars/vault.yml"
+        path: "{{ minirhis_root_dir }}/minirhis-builder-pipelines/vmware/vars/vault.yml"
         state: absent

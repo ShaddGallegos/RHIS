@@ -1,23 +1,23 @@
-# RHIS Ansible Inventory — Jinja-style template
-# This template is auto-rendered by run_rhis_install_sequence.sh into
+# MINIRHIS Ansible Inventory — Jinja-style template
+# This template is auto-rendered by run_minirhis_install_sequence.sh into
 # inventory/hosts using values from ~/.ansible/conf/env.yml and runtime host data.
 #
-# The rhis-provisioner container mounts this directory at:
-#   /rhis/vars/external_inventory/
+# The minirhis-provisioner container mounts this directory at:
+#   /minirhis/vars/external_inventory/
 # Playbooks reference the inventory as:
-#   --inventory /rhis/vars/external_inventory/hosts
+#   --inventory /minirhis/vars/external_inventory/hosts
 #
-# Group names must match what rhis-builder playbooks expect:
+# Group names must match what minirhis-builder playbooks expect:
 #   [ansibledev]        the KVM host / controller running this script
 #   [libvirt]           same host when using the libvirt platform
 #   [installer]         same as ansibledev for most deployments
 #   [scenario_satellite] the Satellite VM
-#   [sat_primary]       alias expected by rhis-builder-satellite
+#   [sat_primary]       alias expected by minirhis-builder-satellite
 #   [aap]               the AAP VM
-#   [aap_hosts]         alias expected by rhis-builder-aap
-#   [platform_installer] alias expected by rhis-builder-aap
+#   [aap_hosts]         alias expected by minirhis-builder-aap
+#   [platform_installer] alias expected by minirhis-builder-aap
 #   [idm]               the IdM VM
-#   [idm_primary]       alias expected by rhis-builder-idm
+#   [idm_primary]       alias expected by minirhis-builder-idm
 
 # Template placeholders rendered automatically:
 #   kaso.prod.spg 192.168.122.1 admin

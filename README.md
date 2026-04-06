@@ -2,7 +2,7 @@
 
 ## Synopsis
 
-RHIS stands for **Red Hat Infrastructure Standard**.
+MINIRHIS stands for **Red Hat Infrastructure Standard**.
 
 This repository is built around `MiniRHIS.sh` (MiniRHIS), an orchestration script for building and bootstrapping a Red Hat management lab on libvirt/KVM.
 
@@ -11,7 +11,7 @@ The current workflow focuses on:
 - **Red Hat Satellite 6.18**
 - **Red Hat Ansible Automation Platform 2.6**
 - **Red Hat Identity Management (IdM / FreeIPA)**
-- optional **RHIS container** deployment
+- optional **MINIRHIS container** deployment
 
 The script automates:
 
@@ -43,8 +43,8 @@ If you are starting fresh, review:
 - [VM provisioning behavior](#vm-provisioning-behavior)
 - [Virt-manager and libvirt setup](#virt-manager-and-libvirt-setup)
 - [DEMOKILL behavior](#demokill-behavior)
-- [RHIS CMDB / HTML dashboard](#rhis-cmdb--html-dashboard)
-- [RHIS Hardware Planning & Resource Management Guide (RHEL 10)](#rhis-hardware-planning--resource-management-guide-rhel-10)
+- [MINIRHIS CMDB / HTML dashboard](#minirhis-cmdb--html-dashboard)
+- [MINIRHIS Hardware Planning & Resource Management Guide (RHEL 10)](#minirhis-hardware-planning--resource-management-guide-rhel-10)
 - [Directory Structure & Configuration Files](#directory-structure--configuration-files)
 - [Important files](#important-files)
 - [Recommended run sequence](#recommended-run-sequence)
@@ -100,9 +100,9 @@ This keeps the installer host self-sufficient for the MiniRHIS workflow.
   - `./MiniRHIS.sh --container-config-only`
 - Retry behavior for transient failures:
   - Failed phases are retried once by default.
-  - Disable with `RHIS_RETRY_FAILED_PHASES_ONCE=0`.
+  - Disable with `MINIRHIS_RETRY_FAILED_PHASES_ONCE=0`.
 - Auto-sequence after menu option `2` can be disabled with:
-  - `RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0`
+  - `MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0`
 
 ### Recommended first run
 
@@ -151,12 +151,12 @@ The main workflow is:
 
 Environment toggles:
 
-- `RHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0` disables auto config-as-code after menu option `2`
-- `RHIS_RETRY_FAILED_PHASES_ONCE=0` disables automatic retry of failed config-as-code phases
+- `MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0` disables auto config-as-code after menu option `2`
+- `MINIRHIS_RETRY_FAILED_PHASES_ONCE=0` disables automatic retry of failed config-as-code phases
 - `RHC_AUTO_CONNECT=0` disables automatic `rhc connect` during guest kickstart `%post`
-- `RHIS_POST_VM_SETTLE_GRACE=650` default guest settle window before SSH preflight checks
-- `RHIS_INTERNAL_SSH_WARN_GRACE=<seconds>` delay before per-host warning logs (default `600`)
-- `RHIS_INTERNAL_SSH_LOG_EVERY=<seconds>` periodic preflight progress log cadence (default `60`)
+- `MINIRHIS_POST_VM_SETTLE_GRACE=650` default guest settle window before SSH preflight checks
+- `MINIRHIS_INTERNAL_SSH_WARN_GRACE=<seconds>` delay before per-host warning logs (default `600`)
+- `MINIRHIS_INTERNAL_SSH_LOG_EVERY=<seconds>` periodic preflight progress log cadence (default `60`)
 
 ### Command-line options
 
@@ -206,9 +206,9 @@ See [inventory/README.md](inventory/README.md) for template details.
 
 ### Generated Ansible runtime files
 
-RHIS now generates a host-side Ansible config for provisioner runs and mounts it into the container automatically:
+MINIRHIS now generates a host-side Ansible config for provisioner runs and mounts it into the container automatically:
 
-- `~/.ansible/conf/rhis-ansible.cfg` — generated RHIS Ansible runtime config
+- `~/.ansible/conf/minirhis-ansible.cfg` — generated MINIRHIS Ansible runtime config
 - `~/.ansible/conf/ansible-provisioner.log` — stable provisioner log file
 - `~/.ansible/conf/facts-cache/` — Ansible fact cache
 
@@ -232,7 +232,7 @@ subscription-manager repos --enable="rhel-10-for-x86_64-baseos-rpms" \
 Run one-shot container workflow without retries:
 
 ```bash
-RHIS_RETRY_FAILED_PHASES_ONCE=0 ./MiniRHIS.sh --container-config-only
+MINIRHIS_RETRY_FAILED_PHASES_ONCE=0 ./MiniRHIS.sh --container-config-only
 ```
 
 Re-open VM console monitors after boot:
@@ -297,13 +297,13 @@ Destroy demo resources and clean leftovers:
 
 [⬆ Back to top](#table-of-contents)
 
-RHIS can run on headless systems (no display/keyboard) using environment variables and command-line flags instead of interactive prompts.
+MINIRHIS can run on headless systems (no display/keyboard) using environment variables and command-line flags instead of interactive prompts.
 
 ### Quick Start: Headless Container + VMs Deployment
 
 ```bash
 # Create an environment file with all required values
-cat > /tmp/rhis-headless.env << 'EOF'
+cat > /tmp/minirhis-headless.env << 'EOF'
 # Core Credentials
 RH_USER="your-rhn-username"
 RH_PASS="your-rhn-password"
@@ -343,15 +343,15 @@ MGMT_NETWORK="10.168.128.0/24"
 
 # Feature Flags (optional - defaults shown)
 DEMO_MODE=0
-RHIS_ENABLE_POST_HEALTHCHECK=1
-RHIS_HEALTHCHECK_AUTOFIX=1
+MINIRHIS_ENABLE_POST_HEALTHCHECK=1
+MINIRHIS_HEALTHCHECK_AUTOFIX=1
 EOF
 
 # Run headless installation (Container + VMs + Config-as-Code)
 ./MiniRHIS.sh \
   --non-interactive \
   --menu-choice 5 \
-  --env-file /tmp/rhis-headless.env
+  --env-file /tmp/minirhis-headless.env
 ```
 
 **Expected Flow:**
@@ -449,13 +449,13 @@ MGMT_NETWORK="10.168.128.0/24"     # Internal network (default: auto-calc)
 
 ```bash
 # 1. Copy template
-cp rhis-headless.env.template /etc/rhis/headless.env
+cp minirhis-headless.env.template /etc/minirhis/headless.env
 
 # 2. Edit with your values
-nano /etc/rhis/headless.env
+nano /etc/minirhis/headless.env
 
 # 3. Run deployment
-source /etc/rhis/headless.env
+source /etc/minirhis/headless.env
 ./MiniRHIS.sh --non-interactive --menu-choice 5
 ```
 
@@ -512,19 +512,19 @@ chmod 644 ~/.ssh/id_rsa.pub
 
 ```bash
 # Monitor real-time logs
-tail -100f /var/log/rhis/rhis_install_*.log
+tail -100f /var/log/minirhis/minirhis_install_*.log
 
 # Check container execution
 podman ps -a
-podman logs -f rhis-provisioner
+podman logs -f minirhis-provisioner
 ```
 
 **Issue 4: Container fails to start**
 
 ```bash
 # Stop and remove old container
-podman stop rhis-provisioner 2>/dev/null || true
-podman rm rhis-provisioner 2>/dev/null || true
+podman stop minirhis-provisioner 2>/dev/null || true
+podman rm minirhis-provisioner 2>/dev/null || true
 
 # Re-run installer
 ./MiniRHIS.sh --non-interactive --menu-choice 5
@@ -546,8 +546,8 @@ ssh root@10.168.128.1 "ss -tlnp | grep :443"
 After deployment or if starting over:
 
 ```bash
-# Stop all RHIS services
-podman stop rhis-provisioner
+# Stop all MINIRHIS services
+podman stop minirhis-provisioner
 
 # Remove all VMs  
 for vm in satellite aap idm; do
@@ -556,7 +556,7 @@ for vm in satellite aap idm; do
 done
 
 # Remove container
-podman rm rhis-provisioner
+podman rm minirhis-provisioner
 
 # Start fresh
 ./MiniRHIS.sh --non-interactive --menu-choice 5
@@ -581,17 +581,17 @@ If IdM, Satellite, or AAP playbooks fail during deployment:
 ./MiniRHIS.sh --non-interactive --menu-choice 7
 ```
 
-**Option B: Re-run Full RHIS Installer**
+**Option B: Re-run Full MINIRHIS Installer**
 
 ```bash
 # Backup any important logs/configs:
-cp -r /var/log/rhis /var/log/rhis.backup.2026-03-24
+cp -r /var/log/minirhis /var/log/minirhis.backup.2026-03-24
 
 # Stop the container:
-podman rm -f rhis-provisioner
+podman rm -f minirhis-provisioner
 
 # Re-run the installer:
-cd ~/GIT/RHIS
+cd ~/GIT/MINIRHIS
 ./MiniRHIS.sh
 ```
 
@@ -599,16 +599,16 @@ cd ~/GIT/RHIS
 
 ```bash
 # Connect to provisioner container:
-podman exec -it -e ANSIBLE_DEBUG=1 rhis-provisioner /bin/bash
+podman exec -it -e ANSIBLE_DEBUG=1 minirhis-provisioner /bin/bash
 
 # Run IdM with verbose output:
-cd /rhis
+cd /minirhis
 ansible-playbook -vvv \
-  --inventory /rhis/vars/external_inventory/hosts \
-  --vault-password-file /rhis/vars/vault/.vaultpass.container \
-  --extra-vars @/rhis/vars/vault/env.yml \
+  --inventory /minirhis/vars/external_inventory/hosts \
+  --vault-password-file /minirhis/vars/vault/.vaultpass.container \
+  --extra-vars @/minirhis/vars/vault/env.yml \
   --limit scenario_idm \
-  /rhis/rhis-builder-idm/main.yml 2>&1 | tee /tmp/idm-playbook.log
+  /minirhis/minirhis-builder-idm/main.yml 2>&1 | tee /tmp/idm-playbook.log
 ```
 
 **Option D: Isolated Component Testing**
@@ -651,12 +651,12 @@ curl -k https://10.168.128.2/ && echo "✓  AAP web reached"
 | -------------- | --------------------------------------------------- |
 | `MiniRHIS.sh`  | Primary orchestration script                        |
 | `CHECKLIST.md` | Required user-provided inputs and where to get them |
-| `README.md`    | This document - complete RHIS documentation         |
+| `README.md`    | This document - complete MINIRHIS documentation         |
 | `LICENSE`      | License information                                 |
 
 ### Directory: `host_vars/`
 
-This directory is bind-mounted into the `rhis-provisioner` container at `/rhis/vars/host_vars/`.
+This directory is bind-mounted into the `minirhis-provisioner` container at `/minirhis/vars/host_vars/`.
 
 **Setup:** Copy each `*.SAMPLE` file to its actual name and fill in real values:
 
@@ -669,12 +669,12 @@ This directory is bind-mounted into the `rhis-provisioner` container at `/rhis/v
 
 ### Directory: `inventory/`
 
-This directory is bind-mounted into the `rhis-provisioner` container at `/rhis/vars/external_inventory/`.
+This directory is bind-mounted into the `minirhis-provisioner` container at `/minirhis/vars/external_inventory/`.
 
 **Setup:**
 
 1. Copy `hosts.SAMPLE` → `hosts` and fill in your actual hostnames and IPs.
-2. The `hosts` file is referenced by all rhis-builder playbooks.
+2. The `hosts` file is referenced by all minirhis-builder playbooks.
 
 **Group Names:**
 
@@ -875,14 +875,14 @@ IdM/Satellite phases can proceed first.
 
 ### AAP callback progress + fail-fast behavior
 
-While waiting for AAP SSH callback readiness, RHIS now reports live progress with:
+While waiting for AAP SSH callback readiness, MINIRHIS now reports live progress with:
 
 - VM state transitions (including power-state changes)
 - detected IP changes
 - SSH reachability transitions
 - periodic progress heartbeat with percent + ETA-style remaining time
 
-If callback state does not progress for a configured timeout window, RHIS now
+If callback state does not progress for a configured timeout window, MINIRHIS now
 fails fast so troubleshooting can begin immediately instead of waiting silently.
 
 Relevant environment controls:
@@ -923,7 +923,7 @@ The script can configure:
 - **external** — outbound connectivity, updates, remote access
 - **internal** — provisioning, orchestration, and management traffic
 
-This matches the intended RHIS lab design.
+This matches the intended MINIRHIS lab design.
 
 ---
 
@@ -941,12 +941,12 @@ It currently cleans up:
 - `OEMDRV.iso`
 - staged AAP bundle content
 - known lock files
-- RHIS temp/cache artifacts
-- stale RHIS node SSH trust entries in the installer host's `~/.ssh/known_hosts`
-- stale RHIS node hostname/IP comment lines in the installer host's `~/.ssh/authorized_keys`
+- MINIRHIS temp/cache artifacts
+- stale MINIRHIS node SSH trust entries in the installer host's `~/.ssh/known_hosts`
+- stale MINIRHIS node hostname/IP comment lines in the installer host's `~/.ssh/authorized_keys`
 - auto-opened console monitor windows
 - fallback `tmux` console sessions
-- known leftover processes from current or previous RHIS runs
+- known leftover processes from current or previous MINIRHIS runs
 
 It also:
 
@@ -959,16 +959,16 @@ Use this before retrying a build if a prior run failed or was interrupted.
 
 ---
 
-## RHIS CMDB / HTML dashboard
+## MINIRHIS CMDB / HTML dashboard
 
 [⬆ Back to top](#table-of-contents)
 
-The script includes bootstrap logic for a lightweight RHIS CMDB-style dashboard on the Satellite node using:
+The script includes bootstrap logic for a lightweight MINIRHIS CMDB-style dashboard on the Satellite node using:
 
 - `ansible-cmdb`
 - a simple Python HTTP server
 
-The intent is to provide a single-pane view of the RHIS nodes and related services.
+The intent is to provide a single-pane view of the MINIRHIS nodes and related services.
 
 ### Live Status Dashboard (menu option `8`)
 
@@ -998,17 +998,17 @@ Use:
 
 ### Ports used by the workflow
 
-- `3000/tcp` — RHIS container/web application
+- `3000/tcp` — MINIRHIS container/web application
 - `8080/tcp` — temporary AAP bundle HTTP server during provisioning
-- `18080/tcp` — RHIS CMDB / HTML dashboard on the Satellite node
+- `18080/tcp` — MINIRHIS CMDB / HTML dashboard on the Satellite node
 
 ---
 
-## RHIS Hardware Planning & Resource Management Guide (RHEL 10)
+## MINIRHIS Hardware Planning & Resource Management Guide (RHEL 10)
 
 [⬆ Back to top](#table-of-contents)
 
-This document consolidates the resource requirements, platform comparisons, overcommit strategies, and health-check commands for a Red Hat Infrastructure Setup (RHIS) consisting of **Satellite 6.18**, **Ansible Automation Platform (AAP) 2.6**, and **Identity Management (IdM)**.
+This document consolidates the resource requirements, platform comparisons, overcommit strategies, and health-check commands for a Red Hat Infrastructure Setup (MINIRHIS) consisting of **Satellite 6.18**, **Ansible Automation Platform (AAP) 2.6**, and **Identity Management (IdM)**.
 
 ---
 
@@ -1033,7 +1033,7 @@ These specifications are tailored for **RHEL 10** environments. Satellite and AA
 
 The hypervisor choice dictates how much "tax" is taken from your physical hardware before the VMs even boot.
 
-| Platform Type           | Examples                | CPU Overhead  | RAM Overhead    | Impact on RHIS                        |
+| Platform Type           | Examples                | CPU Overhead  | RAM Overhead    | Impact on MINIRHIS                        |
 | :---------------------- | :---------------------- | :------------ | :-------------- | :------------------------------------ |
 | **Type 1 (Bare Metal)** | ESXi, Nutanix, KVM      | Low (~2-5%)   | Fixed (~1-2GB)  | Most efficient for heavy stacks.      |
 | **Type 2 (Hosted)**     | Workstation, VirtualBox | Medium (~15%) | High (Host OS)  | Not recommended for production.       |
@@ -1048,7 +1048,7 @@ The hypervisor choice dictates how much "tax" is taken from your physical hardwa
 Overcommitting allows you to run more virtual resources than you have physical hardware, provided you follow these "Golden Ratios."
 
 - **vCPU Overcommit (3:1 to 5:1):** Generally safe. You can assign 3–5 vCPUs per physical core.
-- **RAM Overcommit (1:1):** Highly dangerous for RHIS. Satellite and AAP rely on PostgreSQL; if they are forced into swap, performance collapses.
+- **RAM Overcommit (1:1):** Highly dangerous for MINIRHIS. Satellite and AAP rely on PostgreSQL; if they are forced into swap, performance collapses.
 
 ### Sample Calculation: 64GB RAM / 12-Core (24 Thread) Host
 
@@ -1192,20 +1192,20 @@ When running `ansible-playbook` manually, keep the JSON extra-vars argument quot
 Before any manual re-run, ensure the provisioner container exists and is running:
 
 ```bash
-podman ps -a --format '{{.Names}} {{.Status}}' | grep -E '^rhis-provisioner\b' || echo 'Container missing: run menu option 2 first'
-podman start rhis-provisioner >/dev/null 2>&1 || true
+podman ps -a --format '{{.Names}} {{.Status}}' | grep -E '^minirhis-provisioner\b' || echo 'Container missing: run menu option 2 first'
+podman start minirhis-provisioner >/dev/null 2>&1 || true
 ```
 
 Example:
 
 ```bash
-podman exec -it rhis-provisioner ansible-playbook --inventory /rhis/vars/external_inventory/hosts --vault-password-file /rhis/vars/vault/.vaultpass.container --extra-vars @/rhis/vars/vault/env.yml --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}' --limit idm /rhis/rhis-builder-idm/main.yml
+podman exec -it minirhis-provisioner ansible-playbook --inventory /minirhis/vars/external_inventory/hosts --vault-password-file /minirhis/vars/vault/.vaultpass.container --extra-vars @/minirhis/vars/vault/env.yml --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}' --limit idm /minirhis/minirhis-builder-idm/main.yml
 ```
 
 If inventory/admin auth fails, use root-auth fallback explicitly:
 
 ```bash
-podman exec -it -e ANSIBLE_CONFIG=/rhis/vars/vault/rhis-ansible.cfg rhis-provisioner ansible-playbook --inventory /rhis/vars/external_inventory/hosts --vault-password-file /rhis/vars/vault/.vaultpass.container --extra-vars @/rhis/vars/vault/env.yml --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}' -e ansible_user=root -e ansible_password='<ROOT_PASS>' -e ansible_become=false --limit idm /rhis/rhis-builder-idm/main.yml
+podman exec -it -e ANSIBLE_CONFIG=/minirhis/vars/vault/minirhis-ansible.cfg minirhis-provisioner ansible-playbook --inventory /minirhis/vars/external_inventory/hosts --vault-password-file /minirhis/vars/vault/.vaultpass.container --extra-vars @/minirhis/vars/vault/env.yml --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}' -e ansible_user=root -e ansible_password='<ROOT_PASS>' -e ansible_become=false --limit idm /minirhis/minirhis-builder-idm/main.yml
 ```
 
 If configuration values are wrong, rerun:

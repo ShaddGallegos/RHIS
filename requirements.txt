@@ -1,4 +1,4 @@
-# Python requirements for RHIS container roles and Ansible automation
+# Python requirements for MINIRHIS container roles and Ansible automation
 # 
 # Core Ansible runtime and dependencies
 ansible>=2.14.0,<3.0.0

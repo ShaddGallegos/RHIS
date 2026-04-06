@@ -1,5 +1,5 @@
 ---
-# .ansible-lint — project-wide rules for RHIS
+# .ansible-lint — project-wide rules for MINIRHIS
 #
 # skip_list suppresses rules that would require renaming intentional public-
 # interface variables.  The satellite_url / satellite_username / satellite_password
