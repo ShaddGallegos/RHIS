@@ -31,9 +31,8 @@
 
 # This section is for your AAP Lightspeed host(s)
 # -----------------------------------------------------
-# [ansiblelightspeed]
-# lightspeed1.example.org
-# lightspeed2.example.org
+[ansiblelightspeed]
+{{AAP_LIGHTSPEED_HOST}}
 
 # This section is for your Ansible MCP Server host(s)
 # -----------------------------------------------------
@@ -93,22 +92,20 @@ eda_pg_password={{ADMIN_PASS}}
 # AAP Lightspeed
 # https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/appendix-inventory-files-vars#lightspeed-variables
 # -----------------------------------------------------
-# lightspeed_admin_password={{ADMIN_PASS}}
-# lightspeed_pg_host=externaldb.example.org
-# lightspeed_pg_password={{ADMIN_PASS}}
-
-# In case chatbot is enabled, the default provider is "rhoai"
-# lightspeed_chatbot_model_url=<set your own>
-# lightspeed_chatbot_model_api_key=<set your own>
-# lightspeed_chatbot_model_id=<set your own>
-
-# In case "azure" provider
-# lightspeed_chatbot_default_provider = "azure"
-
-# In case "openai" provider
-# lightspeed_chatbot_default_provider = "openai"
-
-# lightspeed_mcp_controller_enabled=true
-# lightspeed_mcp_lightspeed_enabled=true
-# lightspeed_wca_model_api_key=<set your own>
-# lightspeed_wca_model_id=<set your own>
+lightspeed_admin_user={{AAP_LIGHTSPEED_ADMIN_USER}}
+lightspeed_admin_password={{AAP_LIGHTSPEED_ADMIN_PASSWORD}}
+lightspeed_admin_email={{AAP_LIGHTSPEED_ADMIN_EMAIL}}
+lightspeed_pg_host={{AAP_LIGHTSPEED_PG_HOST}}
+lightspeed_pg_password={{AAP_LIGHTSPEED_PG_PASSWORD}}
+lightspeed_chatbot_model_url={{AAP_LIGHTSPEED_CHATBOT_MODEL_URL}}
+lightspeed_chatbot_model_api_key={{AAP_LIGHTSPEED_CHATBOT_MODEL_API_KEY}}
+lightspeed_chatbot_model_id={{AAP_LIGHTSPEED_CHATBOT_MODEL_ID}}
+lightspeed_chatbot_default_provider='{{AAP_LIGHTSPEED_CHATBOT_DEFAULT_PROVIDER}}'
+lightspeed_chatbot_model_extra_settings={{AAP_LIGHTSPEED_CHATBOT_MODEL_EXTRA_SETTINGS}}
+lightspeed_mcp_controller_enabled={{AAP_LIGHTSPEED_MCP_CONTROLLER_ENABLED}}
+lightspeed_mcp_lightspeed_enabled={{AAP_LIGHTSPEED_MCP_LIGHTSPEED_ENABLED}}
+lightspeed_wca_model_type='{{AAP_LIGHTSPEED_WCA_MODEL_TYPE}}'
+lightspeed_wca_model_url='{{AAP_LIGHTSPEED_WCA_MODEL_URL}}'
+lightspeed_wca_model_verify_ssl={{AAP_LIGHTSPEED_WCA_MODEL_VERIFY_SSL}}
+lightspeed_wca_model_enable_anonymization={{AAP_LIGHTSPEED_WCA_MODEL_ENABLE_ANONYMIZATION}}
+lightspeed_wca_health_check={{AAP_LIGHTSPEED_WCA_HEALTH_CHECK}}

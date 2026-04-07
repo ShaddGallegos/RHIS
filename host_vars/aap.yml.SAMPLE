@@ -7,6 +7,13 @@ ansible_become: true
 ansible_become_pass: "{{ global_admin_password }}"
 aap_admin_user: "admin"
 aap_admin_password: "{{ global_admin_password }}"
+# Standalone AAP model: gateway is a local container on this same AAP host.
+aap_single_host_mode: true
+aap_gateway_mode: "local-container"
+aap_gateway_host: "{{ aap_hostname | default('aap.prod.spg') }}"
+aap_gateway_url: "https://{{ aap_hostname | default('aap.prod.spg') }}/"
 platform_deployment_type: "container"
+aap_topology: "standalone"
 platform_installer_config:
 	deployment_type: "container"
+	topology: "standalone"
