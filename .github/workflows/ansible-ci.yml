@@ -1,10 +1,11 @@
+---
 name: Ansible CI
 
-on:
+"on":
   push:
-    branches: [main, master]
+    branches: [ main, master ]
   pull_request:
-    branches: [main, master]
+    branches: [ main, master ]
 
 jobs:
   syntax-and-lint:
@@ -14,23 +15,29 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.11"
 
       - name: Install Ansible tooling
         run: |
           python -m pip install --upgrade pip
-          pip install ansible-core ansible ansible-lint yamllint
+          pip install ansible-core ansible-lint yamllint
 
-      - name: Ansible syntax-check (minirhis_sat_config)
+      - name: Ansible syntax-check (configure_minirhis_builder)
         run: |
-          ansible-playbook --syntax-check reports/syntax_check_minirhis_sat_config.yml -i localhost,
+          ansible-playbook --syntax-check \
+            container/configure_minirhis_builder.yml \
+            -i localhost,
 
-      - name: Ansible syntax-check (minirhis_builder_satellite)
+      - name: YAML lint (tracked YAML files)
         run: |
-          ansible-playbook --syntax-check reports/syntax_check_minirhis_builder_satellite.yml -i localhost,
+          yamllint -d relaxed \
+            container/configure_minirhis_builder.yml \
+            container/requirements.yml \
+            container/vars/external_inventory/hosts.yml \
+            host_vars/*.SAMPLE
 
-      - name: Run ansible-lint on roles
+      - name: Run ansible-lint (configure_minirhis_builder)
         run: |
-          ansible-lint container/roles || true
+          ansible-lint container/configure_minirhis_builder.yml || true

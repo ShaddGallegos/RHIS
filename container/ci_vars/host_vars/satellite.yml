@@ -1,16 +1,8 @@
-# Minimal host vars for CI playbook run
-sat_ip: "10.168.128.1"
-sat_org: "REDHAT"
-sat_loc: "CORE"
-admin_user: "admin"
-satellite_url: "https://10.168.128.1"
+---
+# CI/CD host vars for Satellite — used by GitHub Actions workflows
+# Values are injected at runtime from GitHub Actions secrets / environment.
+# Do NOT hard-code IPs or URLs here.
 
-# Single source of truth for the admin password — update this one value
-sat_admin_pass: "{{ lookup('env', 'SAT_ADMIN_PASS') | default('') }}"
-
-# All other password fields reference the primary password
-global_admin_password: "{{ sat_admin_pass }}"
-ansible_user: "{{ admin_user }}"
-ansible_password: "{{ sat_admin_pass }}"
-satellite_username: "{{ admin_user }}"
-satellite_password: "{{ sat_admin_pass }}"
+sat_ip: "{{ lookup('env', 'SAT_IP') | default('') }}"
+satellite_url: >-
+  {{ 'https://' + (lookup('env', 'SAT_IP') | default('localhost')) }}

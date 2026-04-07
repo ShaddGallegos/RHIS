@@ -1,6 +1,6 @@
-# MINIRHIS Ansible Inventory — Jinja-style template
-# This template is auto-rendered by run_minirhis_install_sequence.sh into
-# inventory/hosts using values from ~/.ansible/conf/env.yml and runtime host data.
+# MINIRHIS Ansible Inventory — template
+# This file is auto-rendered by MiniRHIS.sh (generate_rhis_inventory) from
+# ~/.ansible/conf/env.yml.  Do NOT commit resolved host details here.
 #
 # The minirhis-provisioner container mounts this directory at:
 #   /minirhis/vars/external_inventory/
@@ -8,41 +8,41 @@
 #   --inventory /minirhis/vars/external_inventory/hosts
 #
 # Group names must match what minirhis-builder playbooks expect:
-#   [ansibledev]        the KVM host / controller running this script
-#   [libvirt]           same host when using the libvirt platform
-#   [installer]         same as ansibledev for most deployments
+#   [ansibledev]         the KVM host / controller running this script
+#   [libvirt]            same host when using the libvirt platform
+#   [installer]          same as ansibledev for most deployments
 #   [scenario_satellite] the Satellite VM
-#   [sat_primary]       alias expected by minirhis-builder-satellite
-#   [aap]               the AAP VM
-#   [aap_hosts]         alias expected by minirhis-builder-aap
+#   [sat_primary]        alias expected by minirhis-builder-satellite
+#   [aap]                the AAP VM
+#   [aap_hosts]          alias expected by minirhis-builder-aap
 #   [platform_installer] alias expected by minirhis-builder-aap
-#   [idm]               the IdM VM
-#   [idm_primary]       alias expected by minirhis-builder-idm
+#   [idm]                the IdM VM
+#   [idm_primary]        alias expected by minirhis-builder-idm
 
-# Template placeholders rendered automatically:
-#   kaso.prod.spg 192.168.122.1 admin
-#   satellite.prod.spg 10.168.128.1 aap.prod.spg 10.168.128.2
-#   idm.prod.spg 10.168.128.3 admin
+# Template placeholders rendered automatically by MiniRHIS.sh:
+#   {{CONTROLLER_HOST}} {{HOST_INT_IP}} {{INSTALLER_USER}}
+#   {{SAT_HOSTNAME}} {{SAT_IP}} {{AAP_HOSTNAME}} {{AAP_IP}}
+#   {{IDM_HOSTNAME}} {{IDM_IP}} {{ADMIN_USER}}
 
 # ─── Controller / KVM host ────────────────────────────────────────────────────
 [ansibledev]
-kaso.prod.spg
+{{CONTROLLER_HOST}}
 
 [libvirt]
-kaso.prod.spg
+{{CONTROLLER_HOST}}
 
 [installer]
-kaso.prod.spg ansible_host=192.168.122.1 ansible_user=admin ansible_become=true
+{{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
 
 # ─── Managed nodes ────────────────────────────────────────────────────────────
 [scenario_satellite]
-satellite.prod.spg ansible_host=10.168.128.1 ansible_user=admin ansible_become=true
+{{SAT_HOSTNAME}} ansible_host={{SAT_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
 
 [sat_primary:children]
 scenario_satellite
 
 [aap]
-aap.prod.spg ansible_host=10.168.128.2 ansible_user=admin ansible_become=true
+{{AAP_HOSTNAME}} ansible_host={{AAP_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
 
 [aap_hosts:children]
 aap
@@ -51,7 +51,7 @@ aap
 aap
 
 [idm]
-idm.prod.spg ansible_host=10.168.128.3 ansible_user=admin ansible_become=true
+{{IDM_HOSTNAME}} ansible_host={{IDM_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
 
 [idm_primary:children]
 idm

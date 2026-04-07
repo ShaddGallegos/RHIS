@@ -1,6 +1,6 @@
+---
 # aap.yml — SAMPLE host_vars for the AAP (Ansible Automation Platform) VM
 # Copy to host_vars/aap.yml and fill in real values.
-# ---
 
 ansible_user: "{{ admin_user | default('admin') }}"
 ansible_become: true
@@ -10,10 +10,10 @@ aap_admin_password: "{{ global_admin_password }}"
 # Standalone AAP model: gateway is a local container on this same AAP host.
 aap_single_host_mode: true
 aap_gateway_mode: "local-container"
-aap_gateway_host: "{{ aap_hostname | default('aap.prod.spg') }}"
-aap_gateway_url: "https://{{ aap_hostname | default('aap.prod.spg') }}/"
+aap_gateway_host: "{{ aap_hostname | default('aap.example.com') }}"
+aap_gateway_url: "https://{{ aap_hostname | default('aap.example.com') }}/"
 platform_deployment_type: "container"
 aap_topology: "standalone"
 platform_installer_config:
-	deployment_type: "container"
-	topology: "standalone"
+  deployment_type: "container"
+  topology: "standalone"

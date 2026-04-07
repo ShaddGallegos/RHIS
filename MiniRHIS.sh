@@ -69,6 +69,7 @@ CLI_CONTAINER_CONFIG_ONLY=""
 CLI_CONFIG_SCOPE=""
 CLI_ATTACH_CONSOLES=""
 CLI_STATUS=""
+CLI_STATUS_LIVE=""
 CLI_TEST=""
 CLI_TEST_PROFILE="full"
 CLI_VALIDATE=""
@@ -361,10 +362,12 @@ AAP_SSH_PUBLIC_KEY="${AAP_SSH_KEY_DIR}/id_rsa.pub"
 AAP_SETUP_LOG_LOCAL="${AAP_SETUP_LOG_LOCAL:-/tmp/aap-setup-$(date +%s).log}"
 MINIRHIS_VM_MONITOR_SESSION="${MINIRHIS_VM_MONITOR_SESSION:-minirhis-vm-consoles}"
 MINIRHIS_VM_MONITOR_PID_FILE="${MINIRHIS_VM_MONITOR_PID_FILE:-/tmp/minirhis-vm-console-pids-${USER}}"
+MINIRHIS_PROGRESS_MONITOR_PID_FILE="${MINIRHIS_PROGRESS_MONITOR_PID_FILE:-/tmp/minirhis-progress-monitor-pids-${USER}}"
 MINIRHIS_VM_WATCHDOG_PID=""
 # VM console monitor noise filter controls
 # 1 = suppress expected reboot chatter (e.g., journald SIGTERM during reboot)
 MINIRHIS_VM_MONITOR_FILTER_NOISE="${MINIRHIS_VM_MONITOR_FILTER_NOISE:-1}"
+MINIRHIS_AUTO_POPUP_MONITORS="${MINIRHIS_AUTO_POPUP_MONITORS:-1}"
 # rc.local bootstrap controls
 # 1 = ensure /etc/rc.d/rc.local is executable during kickstart/bootstrap
 MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC="${MINIRHIS_TEMP_ENABLE_RC_LOCAL_EXEC:-1}"
@@ -671,6 +674,7 @@ Options:
 
   --attach-consoles        Re-open VM console monitors for Satellite/AAP/IdM
     --status                 Read-only status snapshot (no provisioning changes)
+        --status-live            Live-refresh status dashboard (intended for monitor terminals)
   --reconfigure            Prompt for all env values and update env.yml
     --menutest              Interactive menu walkthrough (no provisioning/actions)
   --test[=fast|full]       Run a curated non-interactive test sweep and print a summary
@@ -2302,6 +2306,11 @@ parse_args() {
                 ;;
             --status)
                 CLI_STATUS="1"
+                CLI_NONINTERACTIVE="1"
+                RUN_ONCE=1
+                ;;
+            --status-live)
+                CLI_STATUS_LIVE="1"
                 CLI_NONINTERACTIVE="1"
                 RUN_ONCE=1
                 ;;
@@ -4078,6 +4087,85 @@ has_gui_desktop_session() {
     [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]
 }
 
+launch_gui_monitor_terminal() {
+    local title="$1"
+    local monitor_cmd="$2"
+    local pid_file="$3"
+    local term_pid=""
+
+    [ -n "${title:-}" ] || return 1
+    [ -n "${monitor_cmd:-}" ] || return 1
+    has_gui_desktop_session || return 1
+
+    if command -v konsole >/dev/null 2>&1; then
+        konsole --title "${title}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
+        term_pid=$!
+    elif command -v gnome-terminal >/dev/null 2>&1; then
+        gnome-terminal --title="${title}" -- bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
+        term_pid=$!
+    elif command -v x-terminal-emulator >/dev/null 2>&1; then
+        x-terminal-emulator -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
+        term_pid=$!
+    elif command -v xterm >/dev/null 2>&1; then
+        xterm -T "${title}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
+        term_pid=$!
+    else
+        return 1
+    fi
+
+    if [ -n "${pid_file:-}" ] && [ -n "${term_pid:-}" ]; then
+        echo "${term_pid}" >> "${pid_file}"
+    fi
+
+    return 0
+}
+
+stop_progress_monitors() {
+    local pid
+
+    if [ -f "${MINIRHIS_PROGRESS_MONITOR_PID_FILE}" ]; then
+        while IFS= read -r pid; do
+            [ -n "$pid" ] || continue
+            kill "$pid" >/dev/null 2>&1 || true
+            kill -9 "$pid" >/dev/null 2>&1 || true
+        done < "${MINIRHIS_PROGRESS_MONITOR_PID_FILE}"
+        rm -f "${MINIRHIS_PROGRESS_MONITOR_PID_FILE}"
+    fi
+
+    return 0
+}
+
+launch_progress_dashboard_auto() {
+    local dashboard_cmd=""
+
+    is_enabled "${MINIRHIS_AUTO_POPUP_MONITORS:-1}" || return 0
+
+    stop_progress_monitors >/dev/null 2>&1 || true
+    : > "${MINIRHIS_PROGRESS_MONITOR_PID_FILE}"
+
+    dashboard_cmd="printf '\033]0;%s\007' 'MINIRHIS Progress'; cd '${SCRIPT_DIR}'; exec bash '${SCRIPT_DIR}/MiniRHIS.sh' --status-live"
+
+    if launch_gui_monitor_terminal "MINIRHIS Progress" "${dashboard_cmd}" "${MINIRHIS_PROGRESS_MONITOR_PID_FILE}"; then
+        print_step "Opened progress monitor terminal for MINIRHIS status/logs."
+        return 0
+    fi
+
+    if ! has_gui_desktop_session; then
+        print_headless_monitor_summary
+        return 0
+    fi
+
+    print_warning "No GUI terminal emulator found; skipping progress monitor launch."
+    return 0
+}
+
+ensure_live_progress_monitors() {
+    is_enabled "${MINIRHIS_AUTO_POPUP_MONITORS:-1}" || return 0
+    launch_progress_dashboard_auto || true
+    reattach_vm_consoles || true
+    return 0
+}
+
 print_headless_monitor_summary() {
     if is_enabled "${MINIRHIS_HEADLESS_MONITOR_HINT_SHOWN:-0}"; then
         return 0
@@ -4116,7 +4204,6 @@ launch_single_vm_console_monitor_auto() {
     local vm="$1"
     local vm_label
     local launched=0
-    local term_pid
     local monitor_cmd
     local console_attach_cmd
 
@@ -4134,25 +4221,7 @@ launch_single_vm_console_monitor_auto() {
     fi
 
     if has_gui_desktop_session; then
-        if command -v gnome-terminal >/dev/null 2>&1; then
-            gnome-terminal --title="${vm_label}" -- bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-            term_pid=$!
-            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
-            launched=1
-        elif command -v x-terminal-emulator >/dev/null 2>&1; then
-            x-terminal-emulator -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-            term_pid=$!
-            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
-            launched=1
-        elif command -v konsole >/dev/null 2>&1; then
-            konsole --title "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-            term_pid=$!
-            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
-            launched=1
-        elif command -v xterm >/dev/null 2>&1; then
-            xterm -T "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-            term_pid=$!
-            echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
+        if launch_gui_monitor_terminal "${vm_label}" "${monitor_cmd}" "${MINIRHIS_VM_MONITOR_PID_FILE}"; then
             launched=1
         fi
     fi
@@ -4175,9 +4244,7 @@ launch_single_vm_console_monitor_auto() {
 launch_vm_console_monitors_auto() {
     local -a vms=("satellite" "aap" "idm")
     local vm vm_label launched=0
-    local term_pid
     local monitor_cmd
-    local monitor_cmd_escaped
     local console_attach_cmd
 
     stop_vm_console_monitors >/dev/null 2>&1 || true
@@ -4190,47 +4257,14 @@ launch_vm_console_monitors_auto() {
 
     # GUI terminal popups (preferred)
     if has_gui_desktop_session; then
-        if command -v gnome-terminal >/dev/null 2>&1; then
-            for vm in "${vms[@]}"; do
-                vm_label="$(get_vm_console_label "${vm}")"
-                console_attach_cmd="$(console_attach_cmd_for_vm "${vm}")"
-                monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
-                gnome-terminal --title="${vm_label}" -- bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-                term_pid=$!
-                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
-            done
-            launched=1
-        elif command -v x-terminal-emulator >/dev/null 2>&1; then
-            for vm in "${vms[@]}"; do
-                vm_label="$(get_vm_console_label "${vm}")"
-                console_attach_cmd="$(console_attach_cmd_for_vm "${vm}")"
-                monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
-                x-terminal-emulator -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-                term_pid=$!
-                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
-            done
-            launched=1
-        elif command -v konsole >/dev/null 2>&1; then
-            for vm in "${vms[@]}"; do
-                vm_label="$(get_vm_console_label "${vm}")"
-                console_attach_cmd="$(console_attach_cmd_for_vm "${vm}")"
-                monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
-                konsole --title "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-                term_pid=$!
-                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
-            done
-            launched=1
-        elif command -v xterm >/dev/null 2>&1; then
-            for vm in "${vms[@]}"; do
-                vm_label="$(get_vm_console_label "${vm}")"
-                console_attach_cmd="$(console_attach_cmd_for_vm "${vm}")"
-                monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
-                xterm -T "${vm_label}" -e bash -lc "${monitor_cmd}" >/dev/null 2>&1 &
-                term_pid=$!
-                echo "$term_pid" >> "${MINIRHIS_VM_MONITOR_PID_FILE}"
-            done
-            launched=1
-        fi
+        for vm in "${vms[@]}"; do
+            vm_label="$(get_vm_console_label "${vm}")"
+            console_attach_cmd="$(console_attach_cmd_for_vm "${vm}")"
+            monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
+            if launch_gui_monitor_terminal "${vm_label}" "${monitor_cmd}" "${MINIRHIS_VM_MONITOR_PID_FILE}"; then
+                launched=1
+            fi
+        done
     fi
 
     if [ "$launched" = "1" ]; then
@@ -7394,9 +7428,11 @@ satellite-installer --scenario satellite \
         print_step "Local ${USER} repo selected: skipping mandatory provisioner container bootstrap."
     fi
 
-    # Auto-reattach VM consoles so progress can be observed during configuration.
-    # In non-interactive mode this is skipped to avoid spawning terminals/tmux unexpectedly.
-    if ! is_noninteractive && [ "${use_local_exec}" -eq 0 ]; then
+    # Keep visible progress terminals attached for both VM console output and
+    # Ansible/script activity whenever a GUI desktop session is available.
+    ensure_live_progress_monitors || true
+
+    if [ "${use_local_exec}" -eq 0 ]; then
         case "${component_scope}" in
             satellite)
                 launch_single_vm_console_monitor_auto "satellite" || print_warning "Automatic Satellite console reattach failed; continuing config-as-code."
@@ -14725,6 +14761,7 @@ cleanup_minirhis_lock_files() {
 create_minirhis_vms() {
     print_phase 1 8 "Provision VM artifacts and prerequisites"
     print_step "Preparing Satellite / AAP / IdM qcow2 VMs"
+    ensure_live_progress_monitors || true
     prompt_use_existing_env
     normalize_shared_env_vars
     validate_resolved_kickstart_inputs || return 1
@@ -16156,10 +16193,21 @@ main() {
         exit 0
     fi
 
+    if [ -n "${CLI_STATUS_LIVE:-}" ]; then
+        print_phase 1 1 "Live status dashboard"
+        print_runtime_configuration
+        print_minirhis_health_summary
+        MINIRHIS_DASHBOARD_SINGLE_SHOT=0
+        show_live_status_dashboard || true
+        print_success "Live status dashboard closed"
+        exit 0
+    fi
+
     # CLI-only fast path: reopen VM console monitors without prompts.
     if [ -n "${CLI_ATTACH_CONSOLES:-}" ]; then
         print_phase 1 1 "Reattach VM console monitors"
         ensure_libvirt_access || print_warning "libvirt access check failed; console reattach may not work until access is fixed."
+        launch_progress_dashboard_auto || true
         reattach_vm_consoles || {
             print_warning "Console reattach failed"
             exit 1

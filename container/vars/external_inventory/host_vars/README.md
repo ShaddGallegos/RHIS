@@ -2,26 +2,36 @@
 
 These files are **auto-generated** by `MiniRHIS.sh` (`generate_minirhis_host_vars()`)
 and placed here so Ansible discovers them automatically when using the inventory
-file at `container/vars/external_inventory/hosts.yml`.
+at `container/vars/external_inventory/hosts.yml`.
 
-Per Ansible convention, each file is named after the **host** it applies to:
+Per Ansible convention, each file is named after the **host** it applies to —
+the FQDN of the VM as set in `~/.ansible/conf/env.yml`.
+
+## Generated filenames (examples)
 
 | File                     | Host         |
 | ------------------------ | ------------ |
-| `satellite.prod.spg.yml` | Satellite VM |
-| `aap.prod.spg.yml`       | AAP VM       |
-| `idm.prod.spg.yml`       | IdM VM       |
+| `satellite.<domain>.yml` | Satellite VM |
+| `aap.<domain>.yml`       | AAP VM       |
+| `idm.<domain>.yml`       | IdM VM       |
+
+The `<domain>` part is the `DOMAIN` value you set during `./MiniRHIS.sh --reconfigure`.
 
 ## Source of truth
 
 All values come from `~/.ansible/conf/env.yml` (ansible-vault encrypted).
 Edit via `./MiniRHIS.sh --reconfigure` — do NOT edit these files directly.
 
-## Security
+## Security / git tracking
 
-Do **not** commit these files — they contain resolved IPs and credentials.
-`.gitignore` excludes this directory (covered by `container/vars/external_inventory/`
-gitignore patterns are not set — these are intentionally tracked as generated
-artifacts when running standalone builder workflows).
+**Do NOT commit these files.**  They contain resolved IPs, FQDNs, and path
+references specific to your deployment.
 
-> **Note:** Passwords are vault references (`{{ sat_admin_pass }}`), not plaintext.
+`.gitignore` excludes this directory with:
+
+```gitignore
+container/vars/external_inventory/host_vars/*.yml
+!container/vars/external_inventory/host_vars/README.md
+```
+
+Passwords stored here are vault references (`{{ sat_admin_pass }}`), not plaintext.

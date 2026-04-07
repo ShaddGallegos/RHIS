@@ -112,6 +112,7 @@ Thumbs.db
 host_vars/**
 !host_vars/**/
 !host_vars/**/*[sS][aA][mM][pP][lL][eE]*
+!host_vars/README.md
 
 inventory/**
 !inventory/**/
@@ -122,6 +123,15 @@ inventory/**
 container/roles/**
 
 # MiniRHIS runtime secrets and generated container-side artifacts
+# Generated per-deployment host_vars (Ansible auto-resolves by FQDN hostname).
+# Created by generate_minirhis_host_vars() — do NOT commit these files.
+container/vars/external_inventory/host_vars/*.yml
+!container/vars/external_inventory/host_vars/README.md
+
+# Generated inventory files that may contain resolved live values — keep only
+# the placeholder template variants (hosts / hosts.yml) tracked.
+container/vars/external_inventory/hosts.generated
+
 container/vars/ssh/id_rsa
 container/vars/ssh/id_rsa.pub
 container/vars/ssh/known_hosts
