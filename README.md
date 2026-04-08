@@ -365,7 +365,7 @@ EOF
 
 ### Required Environment Variables
 
-**Authentication (Required)**
+### Authentication (Required)
 
 ```bash
 RH_USER="<Red Hat CDN username>"
@@ -374,7 +374,7 @@ ADMIN_USER="<local admin user>"
 ADMIN_PASS="<local admin password>"
 ```
 
-**IdM Configuration (Required for Options 3-5)**
+### IdM Configuration (Required for Options 3-5)
 
 ```bash
 IDM_IP="10.168.128.3"              # Static IP on internal network
@@ -386,7 +386,7 @@ DOMAIN="example.com"               # Base domain
 IDM_DS_PASS="secure-password"      # Directory Service password
 ```
 
-**Satellite Configuration (Required for Options 3-5)**
+### Satellite Configuration (Required for Options 3-5)
 
 ```bash
 SAT_IP="10.168.128.1"              # Static IP
@@ -397,7 +397,7 @@ SAT_ORG="Default_Organization"     # Satellite org name
 SAT_LOC="Default_Location"         # Satellite location
 ```
 
-**AAP Configuration (Required for Options 3-5)**
+## AAP Configuration (Required for Options 3-5)
 
 ```bash
 AAP_IP="10.168.128.2"              # Static IP
@@ -409,7 +409,7 @@ AAP_ADMIN_EMAIL="admin@example.com"
 HUB_TOKEN="<your-hub-token>"       # Automation Hub token
 ```
 
-**Network Configuration (Optional)**
+### Network Configuration (Optional)
 
 ```bash
 HOST_EXT_IP="192.168.1.100"        # External NIC IP (default: auto-detect)
@@ -482,7 +482,7 @@ source /etc/minirhis/headless.env
 
 ### Common Issues & Solutions
 
-**Issue 1: "NONINTERACTIVE mode requires X to be set"**
+#### Issue 1: "NONINTERACTIVE mode requires X to be set"
 
 ```bash
 # Check which variable is missing
@@ -494,7 +494,7 @@ export RH_PASS="password"
 export ADMIN_PASS="password"
 ```
 
-**Issue 2: "Cannot reach aap via SSH"**
+#### Issue 2: "Cannot reach aap via SSH"
 
 ```bash
 # Check VM status
@@ -508,7 +508,7 @@ chmod 600 ~/.ssh/id_rsa
 chmod 644 ~/.ssh/id_rsa.pub
 ```
 
-**Issue 3: Installation hangs with no output**
+#### Issue 3: Installation hangs with no output
 
 ```bash
 # Monitor real-time logs
@@ -519,7 +519,7 @@ podman ps -a
 podman logs -f minirhis-provisioner
 ```
 
-**Issue 4: Container fails to start**
+#### Issue 4: Container fails to start
 
 ```bash
 # Stop and remove old container
@@ -530,7 +530,7 @@ podman rm minirhis-provisioner 2>/dev/null || true
 ./MiniRHIS.sh --non-interactive --menu-choice 5
 ```
 
-**Issue 5: "Failed to reach Satellite/IdM web UI"**
+#### Issue 5: "Failed to reach Satellite/IdM web UI"
 
 ```bash
 # Check service status
@@ -572,16 +572,16 @@ podman rm minirhis-provisioner
 
 If IdM, Satellite, or AAP playbooks fail during deployment:
 
-**Recovery Procedures**
+## Recovery Procedures
 
-**Option A: Retry Config-as-Code (Recommended - Simple)**
+### Option A: Retry Config-as-Code (Recommended - Simple)
 
 ```bash
 # Re-run the config-as-code phases
 ./MiniRHIS.sh --non-interactive --menu-choice 7
 ```
 
-**Option B: Re-run Full MINIRHIS Installer**
+### Option B: Re-run Full MINIRHIS Installer
 
 ```bash
 # Backup any important logs/configs:
@@ -595,7 +595,7 @@ cd ~/GIT/MINIRHIS
 ./MiniRHIS.sh
 ```
 
-**Option C: Manual Phase Re-execution**
+### Option C: Manual Phase Re-execution
 
 ```bash
 # Connect to provisioner container:
@@ -611,7 +611,7 @@ ansible-playbook -vvv \
   /minirhis/minirhis-builder-idm/main.yml 2>&1 | tee /tmp/idm-playbook.log
 ```
 
-**Option D: Isolated Component Testing**
+### Option D: Isolated Component Testing
 
 ```bash
 # Test IdM SSH connectivity and basic services:
@@ -651,7 +651,7 @@ curl -k https://10.168.128.2/ && echo "✓  AAP web reached"
 | -------------- | --------------------------------------------------- |
 | `MiniRHIS.sh`  | Primary orchestration script                        |
 | `CHECKLIST.md` | Required user-provided inputs and where to get them |
-| `README.md`    | This document - complete MINIRHIS documentation         |
+| `README.md`    | This document - complete MINIRHIS documentation     |
 | `LICENSE`      | License information                                 |
 
 ### Directory: `host_vars/`
@@ -1033,7 +1033,7 @@ These specifications are tailored for **RHEL 10** environments. Satellite and AA
 
 The hypervisor choice dictates how much "tax" is taken from your physical hardware before the VMs even boot.
 
-| Platform Type           | Examples                | CPU Overhead  | RAM Overhead    | Impact on MINIRHIS                        |
+| Platform Type           | Examples                | CPU Overhead  | RAM Overhead    | Impact on MINIRHIS                    |
 | :---------------------- | :---------------------- | :------------ | :-------------- | :------------------------------------ |
 | **Type 1 (Bare Metal)** | ESXi, Nutanix, KVM      | Low (~2-5%)   | Fixed (~1-2GB)  | Most efficient for heavy stacks.      |
 | **Type 2 (Hosted)**     | Workstation, VirtualBox | Medium (~15%) | High (Host OS)  | Not recommended for production.       |

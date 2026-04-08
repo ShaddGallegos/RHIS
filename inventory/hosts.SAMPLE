@@ -11,6 +11,7 @@
 #   [ansibledev]        the KVM host / controller running this script
 #   [libvirt]           same host when using the libvirt platform
 #   [installer]         same as ansibledev for most deployments
+#   [rhis_nodes]        compatibility alias for all managed nodes
 #   [scenario_satellite] the Satellite VM
 #   [sat_primary]       alias expected by minirhis-builder-satellite
 #   [aap]               the AAP VM
@@ -35,6 +36,11 @@
 {{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
 
 # ─── Managed nodes ────────────────────────────────────────────────────────────
+[rhis_nodes:children]
+scenario_satellite
+aap
+idm
+
 [scenario_satellite]
 {{SAT_HOSTNAME}} ansible_host={{SAT_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
 

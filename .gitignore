@@ -161,3 +161,6 @@ docs/
 # Local reports and sweep artifacts
 reports/
 hammers_sweep_report.md
+
+# Local/generated model training artifacts
+training_data/

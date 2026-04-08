@@ -1,0 +1,246 @@
+cmdb_dashboard:
+  title: "MiniRHIS Historical CMDB Dashboard"
+  generated_at: "2026-04-08T15:30:00Z"
+  history_window: "30d"
+  endpoint_ip: "10.168.128.4"
+  endpoint_port: 18080
+  summary:
+    total_nodes: 4
+    critical_nodes: 1
+    avg_cpu_pct: 52
+    avg_mem_pct: 68
+    max_disk_pct: 81
+    avg_load_1m: 2.7
+    capacity_state: "watch"
+    capacity_message: "Memory pressure is trending upward on AAP; plan scale review
+      within 14 days."
+    recommendation_horizon: "14d"
+  global_trends:
+    - title: "Fleet CPU trend"
+      summary: "Slow upward slope over last 30d"
+      color: "#65c2ff"
+      series: [ 24, 32, 39, 35, 41, 47, 45, 52, 58, 61 ]
+    - title: "Fleet memory trend"
+      summary: "AAP and Satellite drive most growth"
+      color: "#88f0d5"
+      series: [ 41, 43, 45, 49, 51, 56, 60, 64, 66, 68 ]
+  forecasts:
+    - node: "aap.prod.spg"
+      resource: "+8 GB RAM"
+      reason: "Memory utilization likely to exceed 80% in 10-14 days based on current
+        slope."
+      eta: "10d"
+      priority: "high"
+    - node: "satellite.prod.spg"
+      resource: "+100 GB storage"
+      reason: "Content and CMDB history growth suggest /var capacity review before
+        next content expansion."
+      eta: "21d"
+      priority: "medium"
+  nodes:
+    - name: "satellite.prod.spg"
+      role: "Satellite"
+      ip: "10.168.128.1"
+      environment: "demo"
+      vcpu: 8
+      memory_gb: 24
+      disk_gb: 150
+      capacity_state: "watch"
+      capacity_message: "Disk growth requires planning."
+      thresholds:
+        cpu_warn: 75
+        mem_warn: 80
+        disk_warn: 80
+      latest:
+        cpu_pct: 54
+        mem_pct: 71
+        disk_pct: 81
+        load_1m: 2.3
+      trend:
+        cpu_slope: "+0.7%/day"
+        mem_slope: "+0.5%/day"
+        disk_slope: "+0.9%/day"
+      services:
+        - name: "foreman"
+          status: "up"
+        - name: "foreman-proxy"
+          status: "up"
+        - name: "minirhis-cmdb"
+          status: "up"
+      recommendations:
+        - "Review storage expansion for historical CMDB retention and Satellite
+          content growth."
+        - "Keep CMDB service on dedicated internal endpoint 10.168.128.4 when
+          implemented."
+      snapshots:
+        - ts: "2026-03-30T00:00:00Z"
+          cpu_pct: 38
+          mem_pct: 60
+          disk_pct: 72
+          load_1m: 1.6
+        - ts: "2026-04-01T00:00:00Z"
+          cpu_pct: 42
+          mem_pct: 63
+          disk_pct: 74
+          load_1m: 1.8
+        - ts: "2026-04-03T00:00:00Z"
+          cpu_pct: 47
+          mem_pct: 67
+          disk_pct: 77
+          load_1m: 2.0
+        - ts: "2026-04-05T00:00:00Z"
+          cpu_pct: 49
+          mem_pct: 69
+          disk_pct: 79
+          load_1m: 2.1
+        - ts: "2026-04-08T00:00:00Z"
+          cpu_pct: 54
+          mem_pct: 71
+          disk_pct: 81
+          load_1m: 2.3
+    - name: "aap.prod.spg"
+      role: "AAP"
+      ip: "10.168.128.2"
+      environment: "demo"
+      vcpu: 8
+      memory_gb: 16
+      disk_gb: 120
+      capacity_state: "scale-now"
+      capacity_message: "Memory growth suggests near-term scale-up."
+      thresholds:
+        cpu_warn: 75
+        mem_warn: 80
+        disk_warn: 80
+      latest:
+        cpu_pct: 68
+        mem_pct: 82
+        disk_pct: 58
+        load_1m: 3.6
+      trend:
+        cpu_slope: "+1.2%/day"
+        mem_slope: "+1.4%/day"
+        disk_slope: "+0.4%/day"
+      services:
+        - name: "automationcontroller"
+          status: "up"
+        - name: "automationgateway"
+          status: "up"
+        - name: "automationhub"
+          status: "degraded"
+      recommendations:
+        - "Increase memory before additional job templates, execution
+          environments, or collection sync load."
+        - "Track Automation Hub upload peaks separately from controller web/task
+          utilization."
+      snapshots:
+        - ts: "2026-03-30T00:00:00Z"
+          cpu_pct: 44
+          mem_pct: 60
+          disk_pct: 49
+          load_1m: 1.7
+        - ts: "2026-04-01T00:00:00Z"
+          cpu_pct: 49
+          mem_pct: 65
+          disk_pct: 51
+          load_1m: 2.1
+        - ts: "2026-04-03T00:00:00Z"
+          cpu_pct: 56
+          mem_pct: 72
+          disk_pct: 54
+          load_1m: 2.7
+        - ts: "2026-04-05T00:00:00Z"
+          cpu_pct: 63
+          mem_pct: 78
+          disk_pct: 56
+          load_1m: 3.2
+        - ts: "2026-04-08T00:00:00Z"
+          cpu_pct: 68
+          mem_pct: 82
+          disk_pct: 58
+          load_1m: 3.6
+    - name: "idm.prod.spg"
+      role: "IdM"
+      ip: "10.168.128.3"
+      environment: "demo"
+      vcpu: 4
+      memory_gb: 8
+      disk_gb: 80
+      capacity_state: "ok"
+      capacity_message: "Stable utilization."
+      thresholds:
+        cpu_warn: 75
+        mem_warn: 80
+        disk_warn: 80
+      latest:
+        cpu_pct: 34
+        mem_pct: 55
+        disk_pct: 44
+        load_1m: 0.9
+      trend:
+        cpu_slope: "+0.2%/day"
+        mem_slope: "+0.3%/day"
+        disk_slope: "+0.1%/day"
+      services:
+        - name: "ipa"
+          status: "up"
+        - name: "dns"
+          status: "up"
+        - name: "httpd"
+          status: "up"
+      recommendations:
+        - "No immediate scaling action. Maintain baseline history collection."
+      snapshots:
+        - ts: "2026-03-30T00:00:00Z"
+          cpu_pct: 28
+          mem_pct: 48
+          disk_pct: 41
+          load_1m: 0.6
+        - ts: "2026-04-01T00:00:00Z"
+          cpu_pct: 29
+          mem_pct: 50
+          disk_pct: 41
+          load_1m: 0.7
+        - ts: "2026-04-03T00:00:00Z"
+          cpu_pct: 31
+          mem_pct: 52
+          disk_pct: 42
+          load_1m: 0.7
+        - ts: "2026-04-05T00:00:00Z"
+          cpu_pct: 33
+          mem_pct: 53
+          disk_pct: 43
+          load_1m: 0.8
+        - ts: "2026-04-08T00:00:00Z"
+          cpu_pct: 34
+          mem_pct: 55
+          disk_pct: 44
+          load_1m: 0.9
+    - name: "cmdb.internal.prod.spg"
+      role: "CMDB endpoint"
+      ip: "10.168.128.4"
+      environment: "planned"
+      vcpu: 2
+      memory_gb: 4
+      disk_gb: 40
+      capacity_state: "ok"
+      capacity_message: "Planned endpoint only; deployment pending."
+      thresholds:
+        cpu_warn: 70
+        mem_warn: 75
+        disk_warn: 75
+      latest:
+        cpu_pct: 0
+        mem_pct: 0
+        disk_pct: 0
+        load_1m: 0
+      trend:
+        cpu_slope: "n/a"
+        mem_slope: "n/a"
+        disk_slope: "n/a"
+      services:
+        - name: "historical-dashboard"
+          status: "degraded"
+      recommendations:
+        - "Deploy this dashboard to the dedicated internal endpoint once
+          alias/IP binding is implemented."
+      snapshots: []

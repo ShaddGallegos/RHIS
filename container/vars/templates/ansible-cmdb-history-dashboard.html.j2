@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ cmdb_dashboard.title | default('MiniRHIS Historical CMDB Dashboard') }}</title>
+  <style>
+    :root {
+      --bg: #09141b;
+      --panel: #11212b;
+      --panel-2: #183140;
+      --text: #e8f0f5;
+      --muted: #98b0bf;
+      --ok: #6fce8b;
+      --warn: #f6bf5b;
+      --bad: #f17373;
+      --accent: #65c2ff;
+      --accent-2: #88f0d5;
+      --border: #284555;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(101, 194, 255, 0.12), transparent 30%),
+        radial-gradient(circle at top right, rgba(136, 240, 213, 0.12), transparent 25%),
+        linear-gradient(180deg, #071017 0%, #0c171e 100%);
+      color: var(--text);
+    }
+
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(17, 33, 43, 0.96), rgba(12, 27, 35, 0.98));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 18px 55px rgba(0, 0, 0, 0.25);
+    }
+
+    h1, h2, h3, p {
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .lead {
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 70ch;
+    }
+
+    .meta-grid,
+    .summary-grid,
+    .trend-grid,
+    .node-grid,
+    .forecast-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .meta-grid,
+    .summary-grid,
+    .forecast-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .trend-grid {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .node-grid {
+      grid-template-columns: repeat(auto-fit, minmax(370px, 1fr));
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .metric-card .label,
+    .chip,
+    .small {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .metric-card .value {
+      font-size: 1.7rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .chip-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .chip {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .sparkline {
+      width: 100%;
+      height: 100px;
+      display: block;
+      margin-top: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+    }
+
+    .sparkline-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .node-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .node-title {
+      margin-bottom: 4px;
+    }
+
+    .node-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .service-list,
+    .recommendation-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .service-list li,
+    .recommendation-list li {
+      margin-bottom: 6px;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.92rem;
+    }
+
+    .table th,
+    .table td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      vertical-align: top;
+    }
+
+    .table th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .footer {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  {% set dashboard = cmdb_dashboard | default({}) %}
+  {% set nodes = dashboard.nodes | default([]) %}
+  {% set summary = dashboard.summary | default({}) %}
+  {% set forecasts = dashboard.forecasts | default([]) %}
+  {% set generated_at = dashboard.generated_at | default('unknown') %}
+  {% set history_window = dashboard.history_window | default('30d') %}
+  {% set endpoint_ip = dashboard.endpoint_ip | default('10.168.128.4') %}
+  {% set endpoint_port = dashboard.endpoint_port | default(18080) %}
+  {% set capacity_state = summary.capacity_state | default('observe') %}
+  <div class="page">
+    <section class="hero">
+      <div class="panel">
+        <h1>{{ dashboard.title | default('MiniRHIS Historical CMDB Dashboard') }}</h1>
+        <p class="lead">
+          Historical capacity view for Satellite, AAP, IdM, and managed systems. This template is intended to render to a static site on
+          <strong>{{ endpoint_ip }}:{{ endpoint_port }}</strong> so operators can compare current utilization against recent history and decide when to add CPU, memory, or storage.
+        </p>
+        <div class="chip-row">
+          <span class="chip">History window: {{ history_window }}</span>
+          <span class="chip">Rendered: {{ generated_at }}</span>
+          <span class="chip">Target endpoint: http://{{ endpoint_ip }}:{{ endpoint_port }}/</span>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Capacity Posture</h2>
+        <p class="status-pill {{ 'bad' if capacity_state == 'scale-now' else 'warn' if capacity_state == 'watch' else 'ok' }}">
+          <span class="status-dot" style="background: {{ '#f17373' if capacity_state == 'scale-now' else '#f6bf5b' if capacity_state == 'watch' else '#6fce8b' }};"></span>
+          {{ summary.capacity_message | default('Collecting enough history to determine trend direction.') }}
+        </p>
+        <div class="meta-grid" style="margin-top: 14px;">
+          <div class="metric-card">
+            <div class="label">Nodes tracked</div>
+            <div class="value">{{ summary.total_nodes | default(nodes | length) }}</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Critical nodes</div>
+            <div class="value">{{ summary.critical_nodes | default(0) }}</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Recommendation horizon</div>
+            <div class="value">{{ summary.recommendation_horizon | default('14d') }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-bottom: 18px;">
+      <h2>Fleet Summary</h2>
+      <div class="summary-grid">
+        <div class="metric-card">
+          <div class="label">Average CPU</div>
+          <div class="value">{{ summary.avg_cpu_pct | default(0) }}%</div>
+          <div class="small">Across latest host samples</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Average Memory</div>
+          <div class="value">{{ summary.avg_mem_pct | default(0) }}%</div>
+          <div class="small">Used memory percentage</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Peak Disk Use</div>
+          <div class="value">{{ summary.max_disk_pct | default(0) }}%</div>
+          <div class="small">Highest filesystem pressure seen</div>
+        </div>
+        <div class="metric-card">
+          <div class="label">Average Load</div>
+          <div class="value">{{ summary.avg_load_1m | default(0) }}</div>
+          <div class="small">Latest 1-minute load average</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="trend-grid">
+      {% for trend in dashboard.global_trends | default([]) %}
+      <div class="panel">
+        <div class="sparkline-title">
+          <h3 style="margin-bottom: 0;">{{ trend.title }}</h3>
+          <span class="small">{{ trend.summary }}</span>
+        </div>
+        <svg class="sparkline" data-series='{{ trend.series | tojson | safe }}' data-stroke='{{ trend.color | default("#65c2ff") }}'></svg>
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="node-grid">
+      {% for node in nodes %}
+      {% set latest = node.latest | default({}) %}
+      {% set thresholds = node.thresholds | default({}) %}
+      {% set node_state = node.capacity_state | default('ok') %}
+      <article class="panel">
+        <div class="node-header">
+          <div>
+            <h3 class="node-title">{{ node.name }}</h3>
+            <div class="node-meta">{{ node.role | default('Managed node') }} | {{ node.ip | default('n/a') }} | {{ node.environment | default('prod') }}</div>
+          </div>
+          <div class="status-pill {{ 'bad' if node_state == 'scale-now' else 'warn' if node_state == 'watch' else 'ok' }}">
+            <span class="status-dot" style="background: {{ '#f17373' if node_state == 'scale-now' else '#f6bf5b' if node_state == 'watch' else '#6fce8b' }};"></span>
+            {{ node.capacity_message | default('Within threshold') }}
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <div class="metric-card">
+            <div class="label">CPU</div>
+            <div class="value">{{ latest.cpu_pct | default(0) }}%</div>
+            <div class="small">Warn at {{ thresholds.cpu_warn | default(75) }}%</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Memory</div>
+            <div class="value">{{ latest.mem_pct | default(0) }}%</div>
+            <div class="small">Warn at {{ thresholds.mem_warn | default(80) }}%</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Disk</div>
+            <div class="value">{{ latest.disk_pct | default(0) }}%</div>
+            <div class="small">Warn at {{ thresholds.disk_warn | default(80) }}%</div>
+          </div>
+          <div class="metric-card">
+            <div class="label">Load 1m</div>
+            <div class="value">{{ latest.load_1m | default(0) }}</div>
+            <div class="small">vCPU: {{ node.vcpu | default('n/a') }}</div>
+          </div>
+        </div>
+
+        <div class="trend-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px;">
+          <div>
+            <div class="sparkline-title"><span>CPU history</span><span class="small">{{ history_window }}</span></div>
+            <svg class="sparkline" data-series='{{ node.snapshots | default([]) | map(attribute="cpu_pct") | list | tojson | safe }}' data-stroke="#65c2ff"></svg>
+          </div>
+          <div>
+            <div class="sparkline-title"><span>Memory history</span><span class="small">{{ history_window }}</span></div>
+            <svg class="sparkline" data-series='{{ node.snapshots | default([]) | map(attribute="mem_pct") | list | tojson | safe }}' data-stroke="#88f0d5"></svg>
+          </div>
+          <div>
+            <div class="sparkline-title"><span>Disk history</span><span class="small">{{ history_window }}</span></div>
+            <svg class="sparkline" data-series='{{ node.snapshots | default([]) | map(attribute="disk_pct") | list | tojson | safe }}' data-stroke="#f6bf5b"></svg>
+          </div>
+          <div>
+            <div class="sparkline-title"><span>Load history</span><span class="small">{{ history_window }}</span></div>
+            <svg class="sparkline" data-series='{{ node.snapshots | default([]) | map(attribute="load_1m") | list | tojson | safe }}' data-stroke="#f17373"></svg>
+          </div>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Current resources</th>
+              <th>Trend signal</th>
+              <th>Observed services</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                {{ node.vcpu | default('n/a') }} vCPU<br>
+                {{ node.memory_gb | default('n/a') }} GB RAM<br>
+                {{ node.disk_gb | default('n/a') }} GB disk
+              </td>
+              <td>
+                CPU slope: {{ node.trend.cpu_slope | default('n/a') }}<br>
+                Mem slope: {{ node.trend.mem_slope | default('n/a') }}<br>
+                Disk slope: {{ node.trend.disk_slope | default('n/a') }}
+              </td>
+              <td>
+                <ul class="service-list">
+                  {% for service in node.services | default([]) %}
+                  <li>
+                    <span class="{{ 'ok' if service.status == 'up' else 'warn' if service.status == 'degraded' else 'bad' }}">{{ service.name }}: {{ service.status }}</span>
+                  </li>
+                  {% endfor %}
+                </ul>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin-top: 16px;">Recommendations</h3>
+        <ul class="recommendation-list">
+          {% for recommendation in node.recommendations | default([]) %}
+          <li>{{ recommendation }}</li>
+          {% else %}
+          <li>No scale action recommended yet. Continue collecting samples.</li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </section>
+
+    {% if forecasts %}
+    <section class="panel" style="margin-top: 18px;">
+      <h2>Forecast Queue</h2>
+      <div class="forecast-grid">
+        {% for item in forecasts %}
+        <div class="metric-card">
+          <div class="label">{{ item.node }}</div>
+          <div class="value">{{ item.resource }}</div>
+          <div class="small">{{ item.reason }}</div>
+          <div class="chip-row">
+            <span class="chip">ETA: {{ item.eta | default('unknown') }}</span>
+            <span class="chip">Priority: {{ item.priority | default('watch') }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="footer">
+      Template: ansible-cmdb-history-dashboard.html.j2 | Intended deployment target: {{ endpoint_ip }}:{{ endpoint_port }} | Internal-network only
+    </div>
+  </div>
+
+  <script>
+    function renderSparkline(svg, values, stroke) {
+      if (!svg || !Array.isArray(values) || values.length === 0) {
+        return;
+      }
+
+      const width = svg.clientWidth || 320;
+      const height = svg.clientHeight || 100;
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+      const cleanValues = values.map(Number).filter((value) => !Number.isNaN(value));
+      if (cleanValues.length === 0) {
+        return;
+      }
+
+      const min = Math.min(...cleanValues);
+      const max = Math.max(...cleanValues);
+      const range = max - min || 1;
+      const step = cleanValues.length === 1 ? width : width / (cleanValues.length - 1);
+
+      const points = cleanValues.map((value, index) => {
+        const x = index * step;
+        const y = height - (((value - min) / range) * (height - 12)) - 6;
+        return `${x},${y}`;
+      }).join(' ');
+
+      const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      polyline.setAttribute('fill', 'none');
+      polyline.setAttribute('stroke', stroke || '#65c2ff');
+      polyline.setAttribute('stroke-width', '3');
+      polyline.setAttribute('stroke-linecap', 'round');
+      polyline.setAttribute('stroke-linejoin', 'round');
+      polyline.setAttribute('points', points);
+
+      const baseLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      baseLine.setAttribute('x1', '0');
+      baseLine.setAttribute('y1', String(height - 1));
+      baseLine.setAttribute('x2', String(width));
+      baseLine.setAttribute('y2', String(height - 1));
+      baseLine.setAttribute('stroke', 'rgba(255,255,255,0.10)');
+      baseLine.setAttribute('stroke-width', '1');
+
+      svg.appendChild(baseLine);
+      svg.appendChild(polyline);
+    }
+
+    document.querySelectorAll('.sparkline').forEach((svg) => {
+      const values = JSON.parse(svg.dataset.series || '[]');
+      renderSparkline(svg, values, svg.dataset.stroke);
+    });
+  </script>
+</body>
+</html>
