@@ -1752,6 +1752,9 @@ generate_minirhis_ansible_cfg() {
     local tmp_cfg
     local tmp_cfg_runtime
     local tmp_cfg_encrypted
+    local _ssh_args_common
+    local _ssh_identity_arg_container
+    local _ssh_identity_arg_host
 
     mkdir -p "${ANSIBLE_ENV_DIR}" "${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}" || return 1
     chmod 700 "${ANSIBLE_ENV_DIR}" "${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}" 2>/dev/null || true
@@ -1761,6 +1764,16 @@ generate_minirhis_ansible_cfg() {
     # Prefer explicit vaulted console token; fall back to HUB_TOKEN.
     # This token is used for Automation Hub galaxy server auth entries.
     local ah_token="${VAULT_CONSOLE_REDHAT_TOKEN:-${HUB_TOKEN:-}}"
+
+    _ssh_args_common="-o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no"
+    _ssh_identity_arg_container=""
+    _ssh_identity_arg_host=""
+    if [ -r "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}" ]; then
+        _ssh_identity_arg_container=" -i ${MINIRHIS_INSTALLER_SSH_KEY_CONTAINER_PATH}"
+        _ssh_identity_arg_host=" -i ${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}"
+    else
+        print_warning "Installer SSH key not found at ${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}; using default SSH identities for Ansible connections."
+    fi
 
     tmp_cfg="$(mktemp "${ANSIBLE_ENV_DIR}/.minirhis-ansible.cfg.XXXXXX")" || return 1
 
@@ -1785,7 +1798,7 @@ inject_facts_as_vars = True
 
 [ssh_connection]
 pipelining = True
-ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ${MINIRHIS_INSTALLER_SSH_KEY_CONTAINER_PATH}
+ssh_args = ${_ssh_args_common}${_ssh_identity_arg_container}
 control_path_dir = /tmp/.ansible-cp
 retries = 3
 
@@ -1823,7 +1836,7 @@ EOF
         -e "s|^inventory = .*|inventory = ${MINIRHIS_INVENTORY_FILE}|" \
         -e "s|^fact_caching_connection = .*|fact_caching_connection = ${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}|" \
         -e "s|^log_path = .*|log_path = ${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME}|" \
-        -e "s|^ssh_args = .*|ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}|" \
+        -e "s|^ssh_args = .*|ssh_args = ${_ssh_args_common}${_ssh_identity_arg_host}|" \
         "${tmp_cfg_runtime}" || {
         rm -f "${tmp_cfg}" "${tmp_cfg_runtime}"
         return 1
