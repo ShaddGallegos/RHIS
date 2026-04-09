@@ -103,6 +103,10 @@ This keeps the installer host self-sufficient for the MiniRHIS workflow.
   - Disable with `MINIRHIS_RETRY_FAILED_PHASES_ONCE=0`.
 - Auto-sequence after menu option `2` can be disabled with:
   - `MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0`
+- AAP API readiness wait now uses a single-line live progress bar and continues immediately as soon as `/api/v2/ping/` responds.
+- SSH mesh now has explicit lifecycle behavior:
+  - bootstrap phase shares installer key temporarily to managed nodes for installation access
+  - finalize phase removes temporary installer-key trust from managed nodes after config-as-code
 
 ### Recommended first run
 
@@ -157,6 +161,9 @@ Environment toggles:
 - `MINIRHIS_POST_VM_SETTLE_GRACE=650` default guest settle window before SSH preflight checks
 - `MINIRHIS_INTERNAL_SSH_WARN_GRACE=<seconds>` delay before per-host warning logs (default `600`)
 - `MINIRHIS_INTERNAL_SSH_LOG_EVERY=<seconds>` periodic preflight progress log cadence (default `60`)
+- `AAP_API_WAIT_INTERVAL=<seconds>` AAP API readiness poll interval (default `10`)
+- `MINIRHIS_ALLOW_DEFERRED_SSH_MESH=1` allow deferred SSH mesh bootstrap and retry later
+- `MINIRHIS_REQUIRE_ROOT_SSH_MESH=1` fail on root mesh errors instead of best-effort
 
 ### Command-line options
 
@@ -826,6 +833,7 @@ All generated kickstarts include the automation required for Day-0 bootstrap, in
 - registers to RHSM during `%post`
 - enables AAP-specific repositories
 - stages the AAP containerized setup bundle
+- accepts duplicate downloaded bundle filenames by matching with wildcard pattern (for example `...tar.gz` and `...(1).tar.gz`)
 - prepares SSH/bootstrap content used by the host callback workflow
 
 #### IdM
@@ -891,6 +899,14 @@ Relevant environment controls:
 - `AAP_SSH_WAIT_INTERVAL` (default `10`)
 - `AAP_SSH_PROGRESS_EVERY` (default `30`)
 - `AAP_SSH_NO_PROGRESS_TIMEOUT` (default `900`)
+
+### AAP API readiness wait behavior
+
+After installer execution, API readiness checks now:
+
+- print a same-line progress bar with elapsed time
+- poll at `AAP_API_WAIT_INTERVAL` cadence (default `10s`)
+- continue immediately once `https://<aap>/api/v2/ping/` returns a valid response
 
 If a phase fails, the script retries only failed phases once by default.
 
