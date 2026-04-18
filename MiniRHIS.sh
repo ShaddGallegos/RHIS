@@ -1530,7 +1530,7 @@ kickstart_creator_baseline_block() {
             ;;
     esac
 
-    cat <<EOF
+    cat <<'EOF'
 # MINIRHIS creator baseline (shared across all kickstarted nodes)
 # Ensures common tooling/services expected by creator/bootstrap automation.
 dnf install -y --nogpgcheck sudo openssh-clients rsync jq ansible-core cockpit || true
