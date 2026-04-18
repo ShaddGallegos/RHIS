@@ -4,6 +4,12 @@
 
 MINIRHIS stands for **Red Hat Infrastructure Standard**.
 
+**Rules & Policies**
+
+- This project follows a strict configuration-as-code model. See `RULES.md` and `docs/assistant-adherence-rules.md` for full rules and guidance.
+- Quick policy: do NOT use containerized workflows unless you explicitly pass a container flag (for example `--container`, `--container-config-only`, or `--use-container`). The default behavior is host-based operations.
+
+
 This repository is built around `MiniRHIS.sh` (MiniRHIS), an orchestration script for building and bootstrapping a Red Hat management lab on libvirt/KVM.
 
 The current workflow focuses on:
@@ -1231,6 +1237,32 @@ If configuration values are wrong, rerun:
 ```
 
 ---
+
+## Artifacts & Debugging
+
+[⬆ Back to top](#table-of-contents)
+
+Runtime debugging artifacts created during recent troubleshooting runs are written to `artifacts_user/` in the repository working tree on the installer host. Common files you may find there:
+
+- `artifacts_user/gw-automation-gateway-aap.prod.spg.log`
+- `artifacts_user/gw-automation-gateway-proxy-aap.prod.spg.log`
+- `artifacts_user/controller-logs-aap.prod.spg.tar.gz`
+- `artifacts_user/aap-root-ca.pem`
+
+Quick TLS verification using the extracted CA (no install):
+
+```
+openssl s_client -connect 10.168.128.2:8446 -servername aap.prod.spg -CAfile artifacts_user/aap-root-ca.pem
+```
+
+To install the extracted root CA system-wide on a RHEL installer host (requires sudo):
+
+```
+sudo cp artifacts_user/aap-root-ca.pem /etc/pki/ca-trust/source/anchors/
+sudo update-ca-trust extract
+```
+
+After installing the CA, re-run any host-side verification checks.
 
 ## Support
 

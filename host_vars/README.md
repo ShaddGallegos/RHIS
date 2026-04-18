@@ -22,9 +22,16 @@ vault references.
 
 ## File index
 
-| File                      | Purpose                                      |
-| ------------------------- | -------------------------------------------- |
-| `aap.yml.SAMPLE`          | AAP Controller + Hub + Gateway variables     |
-| `idm.yml.SAMPLE`          | Red Hat IdM / FreeIPA variables              |
-| `satellite.yml.SAMPLE`    | Red Hat Satellite variables                  |
-| `installer.yml.SAMPLE`    | Installer host (KVM controller) variables    |
+| File                   | Purpose                                   |
+| ---------------------- | ----------------------------------------- |
+| `aap.yml.SAMPLE`       | AAP Controller + Hub + Gateway variables  |
+| `idm.yml.SAMPLE`       | Red Hat IdM / FreeIPA variables           |
+| `satellite.yml.SAMPLE` | Red Hat Satellite variables               |
+| `installer.yml.SAMPLE` | Installer host (KVM controller) variables |
+
+
+---
+
+**Rules & Policies**
+
+- Refer to `RULES.md` and `docs/assistant-adherence-rules.md` before making host-level or image edits. Generated `host_vars` are not the place to persist changes — update via `./MiniRHIS.sh --reconfigure`.

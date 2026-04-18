@@ -1,0 +1,31 @@
+---
+# Main entry for minirhis-recovery role
+- name: Ensure recovery backup dir exists
+  file:
+    path: "{{ recovery_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create timestamp for this run
+  command: date +%Y%m%dT%H%M%S
+  register: recovery_ts
+  changed_when: false
+
+- name: Set image_path fact (default from vm_name)
+  set_fact:
+    image_path: "{{ vm_image_path | default('/var/lib/libvirt/images/' + vm_name +
+      '.qcow2') }}"
+
+- name: Snapshot image (qemu-img convert)
+  include_tasks: snapshot.yml
+
+  include_tasks: guestmount.yml
+
+  debug:
+    msg: "Backup created: {{ recovery_backup_dir }}/{{ vm_name }}.{{
+  
+- name: Run verification tasks (qemu-img check, checksum)
+  include_tasks: verify.yml
+      recovery_ts.stdout }}.qcow2"

@@ -1,0 +1,59 @@
+---
+- name: Ensure guestmount binary is present
+  stat:
+    path: "{{ guestmount_bin }}"
+  register: guestmount_stat
+
+- name: Fail if guestmount missing
+  fail:
+    msg: "guestmount not found at {{ guestmount_bin }}; install libguestfs-tools /
+      guestmount before running this role"
+  when: not guestmount_stat.stat.exists
+
+- name: Ensure mount point exists
+  file:
+    path: "{{ mount_point }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Mount backup image (read-write)
+  become: yes
+  command: >
+    {{ guestmount_bin }} -a {{ recovery_backup_dir }}/{{ vm_name }}.{{
+    recovery_ts.stdout }}.qcow2 -i {{ mount_point }}
+  register: guestmount_result
+  changed_when: guestmount_result.rc == 0
+  failed_when: guestmount_result.rc != 0
+
+- name: Ensure root .ssh directory exists inside mounted image
+  become: yes
+  file:
+    path: "{{ mount_point }}/root/.ssh"
+    state: directory
+    owner: 0
+    group: 0
+    mode: "0700"
+
+- name: Copy installer public key into mounted image authorized_keys
+  become: yes
+  copy:
+    src: "{{ installer_pubkey }}"
+    dest: "{{ mount_point }}/root/.ssh/authorized_keys"
+    owner: 0
+    group: 0
+    mode: "0600"
+  delegate_to: localhost
+
+- name: Try restore SELinux contexts for keys (best-effort)
+  become: yes
+  command: restorecon -Rv "{{ mount_point }}/root/.ssh" || true
+  args:
+    warn: false
+  ignore_errors: yes
+
+- name: Unmount image (best-effort)
+  become: yes
+  command: guestunmount "{{ mount_point }}"
+  ignore_errors: yes

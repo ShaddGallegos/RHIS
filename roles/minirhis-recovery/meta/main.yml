@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  author: MiniRHIS Assistant
+  description: Recovery helpers for VM image backup, key injection and basic
+    remediation tasks.
+  license: MIT
+  min_ansible_version: 2.9
+dependencies: []

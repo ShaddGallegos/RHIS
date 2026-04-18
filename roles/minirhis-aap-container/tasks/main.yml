@@ -1,0 +1,53 @@
+---
+# Prepare host for containerized AAP controller (idempotent)
+- name: Ensure podman package is installed
+  package:
+    name: "{{ podman_pkg }}"
+    state: present
+
+- name: Ensure crun is installed (recommended runtime)
+  package:
+    name: "{{ crun_pkg }}"
+    state: present
+  ignore_errors: yes
+
+- name: Ensure AAP controller volumes exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: 0
+    group: 0
+    mode: "0755"
+  loop: "{{ aap_controller_volumes }}"
+
+- name: Pull AAP controller image (placeholder)
+  become: yes
+  command: podman pull {{ aap_controller_image }}
+  register: podman_pull
+  changed_when: podman_pull.rc == 0 and 'Downloaded' in (podman_pull.stdout +
+    podman_pull.stderr)
+  failed_when: podman_pull.rc != 0 and 'not found' not in (podman_pull.stdout +
+    podman_pull.stderr)
+  ignore_errors: yes
+
+- name: Ensure systemd unit stub for AAP controller container (will not run
+    automatically)
+  copy:
+    dest: /etc/systemd/system/aap-controller-container.service
+    content: |
+      [Unit]
+      Description=AAP controller container (placeholder)
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/podman run --rm --name aap-controller \
+        -v /var/lib/aap-controller/data:/data \
+        -v /var/lib/aap-controller/pgdata:/pgdata \
+        {{ aap_controller_image }}
+      ExecStop=/usr/bin/podman stop aap-controller
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: daemon-reload

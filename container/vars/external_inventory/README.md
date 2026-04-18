@@ -13,18 +13,18 @@ This directory is bind-mounted into the `minirhis-provisioner` container at
 
 ## Group names
 
-| Group               | Purpose                                      |
-|---------------------|----------------------------------------------|
-| `ansibledev`        | KVM host / Ansible controller                |
-| `libvirt`           | Same as ansibledev for libvirt deployments   |
-| `installer`         | Same as ansibledev for most deployments      |
-| `scenario_satellite`| Satellite VM                                 |
-| `sat_primary`       | Alias group expected by Satellite playbooks  |
-| `aap`               | Ansible Automation Platform VM               |
-| `aap_hosts`         | Alias group expected by AAP playbooks        |
-| `platform_installer`| Alias group expected by AAP playbooks        |
-| `idm`               | Red Hat Identity Management VM               |
-| `idm_primary`       | Alias group expected by IdM playbooks        |
+| Group                | Purpose                                     |
+| -------------------- | ------------------------------------------- |
+| `ansibledev`         | KVM host / Ansible controller               |
+| `libvirt`            | Same as ansibledev for libvirt deployments  |
+| `installer`          | Same as ansibledev for most deployments     |
+| `scenario_satellite` | Satellite VM                                |
+| `sat_primary`        | Alias group expected by Satellite playbooks |
+| `aap`                | Ansible Automation Platform VM              |
+| `aap_hosts`          | Alias group expected by AAP playbooks       |
+| `platform_installer` | Alias group expected by AAP playbooks       |
+| `idm`                | Red Hat Identity Management VM              |
+| `idm_primary`        | Alias group expected by IdM playbooks       |
 
 ## Note
 
@@ -189,3 +189,9 @@ podman start minirhis-provisioner >/dev/null 2>&1 || true
 ```bash
 --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}'
 ```
+
+---
+
+**Rules & Policies**
+
+- This inventory is used by containerized provisioner runs; follow `RULES.md` and `docs/assistant-adherence-rules.md` before modifying or running container workflows.

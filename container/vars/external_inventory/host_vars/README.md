@@ -35,3 +35,9 @@ container/vars/external_inventory/host_vars/*.yml
 ```
 
 Passwords stored here are vault references (`{{ sat_admin_pass }}`), not plaintext.
+
+---
+
+**Rules & Policies**
+
+- Do not commit generated host_vars. Refer to `RULES.md` and `docs/assistant-adherence-rules.md` for the policy on when and how to perform image or host edits.

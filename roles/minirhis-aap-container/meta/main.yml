@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  author: MiniRHIS Assistant
+  description: Containerized AAP helper role that prepares podman, volumes and
+    image pulls for AAP 2.6 controller and nodes.
+  license: MIT
+  min_ansible_version: 2.9
+dependencies: []

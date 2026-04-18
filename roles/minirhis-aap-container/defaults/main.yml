@@ -1,0 +1,9 @@
+---
+# Defaults for containerized AAP role
+aap_controller_image: "automation-controller:2.6" # placeholder, replace with registry image path
+aap_controller_volumes:
+  - /var/lib/aap-controller/data
+  - /var/lib/aap-controller/pgdata
+podman_pkg: podman
+crun_pkg: crun
+container_user: root

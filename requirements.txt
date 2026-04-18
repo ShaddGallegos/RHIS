@@ -1,3 +1,12 @@
+# System packages (installer host, not pip):
+# - openssl
+# - podman
+# - jq
+# - ansible-core (via pip or native package)
+#
+# Note (2026-04-17): debugging artifacts are saved to `artifacts_user/`.
+# See CHECKLIST.md for host prerequisites and debugging tips.
+
 # Python requirements for MINIRHIS container roles and Ansible automation
 # 
 # Core Ansible runtime and dependencies

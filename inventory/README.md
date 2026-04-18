@@ -13,18 +13,18 @@ This directory is bind-mounted into the `minirhis-provisioner` container at
 
 ## Group names
 
-| Group               | Purpose                                      |
-|---------------------|----------------------------------------------|
-| `ansibledev`        | KVM host / Ansible controller                |
-| `libvirt`           | Same as ansibledev for libvirt deployments   |
-| `installer`         | Same as ansibledev for most deployments      |
-| `scenario_satellite`| Satellite VM                                 |
-| `sat_primary`       | Alias group expected by Satellite playbooks  |
-| `aap`               | Ansible Automation Platform VM               |
-| `aap_hosts`         | Alias group expected by AAP playbooks        |
-| `platform_installer`| Alias group expected by AAP playbooks        |
-| `idm`               | Red Hat Identity Management VM               |
-| `idm_primary`       | Alias group expected by IdM playbooks        |
+| Group                | Purpose                                     |
+| -------------------- | ------------------------------------------- |
+| `ansibledev`         | KVM host / Ansible controller               |
+| `libvirt`            | Same as ansibledev for libvirt deployments  |
+| `installer`          | Same as ansibledev for most deployments     |
+| `scenario_satellite` | Satellite VM                                |
+| `sat_primary`        | Alias group expected by Satellite playbooks |
+| `aap`                | Ansible Automation Platform VM              |
+| `aap_hosts`          | Alias group expected by AAP playbooks       |
+| `platform_installer` | Alias group expected by AAP playbooks       |
+| `idm`                | Red Hat Identity Management VM              |
+| `idm_primary`        | Alias group expected by IdM playbooks       |
 
 ## Note
 
@@ -45,6 +45,13 @@ Dependency order used by MINIRHIS:
 
 - VM build/create: `IdM -> Satellite -> AAP`
 - Config-as-code phases: `IdM -> Satellite -> AAP`
+
+---
+
+**Rules & Policies**
+
+- Follow the project RULES: (see `RULES.md` and `docs/assistant-adherence-rules.md`).
+- Do not perform destructive edits on generated inventory files; change authoritative values via `./MiniRHIS.sh --reconfigure` and the source `~/.ansible/conf/env.yml` (vault).
 
 ## AAP bundle installer inventories (Jinja templates)
 

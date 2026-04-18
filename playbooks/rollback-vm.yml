@@ -1,0 +1,42 @@
+---
+- name: Rollback VM image to a backup
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    vm_name: "{{ vm_name | default('aap') }}"
+    backup_ts: "{{ backup_ts | default('') }}" # required: timestamp portion of backup filename
+    recovery_backup_dir: /var/lib/libvirt/images/backups
+
+  tasks:
+    - name: Validate backup file exists
+      stat:
+        path: "{{ recovery_backup_dir }}/{{ vm_name }}.{{ backup_ts }}.qcow2"
+      register: backup_stat
+
+    - name: Fail if backup not found
+      fail:
+        msg: "Backup not found: {{ recovery_backup_dir }}/{{ vm_name }}.{{ backup_ts
+          }}.qcow2"
+      when: not backup_stat.stat.exists
+
+    - name: Stop VM if running (best-effort)
+      command: virsh shutdown {{ vm_name }}
+      ignore_errors: yes
+
+    - name: Replace active image with backup (move current aside)
+      command: >
+        bash -lc '
+          if [ -f /var/lib/libvirt/images/{{ vm_name }}.qcow2 ]; then
+            mv /var/lib/libvirt/images/{{ vm_name }}.qcow2 /var/lib/libvirt/images/{{ vm_name }}.qcow2.rollback.$(date +%Y%m%dT%H%M%S) || true
+          fi
+          cp {{ recovery_backup_dir }}/{{ vm_name }}.{{ backup_ts }}.qcow2 /var/lib/libvirt/images/{{ vm_name }}.qcow2
+        '
+
+    - name: Restore SELinux context (best-effort)
+      command: restorecon -v /var/lib/libvirt/images/{{ vm_name }}.qcow2 || true
+
+    - name: Start VM
+      command: virsh start {{ vm_name }}
+      register: start_res
+      failed_when: start_res.rc != 0

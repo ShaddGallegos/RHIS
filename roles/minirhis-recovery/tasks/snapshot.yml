@@ -1,0 +1,19 @@
+---
+- name: Ensure qemu-img exists
+  stat:
+    path: "{{ qemu_img }}"
+  register: qemu_img_stat
+
+- name: Fail if qemu-img missing
+  fail:
+    msg: "qemu-img not found at {{ qemu_img }}; install qemu-img before running this
+      role"
+  when: not qemu_img_stat.stat.exists
+
+- name: Create backup of VM image (qemu-img convert)
+  become: yes
+  command: >
+    {{ qemu_img }} convert -O qcow2 {{ image_path }} {{ recovery_backup_dir
+    }}/{{ vm_name }}.{{ recovery_ts.stdout }}.qcow2
+  args:
+    creates: "{{ recovery_backup_dir }}/{{ vm_name }}.{{ recovery_ts.stdout }}.qcow2"

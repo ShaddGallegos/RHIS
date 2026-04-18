@@ -1541,13 +1541,14 @@ cockpit_port="\${COCKPIT_PORT:-9443}"
 if ! [[ "\${cockpit_port}" =~ ^[0-9]+$ ]] || [ "\${cockpit_port}" -lt 1 ] || [ "\${cockpit_port}" -gt 65535 ]; then
     cockpit_port="9443"
 fi
-if systemctl list-unit-files cockpit.socket >/dev/null 2>&1; then
+    if systemctl list-unit-files cockpit.socket >/dev/null 2>&1; then
     mkdir -p /etc/systemd/system/cockpit.socket.d
     cat > /etc/systemd/system/cockpit.socket.d/override.conf <<'MINIRHIS_COCKPIT_OVERRIDE'
 [Socket]
 ListenStream=
-ListenStream=PORT_PLACEHOLDER
+ListenStream=HOST_IP_PLACEHOLDER:PORT_PLACEHOLDER
 MINIRHIS_COCKPIT_OVERRIDE
+    sed -i "s/HOST_IP_PLACEHOLDER/\${HOST_INT_IP}/g" /etc/systemd/system/cockpit.socket.d/override.conf
     sed -i "s/PORT_PLACEHOLDER/\${cockpit_port}/g" /etc/systemd/system/cockpit.socket.d/override.conf
     systemctl daemon-reload || true
     systemctl enable --now cockpit.socket || true
@@ -2467,6 +2468,13 @@ apply_cli_overrides() {
 
     if [ -n "$CLI_RECONFIGURE" ]; then
         FORCE_PROMPT_ALL=1
+        # If caller only requested reconfigure (no explicit menu choice or
+        # other fast-path CLI flags) and the run is interactive, jump
+        # straight to the Prompts Only menu so the user is immediately
+        # prompted to reconfigure values (equivalent to selecting menu 4).
+        if [ -z "${CLI_MENU_CHOICE:-}" ] && [ -z "${CLI_DEMOKILL:-}${CLI_GENERATE_ENV:-}${CLI_VALIDATE:-}${CLI_STATUS:-}${CLI_TEST:-}${CLI_MINIRHIS:-}${CLI_IDM:-}${CLI_SATELLITE:-}${CLI_AAP:-}${CLI_CONFIG_SCOPE:-}" ] && ! is_noninteractive; then
+            MENU_CHOICE="4"
+        fi
     fi
 
     if [ -n "$CLI_AAP_INVENTORY_TEMPLATE" ]; then
@@ -2633,11 +2641,11 @@ apply_cli_overrides() {
         RUN_ONCE=0
     fi
 
+    return 0
+}
 
 is_menutest() {
     is_enabled "${MINIRHIS_MENU_TEST_MODE:-0}"
-}
-    return 0
 }
 
 is_noninteractive() {
@@ -3171,6 +3179,271 @@ prompt_with_default() {
         printf -v "$var_name" '%s' "$input_value"
         return 0
     done
+}
+
+# Platform helper functions (hoisted to top-level so prompts can call them
+# from any call site). These were previously nested inside
+# `prompt_platform_choice()` which caused "command not found" when the
+# outer function had not yet executed.
+platform_family_for_provider() {
+    case "$(normalize_platform_value "$1")" in
+        aws|azure|gcp|openshift)
+            printf '%s' "cloud"
+            ;;
+        baremetal)
+            printf '%s' "baremetal"
+            ;;
+        *)
+            printf '%s' "virtual"
+            ;;
+    esac
+}
+
+set_platform_targets() {
+    local install_product="$1"
+    local selected_platform
+
+    selected_platform="$(normalize_platform_value "$2")"
+    MINIRHIS_TARGET_PLATFORM="${selected_platform}"
+
+    case "${install_product}" in
+        minirhis)
+            SAT_TARGET_PLATFORM="${selected_platform}"
+            AAP_TARGET_PLATFORM="${selected_platform}"
+            IDM_TARGET_PLATFORM="${selected_platform}"
+            ;;
+        satellite)
+            SAT_TARGET_PLATFORM="${selected_platform}"
+            ;;
+        aap)
+            AAP_TARGET_PLATFORM="${selected_platform}"
+            ;;
+        idm)
+            IDM_TARGET_PLATFORM="${selected_platform}"
+            ;;
+        *)
+            SAT_TARGET_PLATFORM="${selected_platform}"
+            AAP_TARGET_PLATFORM="${selected_platform}"
+            IDM_TARGET_PLATFORM="${selected_platform}"
+            ;;
+    esac
+}
+
+prompt_install_product_choice() {
+    local var_name="$1"
+    local default_value="${2:-${MINIRHIS_INSTALL_PRODUCT:-}}"
+    local choice=""
+    local selected=""
+
+    if is_noninteractive; then
+        printf -v "$var_name" '%s' "${!var_name:-${default_value:-minirhis}}"
+        return 0
+    fi
+
+    while true; do
+        print_minirhis_header
+        echo "Prompts-Only Product Selection"
+        echo ""
+        echo "  1) MINIRHIS Full Stack"
+        echo "     - IdM -> Satellite -> AAP"
+        echo "  2) Satellite Only"
+        echo "  3) IdM Only"
+        echo "  4) AAP Only"
+        echo ""
+        read -r -p "  Choice [1-4, Enter=${default_value:-minirhis}]: " choice
+
+        case "${choice}" in
+            "") selected="${default_value:-minirhis}" ;;
+            1) selected="minirhis" ;;
+            2) selected="satellite" ;;
+            3) selected="idm" ;;
+            4) selected="aap" ;;
+            *)
+                print_warning "Invalid choice '${choice}'. Please enter 1, 2, 3, or 4."
+                continue
+                ;;
+        esac
+        printf -v "$var_name" '%s' "${selected}"
+        return 0
+    done
+}
+
+prompt_platform_family_choice() {
+    local var_name="$1"
+    local default_value="${2:-virtual}"
+    local choice=""
+    local selected=""
+
+    if is_noninteractive; then
+        printf -v "$var_name" '%s' "${!var_name:-${default_value:-virtual}}"
+        return 0
+    fi
+
+    while true; do
+        print_minirhis_header
+        echo "Platform Family"
+        echo ""
+        echo "  1) Bare Metal"
+        echo "  2) Virtual"
+        echo "  3) Cloud"
+        echo ""
+        read -r -p "  Choice [1-3, Enter=${default_value:-virtual}]: " choice
+
+        case "${choice}" in
+            "") selected="${default_value:-virtual}" ;;
+            1) selected="baremetal" ;;
+            2) selected="virtual" ;;
+            3) selected="cloud" ;;
+            *)
+                print_warning "Invalid choice '${choice}'. Please enter 1, 2, or 3."
+                continue
+                ;;
+        esac
+        printf -v "$var_name" '%s' "${selected}"
+        return 0
+    done
+}
+
+prompt_virtual_provider_choice() {
+    local var_name="$1"
+    local default_value="${2:-libvirt}"
+    local choice=""
+    local selected=""
+
+    if is_noninteractive; then
+        printf -v "$var_name" '%s' "$(normalize_platform_value "${!var_name:-${default_value:-libvirt}}")"
+        return 0
+    fi
+
+    while true; do
+        print_minirhis_header
+        echo "Virtual Platform"
+        echo ""
+        echo "  1) libvirt"
+        echo "  2) VMware"
+        echo "  3) Nutanix"
+        echo "  4) OpenShift Virt"
+        echo ""
+        read -r -p "  Choice [1-4, Enter=${default_value:-libvirt}]: " choice
+
+        case "${choice}" in
+            "") selected="${default_value:-libvirt}" ;;
+            1) selected="libvirt" ;;
+            2) selected="vmware" ;;
+            3) selected="nutanix" ;;
+            4) selected="openshift-virt" ;;
+            *)
+                print_warning "Invalid choice '${choice}'. Please enter 1, 2, 3, or 4."
+                continue
+                ;;
+        esac
+        printf -v "$var_name" '%s' "$(normalize_platform_value "${selected}")"
+        return 0
+    done
+}
+
+prompt_cloud_provider_choice() {
+    local var_name="$1"
+    local default_value="${2:-aws}"
+    local choice=""
+    local selected=""
+
+    if is_noninteractive; then
+        printf -v "$var_name" '%s' "$(normalize_platform_value "${!var_name:-${default_value:-aws}}")"
+        return 0
+    fi
+
+    while true; do
+        print_minirhis_header
+        echo "Cloud Platform"
+        echo ""
+        echo "  1) aws"
+        echo "  2) azure"
+        echo "  3) gcp"
+        echo ""
+        read -r -p "  Choice [1-3, Enter=${default_value:-aws}]: " choice
+
+        case "${choice}" in
+            "") selected="${default_value:-aws}" ;;
+            1) selected="aws" ;;
+            2) selected="azure" ;;
+            3) selected="gcp" ;;
+            *)
+                print_warning "Invalid choice '${choice}'. Please enter 1, 2, or 3."
+                continue
+                ;;
+        esac
+        printf -v "$var_name" '%s' "$(normalize_platform_value "${selected}")"
+        return 0
+    done
+}
+
+prompt_platform_connection_details() {
+    local platform
+    platform="$(normalize_platform_value "$1")"
+
+    echo ""
+    echo "=== Platform Connection Details (${platform}) ==="
+    case "${platform}" in
+        libvirt)
+            prompt_with_default LIBVIRT_URI "libvirt connection URI" "${LIBVIRT_URI:-qemu:///system}" 0 1 || return 1
+            prompt_with_default LIBVIRT_STORAGE_POOL "libvirt storage pool" "${LIBVIRT_STORAGE_POOL:-default}" 0 1 || return 1
+            prompt_with_default LIBVIRT_NETWORK "libvirt network" "${LIBVIRT_NETWORK:-default}" 0 1 || return 1
+            ;;
+        vmware)
+            prompt_with_default VMWARE_VCENTER_HOST "vCenter hostname or IP" "${VMWARE_VCENTER_HOST:-}" 0 1 || return 1
+            prompt_with_default VMWARE_USERNAME "vCenter username" "${VMWARE_USERNAME:-}" 0 1 || return 1
+            prompt_with_default VMWARE_PASSWORD "vCenter password" "${VMWARE_PASSWORD:-}" 1 1 || return 1
+            prompt_with_default VMWARE_DATACENTER "VMware datacenter" "${VMWARE_DATACENTER:-}" 0 1 || return 1
+            prompt_with_default VMWARE_CLUSTER "VMware cluster" "${VMWARE_CLUSTER:-}" 0 1 || return 1
+            ;;
+        nutanix)
+            prompt_with_default NUTANIX_ENDPOINT "Nutanix Prism endpoint" "${NUTANIX_ENDPOINT:-}" 0 1 || return 1
+            prompt_with_default NUTANIX_USERNAME "Nutanix username" "${NUTANIX_USERNAME:-}" 0 1 || return 1
+            prompt_with_default NUTANIX_PASSWORD "Nutanix password" "${NUTANIX_PASSWORD:-}" 1 1 || return 1
+            prompt_with_default NUTANIX_CLUSTER "Nutanix cluster" "${NUTANIX_CLUSTER:-}" 0 1 || return 1
+            ;;
+        openshift|openshift-virt)
+            prompt_with_default OPENSHIFT_API_URL "OpenShift API URL" "${OPENSHIFT_API_URL:-}" 0 1 || return 1
+            prompt_with_default OPENSHIFT_USERNAME "OpenShift username" "${OPENSHIFT_USERNAME:-}" 0 1 || return 1
+            prompt_with_default OPENSHIFT_TOKEN "OpenShift token" "${OPENSHIFT_TOKEN:-}" 1 1 || return 1
+            prompt_with_default OPENSHIFT_NAMESPACE "OpenShift namespace" "${OPENSHIFT_NAMESPACE:-openshift-cnv}" 0 1 || return 1
+            ;;
+        aws)
+            prompt_with_default AWS_ACCESS_KEY_ID "AWS access key ID" "${AWS_ACCESS_KEY_ID:-}" 0 1 || return 1
+            prompt_with_default AWS_SECRET_ACCESS_KEY "AWS secret access key" "${AWS_SECRET_ACCESS_KEY:-}" 1 1 || return 1
+            prompt_with_default AWS_SESSION_TOKEN "AWS session token (optional)" "${AWS_SESSION_TOKEN:-}" 1 0 || return 1
+            prompt_with_default AWS_DEFAULT_REGION "AWS region" "${AWS_DEFAULT_REGION:-us-east-1}" 0 1 || return 1
+            prompt_with_default AWS_VPC_ID "AWS VPC ID (optional)" "${AWS_VPC_ID:-}" 0 0 || return 1
+            prompt_with_default AWS_SUBNET_ID "AWS subnet ID (optional)" "${AWS_SUBNET_ID:-}" 0 0 || return 1
+            ;;
+        azure)
+            prompt_with_default AZURE_SUBSCRIPTION_ID "Azure subscription ID" "${AZURE_SUBSCRIPTION_ID:-}" 0 1 || return 1
+            prompt_with_default AZURE_TENANT_ID "Azure tenant ID" "${AZURE_TENANT_ID:-}" 0 1 || return 1
+            prompt_with_default AZURE_CLIENT_ID "Azure client/application ID" "${AZURE_CLIENT_ID:-}" 0 1 || return 1
+            prompt_with_default AZURE_CLIENT_SECRET "Azure client secret" "${AZURE_CLIENT_SECRET:-}" 1 1 || return 1
+            prompt_with_default AZURE_RESOURCE_GROUP "Azure resource group" "${AZURE_RESOURCE_GROUP:-}" 0 1 || return 1
+            prompt_with_default AZURE_LOCATION "Azure region/location" "${AZURE_LOCATION:-eastus}" 0 1 || return 1
+            ;;
+        gcp)
+            prompt_with_default GCP_PROJECT_ID "GCP project ID" "${GCP_PROJECT_ID:-}" 0 1 || return 1
+            prompt_with_default GCP_REGION "GCP region" "${GCP_REGION:-us-central1}" 0 1 || return 1
+            prompt_with_default GCP_ZONE "GCP zone" "${GCP_ZONE:-us-central1-a}" 0 1 || return 1
+            prompt_with_default GCP_SERVICE_ACCOUNT_FILE "GCP service account JSON path" "${GCP_SERVICE_ACCOUNT_FILE:-}" 0 1 || return 1
+            ;;
+        baremetal)
+            prompt_with_default BMC_TYPE "BMC type (redfish/idrac/ipmi/ilo)" "${BMC_TYPE:-redfish}" 0 1 || return 1
+            prompt_with_default BMC_ENDPOINT "BMC or DRAC endpoint" "${BMC_ENDPOINT:-}" 0 1 || return 1
+            prompt_with_default BMC_USERNAME "BMC username" "${BMC_USERNAME:-}" 0 1 || return 1
+            prompt_with_default BMC_PASSWORD "BMC password" "${BMC_PASSWORD:-}" 1 1 || return 1
+            prompt_with_default BMC_SYSTEM_ID "BMC system ID (optional)" "${BMC_SYSTEM_ID:-}" 0 0 || return 1
+            prompt_with_default BAREMETAL_ISO_URL "ISO URL for virtual media / mount source" "${BAREMETAL_ISO_URL:-}" 0 1 || return 1
+            prompt_with_default PXE_SERVER_URL "PXE server URL (optional)" "${PXE_SERVER_URL:-}" 0 0 || return 1
+            ;;
+        *)
+            print_warning "No platform credential prompts implemented for '${platform}'."
+            ;;
+    esac
 }
 
 normalize_platform_value() {
@@ -7580,8 +7853,82 @@ satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_
         return 1
     }
 
+    run_aap_precontainer_bootstrap() {
+        local aap_target_ip="${AAP_IP:-10.168.128.2}"
+        local aap_target_host="${AAP_HOSTNAME:-aap}"
+        local ssh_key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}"
+        local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
+        local rh_user_q=""
+        local rh_pass_q=""
+        local remote_cmd=""
+        local run_aap_upgrade="${MINIRHIS_AAP_PRECONTAINER_DNF_UPGRADE:-1}"
+
+        if ! is_enabled "${MINIRHIS_AAP_PRECONTAINER_BOOTSTRAP:-1}"; then
+            print_step "AAP pre-container bootstrap disabled (MINIRHIS_AAP_PRECONTAINER_BOOTSTRAP=0)."
+            return 0
+        fi
+
+        [ "${run_aap}" -eq 1 ] || return 0
+
+        # Ensure RHSM credentials are available from persisted env.yml even when
+        # the current shell session did not export them.
+        if { [ -z "${RH_USER:-}" ] || [ -z "${RH_PASS:-}" ]; } && [ -f "${ANSIBLE_ENV_FILE}" ]; then
+            load_ansible_env_file || true
+            normalize_shared_env_vars
+        fi
+
+        if [ -z "${RH_USER:-}" ] || [ -z "${RH_PASS:-}" ]; then
+            print_warning "Skipping AAP pre-container bootstrap: RH_USER/RH_PASS is not set."
+            return 1
+        fi
+
+        printf -v rh_user_q '%q' "${RH_USER}"
+        printf -v rh_pass_q '%q' "${RH_PASS}"
+
+        # Ensure we have a usable SSH key path for root login first.
+        if [ ! -r "${ssh_key}" ]; then
+            ssh_key="${HOME}/.ssh/id_rsa"
+        fi
+
+        remote_cmd="set -euo pipefail; \
+hostnamectl set-hostname ${aap_target_host}; \
+grep -q \"${aap_target_ip}.*${aap_target_host}\" /etc/hosts || echo \"${aap_target_ip} ${aap_target_host} aap\" >> /etc/hosts; \
+nmcli device modify eth1 ipv4.addresses ${aap_target_ip}/16 ipv4.method manual >/dev/null 2>&1 || true; \
+nmcli device up eth1 >/dev/null 2>&1 || true; \
+if ! subscription-manager identity >/dev/null 2>&1; then \
+    subscription-manager register --username ${rh_user_q} --password ${rh_pass_q} --force; \
+fi; \
+subscription-manager refresh || true; \
+dnf clean all; \
+if [ \"${run_aap_upgrade}\" = \"1\" ]; then dnf upgrade --nogpgcheck -y; fi; \
+true"
+
+        if [ -r "${ssh_key}" ] && timeout 10 ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${aap_target_ip}" 'echo ready' >/dev/null 2>&1; then
+            if ssh -i "${ssh_key}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${aap_target_ip}" "${remote_cmd}"; then
+                print_success "AAP pre-container bootstrap complete on ${aap_target_host} (${aap_target_ip})."
+                return 0
+            fi
+        fi
+
+        # Fallback to password auth when key-based root login is not ready.
+        if [ -n "${root_auth_pass}" ] && command -v sshpass >/dev/null 2>&1; then
+            print_warning "AAP pre-container bootstrap key-auth failed; retrying with root password auth fallback."
+            if sshpass -p "${root_auth_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${aap_target_ip}" "${remote_cmd}"; then
+                print_success "AAP pre-container bootstrap complete with password fallback on ${aap_target_host} (${aap_target_ip})."
+                return 0
+            fi
+        fi
+
+        print_warning "AAP pre-container bootstrap failed before container phase."
+        return 1
+    }
+
     if [ "${run_satellite}" -eq 1 ]; then
         run_satellite_precontainer_bootstrap || return 1
+    fi
+
+    if [ "${run_aap}" -eq 1 ]; then
+        run_aap_precontainer_bootstrap || return 1
     fi
 
     # Pull latest image and ensure container is running with fresh mounts
@@ -16713,8 +17060,11 @@ main() {
     fi
 
     # Show entry menu in interactive mode with no explicit action flag set.
-     if ! is_noninteractive && \
-         [ -z "${CLI_DEMOKILL:-}${CLI_GENERATE_ENV:-}${CLI_VALIDATE:-}${CLI_STATUS:-}${CLI_TEST:-}${CLI_MINIRHIS:-}${CLI_IDM:-}${CLI_SATELLITE:-}${CLI_AAP:-}${CLI_CONFIG_SCOPE:-}" ]; then
+    # If a CLI action flag is present we skip the initial entry prompt. Include
+    # --reconfigure as an explicit fast-path so callers using it go straight to
+    # the main menu/prompts flow (no intermediate entry menu).
+    if ! is_noninteractive && \
+         [ -z "${CLI_DEMOKILL:-}${CLI_GENERATE_ENV:-}${CLI_VALIDATE:-}${CLI_STATUS:-}${CLI_TEST:-}${CLI_MINIRHIS:-}${CLI_IDM:-}${CLI_SATELLITE:-}${CLI_AAP:-}${CLI_CONFIG_SCOPE:-}${CLI_RECONFIGURE:-}" ]; then
         show_entry_menu
     fi
 
@@ -16905,7 +17255,12 @@ main() {
                 ;;
             2) show_standalone_components_submenu || { print_warning "Standalone components submenu failed"; exit 1; } ;;
             3) configure_platform_selection || { print_warning "Platform selection failed"; exit 1; } ;;
-			4) prompts_only_workflow || { print_warning "Prompts-only workflow failed"; exit 1; } ;;
+            4)
+                # User selected "Prompts Only" from the interactive menu — treat that as
+                # an explicit reconfigure and force prompting of all values.
+                FORCE_PROMPT_ALL=1
+                prompts_only_workflow || { print_warning "Prompts-only workflow failed"; exit 1; }
+                ;;
 			5) generate_oemdrv_kickstarts_only ;;
             6) show_configure_existing_submenu || { print_warning "Configure Existing Stack workflow failed"; exit 1; } ;;
             7) ensure_rootless_podman && print_success "Rootless Podman is ready." || print_warning "Rootless Podman setup did not complete; see messages above." ;;

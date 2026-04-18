@@ -15,3 +15,10 @@ As always, your contributions to the project are essential, PRs are welcome.
 Thanks!
 
 The MiniRHIS Team.
+
+---
+
+**Rules & Policies**
+
+- Container builds and the `minirhis-provisioner` container are part of this repo for convenience. Follow the project RULES: do not run containerized workflows unless you explicitly request them using a container flag (for example `--container`, `--container-config-only`). See `RULES.md` and `docs/assistant-adherence-rules.md` for details.
+

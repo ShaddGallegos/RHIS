@@ -1,0 +1,6 @@
+---
+- name: Prepare AAP container host
+  hosts: installer
+  become: yes
+  roles:
+    - role: minirhis-aap-container
