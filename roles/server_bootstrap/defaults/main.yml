@@ -1,0 +1,47 @@
+---
+# Default variables for server_bootstrap role
+base_packages:
+  - policycoreutils-python-utils
+  - chrony
+
+bootstrap_services:
+  - ssh
+  - http
+  - https
+  - kerberos
+  - ldap
+  - ldaps
+  - dns
+
+# Manage firewalld via the role. When false the role will stop/disable firewalld
+# to match the SOE preference of keeping firewalld disabled during install/runtime.
+manage_firewalld: false
+
+# State of SELinux: 'permissive' or 'enforcing'
+
+# Default SELinux state per SOE: permissive during installs
+selinux_state: permissive
+
+# Whether to open port 9443 in firewall and SELinux
+open_9443: false
+
+# Additional server-specific packages to install
+server_packages: []
+
+# Whether to ensure httpd is running
+ensure_httpd: false
+
+# Whether to perform a web UI wait check after services are configured
+wait_for_web: false
+
+# Web port to check when wait_for_web is true
+web_port: 443
+
+# Whether to register systems with Red Hat Insights (best-effort)
+ensure_insights: false
+
+# When true and RH credentials are available (RH_USER/RH_PASS), attempt to
+# register using those credentials. If false, the role will attempt an
+# unauthenticated `insights-client --register` which may succeed when the
+# host is already registered via subscription-manager or Satellite.
+insights_use_rh_credentials: true

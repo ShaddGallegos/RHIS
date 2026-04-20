@@ -1,0 +1,11 @@
+---
+- name: "Server bootstrap: apply baseline server config"
+  hosts: idm:satellite:aap
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: server_bootstrap
+      open_9443: false
+      ensure_httpd: false
+      wait_for_web: false

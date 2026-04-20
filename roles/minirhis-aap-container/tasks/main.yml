@@ -1,5 +1,25 @@
 ---
+---
 # Prepare host for containerized AAP controller (idempotent)
+
+- name: Install bundle extraction prerequisites
+  package:
+    name: "{{ aap_extract_prereqs }}"
+    state: present
+
+- name: Ensure qemu-guest-agent is installed
+  package:
+    name: qemu-guest-agent
+    state: present
+  ignore_errors: yes
+
+- name: Ensure qemu-guest-agent enabled and started
+  service:
+    name: qemu-guest-agent
+    enabled: true
+    state: started
+  ignore_errors: yes
+
 - name: Ensure podman package is installed
   package:
     name: "{{ podman_pkg }}"
@@ -19,6 +39,9 @@
     group: 0
     mode: "0755"
   loop: "{{ aap_controller_volumes }}"
+
+- name: Include bundle extraction tasks
+  include_tasks: extract_bundle.yml
 
 - name: Pull AAP controller image (placeholder)
   become: yes

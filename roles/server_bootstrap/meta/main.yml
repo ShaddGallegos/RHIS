@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  author: MINIRHIS
+  description: "Role to apply baseline server bootstrap: packages, SELinux,
+    firewall, and optional web checks"
+  license: MIT
+  min_ansible_version: 2.10
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+
+dependencies: []

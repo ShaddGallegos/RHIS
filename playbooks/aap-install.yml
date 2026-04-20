@@ -1,0 +1,37 @@
+---
+- name: AAP bootstrap and readiness
+  hosts: aap
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: server_bootstrap
+      server_packages: []
+      open_9443: true
+      ensure_httpd: false
+      wait_for_web: false
+
+  tasks:
+    - name: Wait for AAP web port (9443) to be available
+      wait_for:
+        port: 9443
+        timeout: 600
+
+    - name: Probe AAP web UI (https:9443)
+      uri:
+        url: "https://{{ ansible_fqdn }}:9443"
+        validate_certs: no
+        return_content: no
+      register: aap_ui_check
+      retries: 30
+      delay: 10
+      until: aap_ui_check.status is defined and aap_ui_check.status in [200,302]
+      failed_when: aap_ui_check.status not in [200,302]
+
+    - name: Check for AAP services (best-effort)
+      shell: |
+        for svc in ansible-automation-platform-controller ansible-tower httpd; do
+          systemctl status $svc --no-pager || true
+        done
+      register: aap_services
+      changed_when: false

@@ -1,0 +1,4 @@
+---
+
+# Role variables for minirhis-aap-container
+# Add any site-specific overrides in playbook-level vars or group_vars.

@@ -11,7 +11,7 @@
   when: not qemu_img_stat.stat.exists
 
 - name: Create backup of VM image (qemu-img convert)
-  become: yes
+  become: true
   command: >
     {{ qemu_img }} convert -O qcow2 {{ image_path }} {{ recovery_backup_dir
     }}/{{ vm_name }}.{{ recovery_ts.stdout }}.qcow2

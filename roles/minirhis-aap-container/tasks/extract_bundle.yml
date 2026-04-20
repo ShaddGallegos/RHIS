@@ -1,0 +1,80 @@
+---
+# Locate AAP staged bundle on the target and extract it to a known directory.
+# This task retries extraction to handle transient failures and ensures required
+# decompressors (zstd, xz, gzip, bzip2) are present via defaults.
+
+- name: Find AAP staged bundle on host
+  find:
+    paths: "{{ aap_bundle_search_paths }}"
+    patterns: "ansible-automation-platform-containerized-setup-bundle-*.tar*"
+    recurse: no
+  register: aap_bundle_search
+
+- name: Fail if AAP bundle not found
+  fail:
+    msg: "AAP bundle not found in search paths: {{ aap_bundle_search_paths }}"
+  when: aap_bundle_search.files | length == 0
+
+- name: Set aap_bundle_path fact
+  set_fact:
+    aap_bundle_path: "{{ aap_bundle_search.files[0].path }}"
+
+- name: Create extraction directory
+  file:
+    path: "{{ aap_extract_dir }}"
+    state: directory
+    owner: admin
+    group: admin
+    mode: "0755"
+
+- name: Extract bundle (retry up to 3 times)
+  become: yes
+  become_user: admin
+  shell: |
+    set -euo pipefail
+    mkdir -p "{{ aap_extract_dir }}"
+    # use tar auto-detect (-a) to pick decompressors based on suffix
+    tar -xaf "{{ aap_bundle_path }}" -C "{{ aap_extract_dir }}"
+    echo extracted
+  register: aap_extract
+  retries: 3
+  delay: 8
+  until: aap_extract.rc == 0
+
+- name: Verify extraction produced files
+  command: bash -lc "[ -n \"$(ls -A '{{ aap_extract_dir }}' 2>/dev/null)\" ]"
+  register: aap_extract_verify
+  failed_when: aap_extract_verify.rc != 0
+
+- name: Make sure extracted files are readable by admin
+  file:
+    path: "{{ aap_extract_dir }}"
+    owner: admin
+    group: admin
+    recurse: yes
+  when: aap_extract_verify is defined
+
+- name: Copy any .j2 templates from bundle into /etc/ansible/templates (if present)
+  find:
+    paths: "{{ aap_extract_dir }}"
+    patterns: "*.j2"
+    recurse: yes
+  register: aap_j2_templates
+
+- name: Ensure ansible templates dir exists
+  file:
+    path: /etc/ansible/templates
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install bundle templates
+  copy:
+    src: "{{ item.path }}"
+    dest: /etc/ansible/templates/
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ aap_j2_templates.files }}"
+  when: aap_j2_templates.files | length > 0

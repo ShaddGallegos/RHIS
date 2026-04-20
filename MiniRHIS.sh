@@ -42,7 +42,7 @@ MINIRHIS_INVENTORY_DIR="${MINIRHIS_INVENTORY_DIR:-$SCRIPT_DIR/container/vars/ext
 MINIRHIS_INVENTORY_FILE="${MINIRHIS_INVENTORY_FILE:-$MINIRHIS_INVENTORY_DIR/hosts.yml}"
 MINIRHIS_CONTAINER_INVENTORY_FILE="${MINIRHIS_CONTAINER_INVENTORY_FILE:-/minirhis/vars/external_inventory/$(basename "${MINIRHIS_INVENTORY_FILE}")}"
 MINIRHIS_HOST_VARS_DIR="${MINIRHIS_HOST_VARS_DIR:-$SCRIPT_DIR/host_vars}"
-MINIRHIS_EXECUTION_MODE="${MINIRHIS_EXECUTION_MODE:-container}"
+MINIRHIS_EXECUTION_MODE="${MINIRHIS_EXECUTION_MODE:-local}"
 
 PRESEED_ENV_FILE="${PRESEED_ENV_FILE:-$SCRIPT_DIR/.env}"
 RH_TOKEN_URL="${RH_TOKEN_URL:-https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token}"
@@ -431,6 +431,32 @@ print_success() {
     local msg
     msg="$(sanitize_log_message "$*")"
     echo -e "${GREEN}[SUCCESS]${NC} ${msg}"
+}
+
+# Print an updating progress bar for long-running retry loops. Prints a single
+# carriage-return-updating line prefixed with [STEP]. Use like:
+#   print_progress_bar <current> <total> "Label"
+print_progress_bar() {
+    local current="${1:-0}"
+    local total="${2:-100}"
+    local label="${3:-}"
+    local width="${4:-30}"
+
+    label="$(sanitize_log_message "${label}")"
+    # Sanity guards
+    if [ "${total}" -le 0 ]; then total=100; fi
+    if [ "${current}" -lt 0 ]; then current=0; fi
+    if [ "${current}" -gt "${total}" ]; then current=${total}; fi
+
+    local pct=$(( current * 100 / total ))
+    local filled=$(( current * width / total ))
+    local empty=$(( width - filled ))
+    local bar_filled bar_empty
+    bar_filled="$(printf '%*s' "${filled}" '' | tr ' ' '#')"
+    bar_empty="$(printf '%*s' "${empty}" '' | tr ' ' '.')"
+
+    # Print carriage-return-updating progress line (no final newline).
+    printf '\r%b %s [%s%s] (%d/%d) ' "${BLUE}[STEP]${NC}" "${label}" "${bar_filled}" "${bar_empty}" "${current}" "${total}"
 }
 
 print_warning() {
@@ -885,7 +911,7 @@ print_kickstart_effective_values() {
 }
 
 kickstart_nogpg_policy_block() {
-    cat <<'EOF'
+    cat <<EOF
 # MINIRHIS policy: disable package signature checks for all dnf/yum repo operations.
 mkdir -p /etc/dnf
 if [ -f /etc/dnf/dnf.conf ]; then
@@ -904,7 +930,7 @@ EOF
 }
 
 kickstart_ssh_baseline_block() {
-    cat <<'EOF'
+    cat <<EOF
 # 1.1 SSH baseline for automation and internal preflight
 ks_log "Phase 1.1: Configure SSH baseline"
 mkdir -p /etc/ssh/sshd_config.d
@@ -949,7 +975,7 @@ EOF
 
 kickstart_user_sudo_bootstrap_block() {
     local role_name="${1:-}"
-    cat <<'EOF'
+    cat <<EOF
 # 1.2 Ensure installer/admin user has passwordless sudo and virtualization groups
 ks_log "Phase 1.2: Ensure admin sudo bootstrap"
 target_user="${INSTALLER_USER:-${ADMIN_USER}}"
@@ -1530,7 +1556,7 @@ kickstart_creator_baseline_block() {
             ;;
     esac
 
-    cat <<'EOF'
+    cat <<EOF
 # MINIRHIS creator baseline (shared across all kickstarted nodes)
 # Ensures common tooling/services expected by creator/bootstrap automation.
 dnf install -y --nogpgcheck sudo openssh-clients rsync jq ansible-core cockpit || true
@@ -1556,38 +1582,38 @@ MINIRHIS_COCKPIT_OVERRIDE
 fi
 
 # SSH login access banner with node and RHIS entry points.
-cat > /etc/motd <<'MINIRHIS_MOTD'
-                                 _.---._
-                         _.-'       `-._
-                    .-'   .-"""-.      `-.
-                .'    .'  _   _`.       `.
-             /     /   (_) (_) \        \
-            /     |       ___   |        \
-         ;      |      (___)  |         ;
-         |       \             /        |
-         ;        `.         .'         ;
-            \          `-._.-'           /
-             `.                           .'
-                 `-.                   _.-'
-                        `--..________..--'
+cat > /etc/motd <<MINIRHIS_MOTD
+                                            _.---._
+                                 _.-'       `-._
+                          .-'   .-"""-.      `-.
+                     .'    .'  _   _`.       `.
+                 /     /   (_) (_) \        \
+                /     |       ___   |        \
+            ;      |      (___)  |         ;
+            |       \             /        |
+            ;        `.         .'         ;
+                \          `-._.-'           /
+                 `.                           .'
+                      `-.                   _.-'
+                                `--..________..--'
 
-                                        R E D   H A T
+                                                     R E D   H A T
 
 MiniRHIS Access Summary
 =======================
-Node role: ${role_name}
-Node hostname: ${node_hostname}
-Node IP: ${node_ip}
+Node role: \${role_name}
+Node hostname: \${node_hostname}
+Node IP: \${node_ip}
 
-Cockpit (enabled, port ${COCKPIT_PORT:-9443}): https://${node_ip}:${COCKPIT_PORT:-9443}/  or  https://${node_hostname}:${COCKPIT_PORT:-9443}/
-Product web UI: ${product_url_ip}  or  ${product_url_dns}
+Cockpit (enabled, port \${COCKPIT_PORT:-9443}): https://\${node_ip}:\${COCKPIT_PORT:-9443}/  or  https://\${node_hostname}:\${COCKPIT_PORT:-9443}/
+Product web UI: \${product_url_ip}  or  \${product_url_dns}
 
 MiniRHIS internal services:
-- Satellite: https://${SAT_IP}/  (${SAT_HOSTNAME})
-- AAP: https://${AAP_IP}:9443/  (${AAP_HOSTNAME})
-- AAP Gateway (container on AAP host): https://${AAP_IP}:9443/  (${AAP_HOSTNAME})
-- IdM: https://${IDM_IP}/ipa/ui/  (${IDM_HOSTNAME})
-- CMDB: http://${CMDB_ENDPOINT_IP:-${SAT_IP}}:18080/  (ansible-cmdb dashboard)
+- Satellite: https://\${SAT_IP}/  (\${SAT_HOSTNAME})
+- AAP: https://\${AAP_IP}:9443/  (\${AAP_HOSTNAME})
+- AAP Gateway (container on AAP host): https://\${AAP_IP}:9443/  (\${AAP_HOSTNAME})
+- IdM: https://\${IDM_IP}/ipa/ui/  (\${IDM_HOSTNAME})
+- CMDB: http://\${CMDB_ENDPOINT_IP:-\${SAT_IP}}:18080/  (ansible-cmdb dashboard)
 
 RHSM/Insights quick checks:
 - subscription-manager identity
@@ -1595,10 +1621,10 @@ RHSM/Insights quick checks:
 MINIRHIS_MOTD
 chmod 0644 /etc/motd || true
 
-cat > /etc/issue.d/minirhis.issue <<'MINIRHIS_ISSUE'
-MiniRHIS node: ${node_hostname} (${node_ip}) - role: ${role_name}
-Cockpit: https://${node_ip}:${COCKPIT_PORT:-9443}/
-Product UI: ${product_url_ip}
+cat > /etc/issue.d/minirhis.issue <<MINIRHIS_ISSUE
+MiniRHIS node: \${node_hostname} (\${node_ip}) - role: \${role_name}
+Cockpit: https://\${node_ip}:\${COCKPIT_PORT:-9443}/
+Product UI: \${product_url_ip}
 MINIRHIS_ISSUE
 chmod 0644 /etc/issue.d/minirhis.issue || true
 cat /etc/issue.d/minirhis.issue > /etc/issue 2>/dev/null || true
@@ -1639,7 +1665,7 @@ MINIRHIS_ANSIBLE_CFG
 done
 
 install -d -m 0755 /etc/minirhis /var/lib/minirhis /var/lib/minirhis/creator
-cat > /etc/minirhis/creator.env <<'MINIRHIS_CREATOR_ENV'
+cat > /etc/minirhis/creator.env <<MINIRHIS_CREATOR_ENV
 MINIRHIS_CREATOR_MANAGED=1
 MINIRHIS_ROLE=${role_name}
 MINIRHIS_HOSTNAME=${node_hostname}
@@ -1727,7 +1753,7 @@ print_runtime_configuration() {
     echo "  AAP_INVENTORY_GROWTH_TEMPLATE=${AAP_INVENTORY_GROWTH_TEMPLATE:-'(unset)'}"
     echo "  AAP_PG_DATABASE=${AAP_PG_DATABASE:-'(unset)'}"
     echo "  AAP_SSH_KEY_DIR=${AAP_SSH_KEY_DIR:-'(unset)'}"
-    echo "  MINIRHIS_EXECUTION_MODE=${MINIRHIS_EXECUTION_MODE:-container}"
+    echo "  MINIRHIS_EXECUTION_MODE=${MINIRHIS_EXECUTION_MODE:-local}"
     echo "  MINIRHIS_ANSIBLE_CFG_VAULT_HOST=${MINIRHIS_ANSIBLE_CFG_VAULT_HOST}"
     echo "  MINIRHIS_ANSIBLE_CFG_HOST=${MINIRHIS_ANSIBLE_CFG_HOST}"
     echo "  MINIRHIS_ANSIBLE_FACT_CACHE_HOST=${MINIRHIS_ANSIBLE_FACT_CACHE_HOST}"
@@ -5375,6 +5401,15 @@ sync_local_roles_to_container() {
         return 0
     fi
 
+    # Only sync local roles into the provisioner container when the execution
+    # mode is explicitly set to 'container'.  By default MINIRHIS runs in
+    # 'local' mode and should not perform any container-side syncs unless the
+    # caller passed --container or set MINIRHIS_EXECUTION_MODE=container.
+    if [ "${MINIRHIS_EXECUTION_MODE:-local}" != "container" ]; then
+        print_step "Skipping syncing local container/roles/* (MINIRHIS_EXECUTION_MODE=${MINIRHIS_EXECUTION_MODE:-local})"
+        return 0
+    fi
+
     print_step "Syncing local container/roles/* to provisioner container /minirhis/"
     for tree in "${local_roles_dir}"/minirhis-builder-*/; do
         tree="$(basename "${tree}")"
@@ -6152,6 +6187,28 @@ activation_keys:
         lifecycle_environment: "PROD_RHEL_10_X86_64"
         content_view: "RHEL_10_X86_64"
         unlimited_hosts: true
+
+# Additional automation hints consumed by Satellite builder role and helper scripts
+installation_media:
+    - name: "RHEL 10"
+        url: "https://satellite.prod.spg/media"
+    - name: "RHEL 9"
+        url: "https://satellite.prod.spg/media"
+
+operating_systems_additional:
+    - major: 10
+        name: "RHEL 10"
+    - major: 9
+        name: "RHEL 9"
+
+flatpak_remotes:
+    - name: "flathub"
+        url: "https://dl.flathub.org/repo/flathub.flatpakrepo"
+
+manifest_import:
+    source_dir: "~/Downloads"
+    dest_dir: "/var/lib/libvirt/images/files"
+    filename_pattern: "manifest*.zip"
 
 # Optional repo intent notes (edit as needed):
 # - satellite-6.18-for-rhel-9-x86_64-rpms
@@ -7726,7 +7783,7 @@ run_minirhis_config_as_code() {
             ;;
     esac
     print_step "Component scope: ${component_scope}"
-    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ]; then
         print_step "Execution mode: local ${USER} repo (local-first reruns/fallbacks enabled)"
         use_local_exec=1
         MINIRHIS_LOCAL_ROLE_FALLBACK=1
@@ -7900,7 +7957,7 @@ if ! subscription-manager identity >/dev/null 2>&1; then \
 fi; \
 subscription-manager refresh || true; \
 dnf clean all; \
-if [ \"${run_aap_upgrade}\" = \"1\" ]; then dnf upgrade --nogpgcheck -y; fi; \
+if [ \"${run_aap_upgrade}\" = \"1\" ]; then dnf install -y --nogpgcheck nginx nginx-core nginx-filesystem redhat-logos-httpd || true; dnf upgrade --nogpgcheck -y; fi; \
 true"
 
         if [ -r "${ssh_key}" ] && timeout 10 ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${aap_target_ip}" 'echo ready' >/dev/null 2>&1; then
@@ -7979,7 +8036,7 @@ true"
         return 0
     }
 
-    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ]; then
         if [ -r "${ANSIBLE_VAULT_PASS_FILE}" ]; then
             vault_arg=(--vault-password-file "${ANSIBLE_VAULT_PASS_FILE}")
         elif is_noninteractive; then
@@ -8096,7 +8153,7 @@ true"
         local root_auth_pass="${3:-}"
         local extra_args="${4:-}"
 
-        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+        if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ]; then
             local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
             local local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
             local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
@@ -8529,7 +8586,7 @@ else:
     else
         manual_satellite_extras+=" --skip-tags tags_satellite_pre_cdn_registration"
     fi
-    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ]; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ]; then
         if ! ensure_satellite_chrony_template; then
             manual_satellite_extras+=" --skip-tags tags_satellite_pre_chrony"
         fi
@@ -8639,7 +8696,7 @@ else:
                 ;;
         esac
 
-        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ]; then
+        if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ]; then
             print_warning "${component^^} rerun (container):"
             print_warning "  podman exec -it ${manual_podman_env} ${MINIRHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
             print_warning "${component^^} rerun (local, optional):"
@@ -8816,7 +8873,7 @@ EOF
         fi
 
         print_step "${phase_label}"
-        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+        if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ]; then
             case "${phase_playbook}" in
                 */minirhis-builder-idm/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-idm")" ;;
                 */minirhis-builder-satellite/main.yml) local_playbook="$(resolve_local_component_playbook "minirhis-builder-satellite")" ;;
@@ -8900,7 +8957,7 @@ EOF
             return 0
         fi
 
-        if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+        if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ]; then
             if [ -z "$root_auth_pass" ]; then
                 print_warning "Auth fallback skipped for ${phase_label}: ROOT_PASS/ADMIN_PASS is unset."
                 phase_auth_fallback_status="unavailable"
@@ -9084,20 +9141,24 @@ EOF
         local sat_validation_reverse="${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}"
         while [ $retry_count -lt $max_retries ]; do
             if timeout 5 ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" "foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" --foreman-initial-location \"${SAT_LOC:-CORE}\" --foreman-initial-admin-username \"${ADMIN_USER:-admin}\" --foreman-initial-admin-password ${admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface eth1 --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse \"${sat_validation_reverse}\" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface eth1 --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-network \"${sat_validation_network}\" --foreman-proxy-dhcp-netmask \"${sat_validation_netmask}\" --foreman-proxy-dhcp-gateway \"${sat_validation_gateway}\" --foreman-proxy-dhcp-range \"${sat_validation_range}\" --foreman-proxy-dhcp-nameservers \"${sat_validation_dns}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --register-with-insights" >/dev/null 2>&1; then
-                print_success "  Satellite installed and running (iteration $((retry_count+1))/${max_retries})"
+                    # Ensure we end the progress-line before printing success
+                    printf '\n'
+                    print_success "  Satellite installed and running (iteration $((retry_count+1))/${max_retries})"
                 break
             fi
             retry_count=$((retry_count+1))
             if [ $retry_count -lt $max_retries ]; then
-                print_step "  Satellite not yet ready, retrying... ($retry_count/${max_retries})"
-                sleep 10
+                    print_progress_bar "$retry_count" "${max_retries}" "  Satellite not yet ready, retrying..."
+                    sleep 10
             fi
         done
 
-        if [ $retry_count -ge $max_retries ]; then
-            print_warning "Satellite validation timeout after ${max_retries} retries."
-            return 1
-        fi
+            # Finish the progress line before final status output
+            printf '\n'
+            if [ $retry_count -ge $max_retries ]; then
+                print_warning "Satellite validation timeout after ${max_retries} retries."
+                return 1
+            fi
 
         # Phase 3: Setup foreman SSH keys to libvirt and create compute resource
         print_step "  Phase 3/3: Setting up foreman user SSH keys and compute resource"
@@ -9599,7 +9660,9 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
 
     prepare_idm_runtime_network() {
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
-        local prep_shell='set -e; nmcli con up eth0 >/dev/null 2>&1 || nmcli dev connect eth0 >/dev/null 2>&1 || true; nmcli con up eth1 >/dev/null 2>&1 || nmcli dev connect eth1 >/dev/null 2>&1 || true; if ! getent hosts redhat.com >/dev/null 2>&1; then printf "nameserver 10.168.0.1\nnameserver 1.1.1.1\nnameserver 8.8.8.8\noptions rotate\n" > /etc/resolv.conf || true; fi; ip route show >/dev/null 2>&1; getent hosts redhat.com >/dev/null 2>&1'
+        local prep_shell='set -euo pipefail; '\n+            'for dev in $(ls /sys/class/net | grep -v lo 2>/dev/null || true); do ip link set dev "$dev" up >/dev/null 2>&1 || true; done; '\n+            'if command -v nmcli >/dev/null 2>&1; then nmcli -t -f DEVICE,STATE d | awk -F: '\''$2!="connected" {print $1}'\'' | while read -r d; do nmcli dev connect "$d" >/dev/null 2>&1 || true; done; fi; '
+            'if ! getent hosts redhat.com >/dev/null 2>&1; then printf "nameserver 10.168.0.1\nnameserver 1.1.1.1\nnameserver 8.8.8.8\noptions rotate\n" > /etc/resolv.conf || true; fi; '
+            'ip route show >/dev/null 2>&1; getent hosts redhat.com >/dev/null 2>&1'
 
         if [ -z "$root_auth_pass" ]; then
             print_warning "Skipping IdM runtime network prep: ROOT_PASS/ADMIN_PASS is unset."
@@ -9608,32 +9671,24 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
 
         print_step "Preparing IdM runtime network/DNS state before phase playbook"
 
-        if [ "$use_interactive_vault_prompt" = "1" ]; then
-            podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
-                ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
-                -e "ansible_user=root" \
-                -e "ansible_password=${root_auth_pass}" \
-                -e "ansible_become=false" \
-                -e "ansible_become_password=${root_auth_pass}" \
-                -m shell \
-                -a "${prep_shell}" >/dev/null 2>&1
-        else
-            podman exec -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
-                ansible "idm" ${inv} "${vault_arg[@]}" ${evars} \
-                -e "ansible_user=root" \
-                -e "ansible_password=${root_auth_pass}" \
-                -e "ansible_become=false" \
-                -e "ansible_become_password=${root_auth_pass}" \
-                -m shell \
-                -a "${prep_shell}" >/dev/null 2>&1
-        fi
+        local max_attempts=5
+        local attempt=1
+        while [ $attempt -le $max_attempts ]; do
+            # Use run_ansible_shell_in_container helper which handles local/container modes
+            if run_ansible_shell_in_container "idm" "${prep_shell}" "${root_auth_pass}" >/dev/null 2>&1; then
+                print_success "IdM runtime network prep completed."
+                return 0
+            fi
 
-        if [ "$?" -eq 0 ]; then
-            print_success "IdM runtime network prep completed."
-            return 0
-        fi
+            print_warning "IdM runtime network prep attempt ${attempt} failed. Collecting diagnostics."
+            # dump diagnostics (will attempt with root auth when available)
+            dump_idm_network_diagnostics || true
 
-        print_warning "IdM runtime network prep could not be confirmed; continuing to phase playbook."
+            attempt=$((attempt + 1))
+            sleep $((attempt * 5))
+        done
+
+        print_warning "IdM runtime network prep could not be confirmed after ${max_attempts} attempts; continuing to phase playbook."
         return 1
     }
 
@@ -9724,7 +9779,9 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 check_out=$(run_ansible_shell_in_container "idm" "${check_shell}" "" "--one-line" 2>&1) || rc=$?
             fi
 
-            if [ "$rc" -eq 0 ] && printf '%s\n' "${check_out}" | grep -q 'IDM_WEB_UI_READY:'; then
+            if [ "${rc}" -eq 0 ] && printf '%s\n' "${check_out}" | grep -q 'IDM_WEB_UI_READY:'; then
+                # End any in-place progress line before printing success
+                printf '\n'
                 print_success "IdM Web UI is reachable and healthy (${check_out##*IDM_WEB_UI_READY:})."
                 return 0
             fi
@@ -9732,15 +9789,15 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             now="$(date +%s)"
             elapsed=$(( now - start_ts ))
             if [ "$elapsed" -ge "$timeout" ]; then
+                printf '\n'
                 print_warning "IdM Web UI did not become ready within ${timeout}s."
                 print_warning "Last Web UI probe output: ${check_out}"
                 dump_idm_web_ui_diagnostics || true
                 return 1
             fi
 
-            if [ $(( elapsed % 60 )) -eq 0 ]; then
-                print_step "IdM Web UI still converging (elapsed=${elapsed}s/${timeout}s)."
-            fi
+            # Update progress inline instead of printing periodic lines
+            print_progress_bar "$elapsed" "$timeout" "IdM Web UI converging..."
             sleep "$interval"
         done
     }
@@ -9900,7 +9957,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
     # ---- Component phase execution ------------------------------------------
     # ── 1. IdM — must be ready first (Satellite/AAP enroll against it) ─────────
     if [ "${run_idm}" -eq 1 ]; then
-    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ] && ! ensure_container_running_with_retry; then
         idm_status="skipped-container"
         any_failed=1
         print_warning "Provisioner container unavailable; skipping IdM phase."
@@ -9936,7 +9993,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
     remediate_satellite_repo_entitlements || true
     print_step "Pre-flight: collecting Satellite RHSM state"
     dump_satellite_rhsm_diagnostics || true
-    if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
+    if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ] && ! ensure_container_running_with_retry; then
         satellite_status="skipped-container"
         any_failed=1
         print_warning "Provisioner container unavailable; skipping Satellite phase."
@@ -10008,7 +10065,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         aap_auth_fallback_status="not-needed"
         any_failed=1
         print_warning "AAP internal SSH is still not reachable; skipping AAP config-as-code phase."
-    elif [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ] && ! ensure_container_running_with_retry; then
+    elif [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ] && ! ensure_container_running_with_retry; then
         aap_status="skipped-container"
         aap_auth_fallback_status="not-needed"
         any_failed=1
@@ -10099,7 +10156,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         any_failed=0
 
         if [ "$idm_status" = "failed" ]; then
-            if { [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — IdM" "idm" "/minirhis/minirhis-builder-idm/main.yml"; then
+            if { [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — IdM" "idm" "/minirhis/minirhis-builder-idm/main.yml"; then
                 idm_status="success-after-retry"
                 print_success "IdM succeeded on retry."
             else
@@ -10111,7 +10168,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         fi
 
         if [ "$satellite_status" = "failed" ]; then
-            if { [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — Satellite" "scenario_satellite" "/minirhis/minirhis-builder-satellite/main.yml"; then
+            if { [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — Satellite" "scenario_satellite" "/minirhis/minirhis-builder-satellite/main.yml"; then
                 satellite_status="success-after-retry"
                 print_success "Satellite succeeded on retry."
             else
@@ -10123,7 +10180,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         fi
 
         if [ "$aap_status" = "failed" ]; then
-            if { [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — AAP" "aap" "/minirhis/minirhis-builder-aap/minirhis-builder-aap/main.yml"; then
+            if { [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ] || ensure_container_running_with_retry; } && run_phase_playbook_with_auth_fallback "Retry — AAP" "aap" "/minirhis/minirhis-builder-aap/minirhis-builder-aap/main.yml"; then
                 aap_status="success-after-retry"
                 print_success "AAP succeeded on retry."
             else
@@ -10148,7 +10205,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
             local local_vault_arg=""
 
-            if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "local" ]; then
+            if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ]; then
                 [ -f "${local_cfg}" ] || local_cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
                 if [ -r "${ANSIBLE_VAULT_PASS_FILE}" ]; then
                     local_vault_arg="--vault-password-file ${ANSIBLE_VAULT_PASS_FILE}"
@@ -10909,6 +10966,32 @@ minirhis_target_platform: "${MINIRHIS_TARGET_PLATFORM:-libvirt}"
 sat_target_platform: "${SAT_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
 aap_target_platform: "${AAP_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
 idm_target_platform: "${IDM_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
+    # Satellite compute / image provisioning settings
+    sat_compute_platform: "${SAT_COMPUTE_PLATFORM:-libvirt}"
+    sat_compute_resource_name: "${SAT_COMPUTE_RESOURCE_NAME:-MINIRHIS_Compute}"
+    sat_compute_profile_name: "${SAT_COMPUTE_PROFILE_NAME:-MINIRHIS_Standard}"
+    sat_compute_url: "${SAT_COMPUTE_URL:-}"
+    sat_compute_username: "${SAT_COMPUTE_USERNAME:-}"
+    sat_compute_password: "${SAT_COMPUTE_PASSWORD:-}"
+    sat_compute_region: "${SAT_COMPUTE_REGION:-}"
+    sat_compute_project: "${SAT_COMPUTE_PROJECT:-}"
+    sat_compute_zone: "${SAT_COMPUTE_ZONE:-}"
+    sat_compute_tenant: "${SAT_COMPUTE_TENANT:-}"
+    sat_compute_subscription: "${SAT_COMPUTE_SUBSCRIPTION:-}"
+    sat_compute_datacenter: "${SAT_COMPUTE_DATACENTER:-}"
+    sat_compute_cluster: "${SAT_COMPUTE_CLUSTER:-}"
+    sat_compute_namespace: "${SAT_COMPUTE_NAMESPACE:-}"
+    sat_compute_network: "${SAT_COMPUTE_NETWORK:-default}"
+    sat_compute_pool: "${SAT_COMPUTE_POOL:-default}"
+    sat_compute_cpus: "${SAT_COMPUTE_CPUS:-2}"
+    sat_compute_memory_mb: "${SAT_COMPUTE_MEMORY_MB:-4096}"
+    sat_compute_volume_gb: "${SAT_COMPUTE_VOLUME_GB:-20}"
+
+    # Image settings for Satellite image-based provisioning
+    sat_image_name: "${SAT_IMAGE_NAME:-rhel-9-base.qcow2}"
+    sat_image_uuid: "${SAT_IMAGE_UUID:-}"
+    sat_image_username: "${SAT_IMAGE_USERNAME:-root}"
+    sat_image_password: "${SAT_IMAGE_PASSWORD:-}"
 libvirt_uri: "${LIBVIRT_URI:-qemu:///system}"
 libvirt_storage_pool: "${LIBVIRT_STORAGE_POOL:-default}"
 libvirt_network: "${LIBVIRT_NETWORK:-default}"
@@ -11865,13 +11948,11 @@ wait_for_vm_ssh() {
         fi
 
         if [ $((now - last_progress_log)) -ge "${ssh_progress_every}" ]; then
-            percent=$(( elapsed * 100 / ssh_wait_timeout ))
-            [ "${percent}" -gt 100 ] && percent=100
-            filled=$(( percent / 5 ))
-            printf -v bar '%*s' "${filled}" ''
-            bar="${bar// /#}"
-            printf -v bar '%-20s' "${bar}"
-            _aap_progress_render_inline "AAP callback wait: [${bar}] ${percent}%% elapsed=${elapsed}s/${ssh_wait_timeout}s remaining~${remaining}s stage=${stage_label}"
+            # Use unified progress bar helper for inline updates. Preserve the
+            # flush semantics by marking progress_inline_active so callers can
+            # newline when stages change or warnings are emitted.
+            progress_inline_active=1
+            print_progress_bar "$elapsed" "${ssh_wait_timeout}" "AAP callback wait: stage=${stage_label} remaining~${remaining}s" 20
             last_progress_log="${now}"
         fi
 
@@ -12221,6 +12302,34 @@ if gateway_migrate.exists():
     if injected not in text and marker in text:
         gateway_migrate.write_text(text.replace(marker, injected + marker, 1), encoding='utf-8')
         updated += 1
+    # Patch any direct aap-gateway-manage invocations so they run inside the
+    # automation-gateway container with PYTHONHTTPSVERIFY=0 to disable TLS
+    # verification for demo / self-signed cert scenarios. Only apply if the
+    # patch hasn't already been added.
+    if 'PYTHONHTTPSVERIFY=0' not in text:
+        import re
+        def _wrap_aap_manage(m):
+            cmd = m.group(1).strip()
+            # if it's already using podman exec, leave it alone
+            if 'podman exec' in cmd:
+                return m.group(0)
+            # If an AAP root CA bundle exists in artifacts_user, copy it into the
+            # automation-gateway container and update the container trust store
+            # before running the management command. Use a host-level shell so
+            # we can run podman cp and podman exec in sequence.
+            safe_cmd = cmd.replace('"', '\\"')
+            new_cmd = (
+                "sh -lc 'if [ -f artifacts_user/aap-root-ca.pem ]; then "
+                "podman cp artifacts_user/aap-root-ca.pem automation-gateway:/etc/pki/ca-trust/source/anchors/aap-root-ca.pem && "
+                "podman exec automation-gateway sh -lc \"update-ca-trust extract 2>/dev/null || update-ca-certificates 2>/dev/null || true\"; "
+                "fi; podman exec automation-gateway sh -lc \"PYTHONHTTPSVERIFY=0 " + safe_cmd + "\"'"
+            )
+            return 'ansible.builtin.command: ' + new_cmd
+
+        new_text = re.sub(r'ansible\.builtin\.command:\s*(.+aap-gateway-manage[^\n]*)', _wrap_aap_manage, text)
+        if new_text != text:
+            gateway_migrate.write_text(new_text, encoding='utf-8')
+            updated += 1
 
 if hub_upload_images.exists():
     text = hub_upload_images.read_text(encoding='utf-8', errors='ignore')
@@ -12284,28 +12393,20 @@ wait_for_aap_api() {
     print_step "Waiting for AAP API on ${host}..."
     while true; do
         if curl -sk -u "${ADMIN_USER}:${pass}" "https://${host}/api/v2/ping/" 2>/dev/null | grep -q '"version"'; then
-            printf "\r[STEP] Waiting for AAP API on %s... [%-20s] 100%% (%02d:%02d elapsed)\n" \
-                "${host}" "####################" "$((elapsed / 60))" "$((elapsed % 60))"
+            # End progress line and report success
+            printf '\n'
             print_success "AAP API is ready on ${host}."
             return 0
         fi
 
         if [ "${elapsed}" -ge "${max_wait}" ]; then
-            printf "\n"
+            printf '\n'
             print_warning "AAP API on ${host} did not respond within $((max_wait / 60)) minutes."
             return 1
         fi
 
-        pct=$(( (elapsed * 100) / max_wait ))
-        filled=$(( (elapsed * bar_width) / max_wait ))
-        remaining=$(( bar_width - filled ))
-        minutes=$(( elapsed / 60 ))
-        seconds=$(( elapsed % 60 ))
-
-        printf "\r[STEP] Waiting for AAP API on %s... [" "${host}"
-        printf "%${filled}s" "" | tr ' ' '#'
-        printf "%${remaining}s" "" | tr ' ' '-'
-        printf "] %3d%% (%02d:%02d elapsed)" "${pct}" "${minutes}" "${seconds}"
+        # Use unified progress bar helper
+        print_progress_bar "$elapsed" "$max_wait" "Waiting for AAP API on ${host}" ${bar_width}
 
         sleep "${interval}"
         elapsed=$((elapsed + interval))
@@ -13283,6 +13384,90 @@ systemctl status foreman-proxy | grep -q "active (running)" && echo "✓ Foreman
 
 # Create ssh key template for image provisioning
 mkdir -p /usr/share/foreman/provision_templates/ssh_provisioning 2>/dev/null || true
+## Satellite helper actions: flatpak remote, weekly sync plan, manifest import
+ensure_flatpak_remote() {
+    echo "Ensuring Flatpak remote 'flathub' exists..."
+    api_resp=$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://${SAT_IP}}/api/v2/flatpak_remotes?search=name=\"flathub\"" 2>/dev/null || true)
+    if [ -n "${api_resp}" ] && ! echo "${api_resp}" | grep -q '"total": *0'; then
+        echo "  ℹ flathub flatpak remote already exists (verified via API)"
+        return 0
+    fi
+    create_json='{"flatpak_remote":{"name":"flathub","url":"https://dl.flathub.org/repo/flathub.flatpakrepo","enabled":true}}'
+    if curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" -H "Content-Type: application/json" -X POST -d "${create_json}" "${SAT_URL:-https://${SAT_IP}}/api/v2/flatpak_remotes" -o /dev/null -w "%{http_code}" | grep -qE '20[1-3]'; then
+        echo "  ✓ flathub flatpak remote created via API"
+        return 0
+    fi
+    bash tools/hammer_api_fallback.sh flatpak_remotes '' -- hammer flatpak-remote create --name="flathub" --url="https://dl.flathub.org/repo/flathub.flatpakrepo" 2>/dev/null || echo "  ⚠ Could not create flathub flatpak remote (add manually)"
+}
+
+create_weekly_sync_plan() {
+    echo "Ensuring weekly sync plan 'weekly_all_repos' exists..."
+    api_resp=$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://${SAT_IP}}/api/v2/sync_plans?search=name=\"weekly_all_repos\"" 2>/dev/null || true)
+    if [ -n "${api_resp}" ] && ! echo "${api_resp}" | grep -q '"total": *0'; then
+        echo "  ℹ weekly_all_repos sync plan already exists"
+        return 0
+    fi
+    # Attempt to gather repository IDs (hammer fallback will be used if hammer exists)
+    if command -v hammer >/dev/null 2>&1; then
+        repo_ids=$(hammer repository list --per-page 100000 --fields Id --csv 2>/dev/null | tail -n +2 | tr '\n' ',' | sed 's/,$//') || repo_ids=""
+    else
+        repo_ids=""
+    fi
+    if [ -n "${repo_ids}" ]; then
+        echo "  ℹ Creating sync plan with repository IDs: ${repo_ids}"
+        bash tools/hammer_api_fallback.sh sync_plans '' -- hammer sync-plan create --name="weekly_all_repos" --interval=weekly --repository-ids="${repo_ids}" 2>/dev/null && echo "  ✓ weekly_all_repos sync plan created" || echo "  ⚠ Failed to create weekly_all_repos via hammer; create manually"
+    else
+        echo "  ⚠ No repositories found to include in sync plan; skipping automatic creation"
+    fi
+}
+
+import_latest_manifest() {
+    echo "Importing latest Satellite manifest from ${HOME}/Downloads to /var/lib/libvirt/images/files/..."
+    downloads_dir="${HOME}/Downloads"
+    dest_dir="/var/lib/libvirt/images/files"
+    mkdir -p "${dest_dir}" || true
+    latest=$(ls -1t "${downloads_dir}"/manifest*.zip 2>/dev/null | head -1 || true)
+    if [ -z "${latest}" ]; then
+        echo "  ⚠ No manifest ZIP found in ${downloads_dir}; skipping import"
+        return 0
+    fi
+    cp -f "${latest}" "${dest_dir}/" || { echo "  ⚠ Failed to copy manifest to ${dest_dir}"; return 1; }
+    target="${dest_dir}/$(basename "${latest}")"
+    echo "  ℹ Copied ${latest} → ${target}"
+    # Try API import
+    if curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" -F "file=@${target}" "${SAT_URL:-https://${SAT_IP}}/api/v2/manifest_imports" -o /dev/null -w "%{http_code}" | grep -qE '20[1-3]'; then
+        echo "  ✓ Manifest uploaded via Satellite API"
+    else
+        bash tools/hammer_api_fallback.sh manifest_imports '' -- hammer subscription upload_manifest --organization="${SAT_ORG}" --file="${target}" 2>/dev/null && echo "  ✓ Manifest uploaded via hammer" || echo "  ⚠ Manifest upload failed; import manually via Satellite web UI"
+    fi
+}
+
+download_baseos_kickstarts() {
+    echo "Attempting to retrieve/generate BaseOS kickstarts for RHEL9 and RHEL10..."
+    ks_dir="${KS_DIR:-/var/lib/libvirt/images/kickstarts}"
+    mkdir -p "${ks_dir}" || true
+    for v in 10 9; do
+        out_file="${ks_dir}/rhel${v}-baseos.ks"
+        # Try to fetch a reasonably-formed unattended kickstart via Foreman API (best-effort)
+        if curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://${SAT_IP}}/unattended/provision_template?search=operatingsystem_major=\"${v}\"" -o "${out_file}" 2>/dev/null; then
+            echo "  ✓ Wrote possible kickstart for RHEL ${v} to ${out_file} (verify contents)"
+        else
+            echo "  ⚠ Could not fetch kickstart via API for RHEL ${v}; creating placeholder at ${out_file}"
+            cat > "${out_file}" <<'KS'
+# Placeholder kickstart - replace with real Satellite unattended kickstart
+# RHEL ${v} BaseOS kickstart
+install
+text
+reboot
+KS
+        fi
+    done
+}
+
+ensure_flatpak_remote || true
+create_weekly_sync_plan || true
+import_latest_manifest || true
+download_baseos_kickstarts || true
 
 echo "=== SATELLITE LIFECYCLE & PROVISIONING CONFIGURATION COMPLETE ==="
 echo "  ✓ Lifecycle Environments: Created for RHEL 9 & 10 (DEV/TEST/PROD)"
@@ -13692,7 +13877,7 @@ create_satellite_vm_only() {
 
     if is_demo; then
         print_step "DEMO mode: reduced Satellite VM specifications (PoC/learning environment)"
-        sat_disk="150G"; sat_ram=24576; sat_vcpu=8
+        sat_disk="150G"; sat_ram=$((24576 + 2048)); sat_vcpu=8
     else
         print_step "Standard mode: production/best-practice Satellite VM specifications"
         sat_disk="150G"; sat_ram=32768; sat_vcpu=8
@@ -13728,7 +13913,7 @@ create_idm_vm_only() {
 
     if is_demo; then
         print_step "DEMO mode: reduced IdM VM specifications (PoC/learning environment)"
-        idm_disk="30G"; idm_ram=4096; idm_vcpu=2
+        idm_disk="30G"; idm_ram=$((4096 + 2048)); idm_vcpu=2
     else
         print_step "Standard mode: production/best-practice IdM VM specifications"
         idm_disk="60G"; idm_ram=16384; idm_vcpu=4
@@ -13764,7 +13949,7 @@ create_aap_vm_only() {
 
     if is_demo; then
         print_step "DEMO mode: reduced AAP VM specifications (PoC/learning environment)"
-        aap_disk="50G"; aap_ram=8152; aap_vcpu=4
+        aap_disk="50G"; aap_ram=$((8152 + 2048)); aap_vcpu=4
     else
         print_step "Standard mode: production/best-practice AAP VM specifications"
         aap_disk="50G"; aap_ram=16384; aap_vcpu=8
@@ -15618,9 +15803,9 @@ create_minirhis_vms() {
 
     if is_demo; then
         print_step "DEMO mode: reduced per-node VM specs for MiniRHIS 3-node stack (IdM + Satellite + AAP)"
-        sat_disk="150G"; sat_ram=24576; sat_vcpu=8
-        aap_disk="50G";  aap_ram=8152;  aap_vcpu=4
-        idm_disk="30G";  idm_ram=4096;  idm_vcpu=2
+        sat_disk="150G"; sat_ram=$((24576 + 2048)); sat_vcpu=8
+        aap_disk="50G";  aap_ram=$((8152 + 2048));  aap_vcpu=4
+        idm_disk="30G";  idm_ram=$((4096 + 2048));  idm_vcpu=2
     else
         print_step "Standard mode: production/best-practice VM specifications"
         sat_disk="150G"; sat_ram=32768; sat_vcpu=8
@@ -17010,7 +17195,8 @@ install_package_with_fallback() {
         fi
     fi
 
-    print_warning "Could not install package (tolerated failure): ${pkg_spec}"
+    local _minirhis_pkg_display="${pkg_spec:-<unspecified>}"
+    print_warning "Could not install package (tolerated failure): ${_minirhis_pkg_display}; to debug run: sudo dnf install ${_minirhis_pkg_display} or check /var/log/dnf.log"
     return 0  # Tolerate failure
 }
 
@@ -17043,7 +17229,8 @@ install_dnf_package_with_fallback() {
         fi
     fi
 
-    print_warning "Could not install package (tolerated failure): ${pkg_spec}"
+    local _minirhis_pkg_display="${pkg_spec:-<unspecified>}"
+    print_warning "Could not install package (tolerated failure): ${_minirhis_pkg_display}; to debug run: sudo dnf install ${_minirhis_pkg_display} or check /var/log/dnf.log"
     return 0  # Tolerate failure
 }
 
@@ -17190,7 +17377,7 @@ main() {
                 }
                 ;;
             all)
-                if [ "${MINIRHIS_EXECUTION_MODE:-container}" = "container" ]; then
+                if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ]; then
                     install_container || {
                         print_warning "Could not initialize provisioner container for config-as-code."
                         exit 1

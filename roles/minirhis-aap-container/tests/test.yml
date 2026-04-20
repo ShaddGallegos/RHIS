@@ -1,0 +1,6 @@
+---
+- name: Test minirhis-aap-container role (smoke)
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - debug: msg="minirhis-aap-container role skeleton present"

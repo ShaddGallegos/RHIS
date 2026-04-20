@@ -1,0 +1,209 @@
+---
+# Server bootstrap tasks: install packages, configure SELinux, firewalld, and optional web checks
+- name: Install base and server-specific packages
+  package:
+    name: "{{ (base_packages | default([])) + (server_packages | default([])) }}"
+    state: present
+
+- name: Ensure firewalld is running and enabled (RedHat family)
+  service:
+    name: firewalld
+    state: started
+    enabled: true
+  when: ansible_facts.os_family == 'RedHat' and (manage_firewalld | default(true))
+
+- name: Open bootstrap services (firewalld)
+  firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: yes
+  loop: "{{ bootstrap_services }}"
+  when: ansible_facts.os_family == 'RedHat' and (manage_firewalld | default(true))
+
+- name: Open port 9443/tcp (firewalld) when requested
+  firewalld:
+    port: 9443/tcp
+    permanent: true
+    state: enabled
+    immediate: yes
+  when: open_9443 and ansible_facts.os_family == 'RedHat' and (manage_firewalld |
+    default(true))
+
+- name: Stop and disable firewalld when management is off (SOE)
+  service:
+    name: firewalld
+    state: stopped
+    enabled: false
+    masked: true
+  when: ansible_facts.os_family == 'RedHat' and not (manage_firewalld |
+    default(true))
+
+- name: Ensure SELinux mode (best-effort)
+  ansible.posix.selinux:
+    policy: targeted
+    state: "{{ selinux_state }}"
+
+- name: Ensure httpd can make network connections (SELinux boolean)
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+
+- name: Install SELinux management utilities (semanage)
+  package:
+    name: policycoreutils-python-utils
+    state: present
+  when: ansible_facts.os_family == 'RedHat'
+
+- name: Add http port 9443 to SELinux http_port_t (best-effort)
+  command: semanage port -a -t http_port_t -p tcp 9443
+  args:
+    warn: false
+  register: semanage_add
+  failed_when: false
+  when: open_9443 and ansible_facts.os_family == 'RedHat'
+
+- name: Ensure httpd is enabled and started (if requested)
+  service:
+    name: httpd
+    state: started
+    enabled: true
+  when: ensure_httpd and ansible_facts.os_family == 'RedHat'
+  ignore_errors: true
+
+- name: Optionally wait for web UI port to be available
+  wait_for:
+    port: "{{ web_port }}"
+    timeout: 300
+  when: wait_for_web
+
+- name: Optionally probe web UI until healthy
+  uri:
+    url: "https://{{ ansible_fqdn }}"
+    validate_certs: no
+    return_content: no
+  register: ui_check_result
+  retries: 12
+  delay: 10
+  until: ui_check_result.status is defined and ui_check_result.status in [200,302]
+  when: wait_for_web
+
+# Optional: share SSH keys between installer and this host. Controlled by
+# the `share_ssh_keys` variable (default: false). When enabled this will:
+# - push the minirhis installer and control public keys to `admin` and the
+#   local operator user (if present) on the target host
+# - fetch the target host's admin/operator public keys and add them to the
+#   installer's `admin` authorized_keys so the node can SSH back to installer.
+- block:
+    - name: Set operator_user from control environment
+      set_fact:
+        operator_user: "{{ lookup('env','USER') }}"
+
+    - name: Install minirhis-installer public key for admin
+      authorized_key:
+        user: admin
+        key: "{{ lookup('file', lookup('env','HOME') +
+          '/.ssh/minirhis-installer/id_rsa.pub') }}"
+        state: present
+        manage_dir: yes
+
+    - name: Install control user's public key for admin
+      authorized_key:
+        user: admin
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+        state: present
+        manage_dir: yes
+
+    - name: Check operator_user exists on this host
+      getent:
+        database: passwd
+        key: "{{ operator_user }}"
+      register: operator_getent
+      failed_when: false
+
+    - name: Install minirhis-installer public key for operator_user (if present)
+      authorized_key:
+        user: "{{ operator_user }}"
+        key: "{{ lookup('file', lookup('env','HOME') +
+          '/.ssh/minirhis-installer/id_rsa.pub') }}"
+        state: present
+        manage_dir: yes
+      when: operator_getent.entries is defined and operator_getent.entries | length >
+        0
+
+    - name: Install control user's public key for operator_user (if present)
+      authorized_key:
+        user: "{{ operator_user }}"
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+        state: present
+        manage_dir: yes
+      when: operator_getent.entries is defined and operator_getent.entries | length >
+        0
+
+    - name: Slurp admin public key from this host (if present)
+      slurp:
+        src: "/home/admin/.ssh/id_rsa.pub"
+      register: admin_pub
+      failed_when: false
+      changed_when: false
+
+    - name: Slurp operator public key from this host (if present)
+      slurp:
+        src: "/home/{{ operator_user }}/.ssh/id_rsa.pub"
+      register: operator_pub
+      failed_when: false
+      changed_when: false
+
+    - name: Save this host's admin public key to controller for later import
+      copy:
+        content: "{{ admin_pub.content | b64decode }}"
+        dest: "/tmp/minirhis_node_keys/{{ inventory_hostname }}-admin.pub"
+        mode: "0644"
+      delegate_to: localhost
+      when: admin_pub is defined and admin_pub.content is defined and
+        admin_pub.content | length > 0
+
+    - name: Save this host's operator public key to controller for later import
+      copy:
+        content: "{{ operator_pub.content | b64decode }}"
+        dest: "/tmp/minirhis_node_keys/{{ inventory_hostname }}-operator.pub"
+        mode: "0644"
+      delegate_to: localhost
+      when: operator_pub is defined and operator_pub.content is defined and
+        operator_pub.content | length > 0
+  when: share_ssh_keys | default(false)
+
+# Red Hat Insights integration (optional)
+- block:
+    - name: Ensure Red Hat Insights client is installed
+      package:
+        name: insights-client
+        state: present
+
+    - name: Register system with Red Hat Insights using RH credentials
+      command: >-
+        insights-client --register --username {{ rh_user | default(RH_USER |
+        default('')) }} --password {{ rh_pass | default(RH_PASS | default(''))
+        }}
+      register: insights_register_result
+      failed_when: false
+      changed_when: insights_register_result.rc == 0
+      when: (rh_user | default(RH_USER | default(''))) != '' and (rh_pass |
+        default(RH_PASS | default(''))) != ''
+
+    - name: Register system with Red Hat Insights (no credentials)
+      command: insights-client --register
+      register: insights_register_result_no_creds
+      failed_when: false
+      changed_when: insights_register_result_no_creds.rc == 0
+      when: not ((rh_user | default(RH_USER | default(''))) != '' and (rh_pass |
+        default(RH_PASS | default(''))) != '')
+
+    - name: Report Insights registration result
+      debug:
+        msg: |
+          Insights register rc={{ insights_register_result.rc | default(insights_register_result_no_creds.rc | default('unset')) }}
+          out={{ insights_register_result.stdout | default(insights_register_result_no_creds.stdout | default('')) }}
+      when: true
+  when: ensure_insights | default(false) and ansible_facts.os_family == 'RedHat'

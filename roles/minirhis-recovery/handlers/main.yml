@@ -1,0 +1,5 @@
+---
+# Handlers for minirhis-recovery role
+- name: noop
+  debug:
+    msg: "minirhis-recovery handler placeholder"

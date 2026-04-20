@@ -21,11 +21,13 @@
 - name: Snapshot image (qemu-img convert)
   include_tasks: snapshot.yml
 
+- name: Include guestmount tasks
   include_tasks: guestmount.yml
 
+- name: Backup created message
   debug:
     msg: "Backup created: {{ recovery_backup_dir }}/{{ vm_name }}.{{
-  
+      recovery_ts.stdout }}.qcow2"
+
 - name: Run verification tasks (qemu-img check, checksum)
   include_tasks: verify.yml
-      recovery_ts.stdout }}.qcow2"
