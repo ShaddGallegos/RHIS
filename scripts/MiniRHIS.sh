@@ -977,8 +977,8 @@ kickstart_user_sudo_bootstrap_block() {
     local role_name="${1:-}"
     cat <<EOF
 # 1.2 Ensure installer/admin user has passwordless sudo and virtualization groups
-ks_log "Phase 1.2: Ensure admin sudo bootstrap"
-target_user="${INSTALLER_USER:-${ADMIN_USER}}"
+    ks_log "Phase 1.2: Ensure admin sudo bootstrap"
+    target_user="${INSTALLER_USER:-${ADMIN_USER:-admin}}"
 if [ "${INSTALLER_USER:-${ADMIN_USER}}" != "${ADMIN_USER}" ] && ! id "${INSTALLER_USER:-${ADMIN_USER}}" >/dev/null 2>&1; then
     useradd -m -G wheel "${INSTALLER_USER:-${ADMIN_USER}}" || true
     echo "${INSTALLER_USER:-${ADMIN_USER}}:${ADMIN_PASS}" | chpasswd || true
@@ -988,9 +988,21 @@ for grp in libvirt qemu kvm wheel foreman; do
     getent group "$grp" >/dev/null 2>&1 || groupadd -f "$grp" || true
 done
 usermod -aG libvirt,qemu,kvm,wheel,foreman "$target_user" || true
+# Ensure wheel group members have passwordless sudo where expected
 sed -i -E 's/^#?[[:space:]]*%wheel[[:space:]]+ALL=\(ALL\)[[:space:]]+ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || true
-printf '%s\n' "$target_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-minirhis-nopasswd
-chmod 0440 /etc/sudoers.d/90-minirhis-nopasswd
+# Create a user-specific sudoers drop-in validated with visudo to avoid syntax errors
+if [ -z "${target_user}" ]; then
+    target_user="admin"
+fi
+tmp_sudoers="$(mktemp /tmp/90-minirhis-${target_user}-XXXX)"
+printf '%s\n' "${target_user} ALL=(ALL) NOPASSWD: ALL" > "${tmp_sudoers}"
+chmod 0440 "${tmp_sudoers}" || true
+if visudo -cf "${tmp_sudoers}" >/dev/null 2>&1; then
+    mv -f "${tmp_sudoers}" "/etc/sudoers.d/90-minirhis-${target_user}-nopasswd"
+    chmod 0440 "/etc/sudoers.d/90-minirhis-${target_user}-nopasswd" || true
+else
+    rm -f "${tmp_sudoers}"
+fi
 visudo -cf /etc/sudoers >/dev/null 2>&1 || true
 EOF
 }
@@ -1922,7 +1934,10 @@ generate_local_roles_ansible_cfg() {
     local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
     local_inventory_name="$(basename "${MINIRHIS_INVENTORY_FILE}")"
     local_inventory="${SCRIPT_DIR}/container/roles/inventory/${local_inventory_name}"
-    local_roles_path="${SCRIPT_DIR}/container/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/minirhis-builder-aap/roles"
+    # include the repository `roles/` directory so local and container runs can
+    # discover roles defined at the repository root (append to the generated
+    # `roles_path` used when rendering `container/roles/ansible.cfg`).
+    local_roles_path="${SCRIPT_DIR}/container/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/minirhis-builder-aap/roles:${SCRIPT_DIR}/roles"
     local_ssh_key="~/.ssh/id_rsa"
     local_fact_cache="${HOME}/.ansible/conf/${MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME}"
     local_log_path="${HOME}/.ansible/conf/${AAP_ANSIBLE_LOG_BASENAME}"
@@ -15907,6 +15922,10 @@ create_minirhis_vms() {
     print_phase 4 8 "SSH mesh validation"
     if [ "${ssh_mesh_bootstrap_ok}" -eq 1 ]; then
         validate_minirhis_ssh_mesh || print_warning "SSH mesh validation reported failures; continuing."
+        # Ensure installer <-> admin SSH key exchange across all RHIS server types
+        if ! ensure_installer_admin_ssh_exchange; then
+            print_warning "Installer <-> admin SSH key exchange reported issues; continuing."
+        fi
     else
         print_step "Skipping early SSH mesh validation because bootstrap was deferred."
     fi
@@ -16570,15 +16589,24 @@ ensure_local_installer_user_passwordless_sudo() {
     fi
 
     print_step "Ensuring passwordless sudo for installer user ${current_user}"
-    if ! printf '%s\n' "${current_user} ALL=(ALL) NOPASSWD: ALL" | sudo tee "${sudoers_file}" >/dev/null 2>&1; then
-        print_warning "Could not create ${sudoers_file}; passwordless sudo for ${current_user} is not configured."
-        return 1
+    if [ -z "${current_user}" ]; then
+        current_user="admin"
+        sudoers_file="/etc/sudoers.d/90-minirhis-${current_user}-nopasswd"
     fi
 
-    sudo chmod 0440 "${sudoers_file}" >/dev/null 2>&1 || true
-    if ! sudo visudo -cf /etc/sudoers >/dev/null 2>&1; then
-        print_warning "sudoers validation failed after writing ${sudoers_file}; rolling back."
-        sudo rm -f "${sudoers_file}" >/dev/null 2>&1 || true
+    tmpfile="$(mktemp /tmp/90-minirhis-${current_user}-XXXX)"
+    printf '%s\n' "${current_user} ALL=(ALL) NOPASSWD: ALL" > "${tmpfile}"
+    chmod 0440 "${tmpfile}" || true
+    if sudo visudo -cf "${tmpfile}" >/dev/null 2>&1; then
+        if ! sudo mv -f "${tmpfile}" "${sudoers_file}" >/dev/null 2>&1; then
+            print_warning "Could not move ${tmpfile} to ${sudoers_file}; passwordless sudo not configured."
+            rm -f "${tmpfile}" || true
+            return 1
+        fi
+        sudo chmod 0440 "${sudoers_file}" >/dev/null 2>&1 || true
+    else
+        print_warning "sudoers validation failed for temp file; not installing passwordless sudo for ${current_user}."
+        rm -f "${tmpfile}" || true
         return 1
     fi
 
@@ -16649,6 +16677,86 @@ ensure_host_installer_keys_on_satellite() {
         print_step "Installer-host keys synchronized to ${target_user}@${sat_host} (${sat_ip})"
     done
 
+    return 0
+}
+
+# Ensure installer <-> admin SSH key exchange across all RHIS server types.
+ensure_installer_admin_ssh_exchange() {
+    local installer_pub_file="${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY:-"${HOME}/.ssh/minirhis-installer/id_rsa.pub"}"
+    local installer_pub installer_pub_b64
+    local admin_user="${ADMIN_USER:-admin}"
+    local admin_pass="${ADMIN_PASS:-}"
+    local root_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
+    local -a nodes
+
+    if [ ! -r "${installer_pub_file}" ]; then
+        print_warning "Installer public key not found at ${installer_pub_file}; skipping installer/admin key exchange."
+        return 1
+    fi
+
+    installer_pub="$(cat "${installer_pub_file}" 2>/dev/null || true)"
+    installer_pub_b64="$(printf '%s' "${installer_pub}" | base64 -w0 2>/dev/null || true)"
+    if [ -z "${installer_pub}" ] || [ -z "${installer_pub_b64}" ]; then
+        print_warning "Installer public key empty or unreadable; skipping installer/admin key exchange."
+        return 1
+    fi
+
+    [ -n "${SAT_IP:-}" ] && nodes+=("${SAT_IP}:satellite")
+    [ -n "${AAP_IP:-}" ] && nodes+=("${AAP_IP}:aap")
+    [ -n "${IDM_IP:-}" ] && nodes+=("${IDM_IP}:idm")
+
+    if [ "${#nodes[@]}" -eq 0 ]; then
+        print_warning "No RHIS node IPs configured; skipping installer/admin key exchange."
+        return 1
+    fi
+
+    if ! command -v sshpass >/dev/null 2>&1; then
+        print_step "Installing sshpass for remote key exchange"
+        sudo dnf install -y --nogpgcheck sshpass >/dev/null 2>&1 || true
+    fi
+
+    print_step "Synchronizing installer <-> admin SSH keys to nodes: ${nodes[*]}"
+    for n in "${nodes[@]}"; do
+        local ip="${n%%:*}"
+        local name="${n##*:}"
+        local append_cmd read_pub
+
+        # Push installer public key into admin user's authorized_keys on the node.
+        append_cmd="target_home=\"\$(getent passwd '${admin_user}' 2>/dev/null | cut -d: -f6)\"; [ -n \"\$target_home\" ] || target_home=\"/home/${admin_user}\"; install -d -m 700 \"\$target_home/.ssh\"; touch \"\$target_home/.ssh/authorized_keys\"; printf '%s\\n' '${installer_pub}' >> \"\$target_home/.ssh/authorized_keys\"; sort -u \"\$target_home/.ssh/authorized_keys\" -o \"\$target_home/.ssh/authorized_keys\"; chown '${admin_user}:${admin_user}' \"\$target_home/.ssh/authorized_keys\" 2>/dev/null || true; chmod 600 \"\$target_home/.ssh/authorized_keys\""
+
+        if [ -n "${admin_pass}" ]; then
+            sshpass -p "${admin_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "${admin_user}@${ip}" "${append_cmd}" >/dev/null 2>&1 || true
+        elif [ -n "${root_pass}" ]; then
+            # Root fallback: append to admin's home as root
+            append_cmd_root="install -d -m 700 /home/${admin_user}/.ssh 2>/dev/null || true; touch /home/${admin_user}/.ssh/authorized_keys; printf '%s\\n' '${installer_pub}' >> /home/${admin_user}/.ssh/authorized_keys; sort -u /home/${admin_user}/.ssh/authorized_keys -o /home/${admin_user}/.ssh/authorized_keys; chown ${admin_user}:${admin_user} /home/${admin_user}/.ssh/authorized_keys 2>/dev/null || true; chmod 600 /home/${admin_user}/.ssh/authorized_keys"
+            sshpass -p "${root_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "root@${ip}" "${append_cmd_root}" >/dev/null 2>&1 || true
+        else
+            print_warning "Skipping installer -> ${admin_user} key push to ${name} (${ip}): no admin or root password available"
+        fi
+
+        # Pull admin public key from node and add it to installer host's authorized_keys.
+        read_pub=""
+        if [ -n "${admin_pass}" ]; then
+            read_pub="$(sshpass -p "${admin_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "${admin_user}@${ip}" 'cat ~/.ssh/id_rsa.pub' 2>/dev/null || true)"
+        fi
+        if [ -z "${read_pub}" ] && [ -n "${root_pass}" ]; then
+            read_pub="$(sshpass -p "${root_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "root@${ip}" 'cat /home/${admin_user}/.ssh/id_rsa.pub 2>/dev/null || cat /root/.ssh/id_rsa.pub 2>/dev/null || true' 2>/dev/null || true)"
+        fi
+
+        if [ -n "${read_pub}" ]; then
+            mkdir -p "${HOME}/.ssh" >/dev/null 2>&1 || true
+            touch "${HOME}/.ssh/authorized_keys" >/dev/null 2>&1 || true
+            if ! grep -qxF "${read_pub}" "${HOME}/.ssh/authorized_keys" 2>/dev/null; then
+                printf '%s\n' "${read_pub}" >> "${HOME}/.ssh/authorized_keys"
+                sort -u "${HOME}/.ssh/authorized_keys" -o "${HOME}/.ssh/authorized_keys" || true
+            fi
+        else
+            print_warning "Could not retrieve ${admin_user} public key from ${name} (${ip})"
+        fi
+    done
+
+    chmod 600 "${HOME}/.ssh/authorized_keys" >/dev/null 2>&1 || true
+    print_success "Installer <-> admin SSH keys synchronized across RHIS nodes"
     return 0
 }
 

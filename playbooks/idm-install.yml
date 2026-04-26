@@ -5,9 +5,11 @@
   gather_facts: true
 
   vars:
-    idm_packages: "{{ idm_packages | default(['freeipa-server','bind-dyndb-ldap']) }}"
-    idm_ds_pass: "{{ idm_ds_pass | default(idm_admin_pass |
-      default(global_admin_password | default('changeme'))) }}"
+    idm_packages:
+      - freeipa-server
+      - bind-dyndb-ldap
+    idm_ds_pass: "{{ idm_admin_pass | default(global_admin_password |
+      default('changeme')) }}"
 
   roles:
     - role: server_bootstrap

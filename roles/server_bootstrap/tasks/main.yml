@@ -1,8 +1,19 @@
 ---
 # Server bootstrap tasks: install packages, configure SELinux, firewalld, and optional web checks
+
+- name: Normalize `base_packages` to a list
+  set_fact:
+    base_packages_list: "{{ base_packages.split() if base_packages is string else
+      (base_packages | default([])) }}"
+
+- name: Normalize `server_packages` to a list
+  set_fact:
+    server_packages_list: "{{ server_packages.split() if server_packages is string
+      else (server_packages | default([])) }}"
+
 - name: Install base and server-specific packages
   package:
-    name: "{{ (base_packages | default([])) + (server_packages | default([])) }}"
+    name: "{{ base_packages_list + server_packages_list }}"
     state: present
 
 - name: Ensure firewalld is running and enabled (RedHat family)
@@ -17,18 +28,18 @@
     service: "{{ item }}"
     permanent: true
     state: enabled
-    immediate: yes
-  loop: "{{ bootstrap_services }}"
+    immediate: true
+  loop: "{{ bootstrap_services | default([]) }}"
   when: ansible_facts.os_family == 'RedHat' and (manage_firewalld | default(true))
 
 - name: Open port 9443/tcp (firewalld) when requested
   firewalld:
-    port: 9443/tcp
+    port: "9443/tcp"
     permanent: true
     state: enabled
-    immediate: yes
-  when: open_9443 and ansible_facts.os_family == 'RedHat' and (manage_firewalld |
-    default(true))
+    immediate: true
+  when: (open_9443 | default(false)) and ansible_facts.os_family == 'RedHat' and
+    (manage_firewalld | default(true))
 
 - name: Stop and disable firewalld when management is off (SOE)
   service:
@@ -36,19 +47,19 @@
     state: stopped
     enabled: false
     masked: true
-  when: ansible_facts.os_family == 'RedHat' and not (manage_firewalld |
-    default(true))
+  when: ansible_facts.os_family == 'RedHat' and (manage_firewalld | default(true))
+    == false
 
 - name: Ensure SELinux mode (best-effort)
   ansible.posix.selinux:
     policy: targeted
-    state: "{{ selinux_state }}"
+    state: "{{ selinux_state | default('permissive') }}"
 
 - name: Ensure httpd can make network connections (SELinux boolean)
   ansible.posix.seboolean:
     name: httpd_can_network_connect
-    state: yes
-    persistent: yes
+    state: true
+    persistent: true
 
 - name: Install SELinux management utilities (semanage)
   package:
@@ -62,39 +73,108 @@
     warn: false
   register: semanage_add
   failed_when: false
-  when: open_9443 and ansible_facts.os_family == 'RedHat'
+  when: (open_9443 | default(false)) and ansible_facts.os_family == 'RedHat'
 
 - name: Ensure httpd is enabled and started (if requested)
   service:
     name: httpd
     state: started
     enabled: true
-  when: ensure_httpd and ansible_facts.os_family == 'RedHat'
+  when: (ensure_httpd | default(false)) and ansible_facts.os_family == 'RedHat'
   ignore_errors: true
 
 - name: Optionally wait for web UI port to be available
   wait_for:
-    port: "{{ web_port }}"
+    port: "{{ web_port | default(9443) }}"
     timeout: 300
-  when: wait_for_web
+  when: wait_for_web | default(false)
 
 - name: Optionally probe web UI until healthy
   uri:
-    url: "https://{{ ansible_fqdn }}"
-    validate_certs: no
-    return_content: no
+    url: "https://{{ ansible_fqdn | default(inventory_hostname) }}"
+    validate_certs: false
+    return_content: false
   register: ui_check_result
   retries: 12
   delay: 10
   until: ui_check_result.status is defined and ui_check_result.status in [200,302]
-  when: wait_for_web
+  when: wait_for_web | default(false)
+
+# Persist a NAT redirect from 443 -> 8443 for services (e.g., AAP/nginx)
+# Controlled by `persist_nat_443_to_8443` (default: false).
+- name: Ensure nftables config directory exists
+  file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: persist_nat_443_to_8443 | default(false) and ansible_facts.os_family ==
+    'RedHat'
+
+- name: Write minirhis NAT nft rules file
+  copy:
+    dest: /etc/nftables.d/minirhis-nat.nft
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      table ip nat {
+          chain PREROUTING {
+              type nat hook prerouting priority 0; policy accept;
+              tcp dport 443 redirect to :8443
+          }
+      }
+  when: persist_nat_443_to_8443 | default(false) and ansible_facts.os_family ==
+    'RedHat'
+
+- name: Install systemd unit to load minirhis nft rules at boot
+  copy:
+    dest: /etc/systemd/system/minirhis-nat.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Load minirhis nft NAT rules
+      After=network.target nftables.service
+      Wants=nftables.service
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/sbin/nft -f /etc/nftables.d/minirhis-nat.nft
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
+  when: persist_nat_443_to_8443 | default(false) and ansible_facts.os_family ==
+    'RedHat'
+
+- name: Reload systemd and enable + start minirhis-nat service
+  systemd:
+    name: minirhis-nat.service
+    daemon_reload: true
+    enabled: true
+    state: started
+  when: persist_nat_443_to_8443 | default(false) and ansible_facts.os_family ==
+    'RedHat'
+
+- name: Apply minirhis nft rules immediately
+  command: /usr/sbin/nft -f /etc/nftables.d/minirhis-nat.nft
+  args:
+    warn: false
+  register: nft_apply
+  failed_when: nft_apply.rc not in [0,2]
+  changed_when: nft_apply.rc == 0
+  when: persist_nat_443_to_8443 | default(false) and ansible_facts.os_family ==
+    'RedHat'
 
 # Optional: share SSH keys between installer and this host. Controlled by
 # the `share_ssh_keys` variable (default: false). When enabled this will:
 # - push the minirhis installer and control public keys to `admin` and the
 #   local operator user (if present) on the target host
 # - fetch the target host's admin/operator public keys and add them to the
-#   installer's `admin` authorized_keys so the node can SSH back to installer.
+#   installer's `admin` authorized_keys so the controller can SSH back to installer.
 - block:
     - name: Set operator_user from control environment
       set_fact:
@@ -106,14 +186,14 @@
         key: "{{ lookup('file', lookup('env','HOME') +
           '/.ssh/minirhis-installer/id_rsa.pub') }}"
         state: present
-        manage_dir: yes
+        manage_dir: true
 
     - name: Install control user's public key for admin
       authorized_key:
         user: admin
         key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
         state: present
-        manage_dir: yes
+        manage_dir: true
 
     - name: Check operator_user exists on this host
       getent:
@@ -128,7 +208,7 @@
         key: "{{ lookup('file', lookup('env','HOME') +
           '/.ssh/minirhis-installer/id_rsa.pub') }}"
         state: present
-        manage_dir: yes
+        manage_dir: true
       when: operator_getent.entries is defined and operator_getent.entries | length >
         0
 
@@ -137,7 +217,7 @@
         user: "{{ operator_user }}"
         key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
         state: present
-        manage_dir: yes
+        manage_dir: true
       when: operator_getent.entries is defined and operator_getent.entries | length >
         0
 
@@ -158,7 +238,7 @@
     - name: Save this host's admin public key to controller for later import
       copy:
         content: "{{ admin_pub.content | b64decode }}"
-        dest: "/tmp/minirhis_node_keys/{{ inventory_hostname }}-admin.pub"
+        dest: "/tmp/minirhis_controller_keys/{{ inventory_hostname }}-admin.pub"
         mode: "0644"
       delegate_to: localhost
       when: admin_pub is defined and admin_pub.content is defined and
@@ -167,7 +247,7 @@
     - name: Save this host's operator public key to controller for later import
       copy:
         content: "{{ operator_pub.content | b64decode }}"
-        dest: "/tmp/minirhis_node_keys/{{ inventory_hostname }}-operator.pub"
+        dest: "/tmp/minirhis_controller_keys/{{ inventory_hostname }}-operator.pub"
         mode: "0644"
       delegate_to: localhost
       when: operator_pub is defined and operator_pub.content is defined and
@@ -192,18 +272,18 @@
       when: (rh_user | default(RH_USER | default(''))) != '' and (rh_pass |
         default(RH_PASS | default(''))) != ''
 
-    - name: Register system with Red Hat Insights (no credentials)
+    - name: Register system with Red Hat Insights (false credentials)
       command: insights-client --register
-      register: insights_register_result_no_creds
+      register: insights_register_result_false_creds
       failed_when: false
-      changed_when: insights_register_result_no_creds.rc == 0
-      when: not ((rh_user | default(RH_USER | default(''))) != '' and (rh_pass |
+      changed_when: insights_register_result_false_creds.rc == 0
+      when: falset ((rh_user | default(RH_USER | default(''))) != '' and (rh_pass |
         default(RH_PASS | default(''))) != '')
 
     - name: Report Insights registration result
       debug:
         msg: |
-          Insights register rc={{ insights_register_result.rc | default(insights_register_result_no_creds.rc | default('unset')) }}
-          out={{ insights_register_result.stdout | default(insights_register_result_no_creds.stdout | default('')) }}
+          Insights register rc={{ insights_register_result.rc | default(insights_register_result_false_creds.rc | default('unset')) }}
+          out={{ insights_register_result.stdout | default(insights_register_result_false_creds.stdout | default('')) }}
       when: true
   when: ensure_insights | default(false) and ansible_facts.os_family == 'RedHat'
