@@ -49,8 +49,6 @@
 - name: Try restore SELinux contexts for keys (best-effort)
   become: yes
   command: restorecon -Rv "{{ mount_point }}/root/.ssh" || true
-  args:
-    warn: false
   ignore_errors: yes
 
 - name: Unmount image (best-effort)

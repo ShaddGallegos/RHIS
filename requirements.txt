@@ -58,3 +58,29 @@ pycryptodome>=3.15.0
 
 # Additional SDK dependencies
 simplejson>=3.18.0
+
+# Additional user-requested pip packages
+aider-chat
+charset-normalizer
+filelock
+virtualenv
+tox
+opencv-python
+numpy
+streamlit
+google-ai-generativelanguage
+protobuf
+ollama-mcp-bridge
+pytest-asyncio
+pytest
+typer
+fastapi
+tenacity
+rich
+pillow
+pandas
+packaging
+cachetools
+pyopenssl
+tox-ansible
+google-generativeai

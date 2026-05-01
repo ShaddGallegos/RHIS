@@ -1,0 +1,8 @@
+---
+- name: IdM node provisioning (skeleton)
+  hosts: idm
+  become: true
+  vars:
+    node_type: idm
+  roles:
+    - role: node_common

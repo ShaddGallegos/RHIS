@@ -1,0 +1,20 @@
+---
+# Manage users provided via `node_common_users` (list of dicts: name, groups, ssh_key, comment)
+- name: Ensure users are present when requested
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    comment: "{{ item.comment | default(omit) }}"
+    groups: "{{ item.groups | default(omit) }}"
+    state: present
+    create_home: yes
+    shell: "{{ item.shell | default('/bin/bash') }}"
+  loop: "{{ node_common_users | default([]) }}"
+  when: node_common_users is defined
+
+- name: Ensure authorized keys for created users
+  ansible.builtin.authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.ssh_key }}"
+    state: present
+  loop: "{{ node_common_users | default([]) }}"
+  when: node_common_users is defined

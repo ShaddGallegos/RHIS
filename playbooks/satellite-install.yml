@@ -1,6 +1,6 @@
 ---
 - name: Satellite bootstrap and readiness
-  hosts: satellite
+  hosts: sat_primary:scenario_satellite
   become: true
   gather_facts: true
 

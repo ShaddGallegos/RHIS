@@ -1,0 +1,28 @@
+---
+- name: Local test - render kickstart snippets and start AAP HTTP service
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: true
+  vars:
+    host_int_ip: "0.0.0.0"
+    host_port: 8080
+    aap_bundle_dir: "/var/lib/libvirt/images/aap-bundle"
+
+  pre_tasks:
+    - name: Ensure AAP bundle directory exists
+      ansible.builtin.file:
+        path: "{{ aap_bundle_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Stage a dummy AAP bundle file for testing
+      ansible.builtin.copy:
+        dest: "{{ aap_bundle_dir }}/aap-bundle.tar.gz"
+        content: "dummy-aap-bundle"
+        mode: "0644"
+      become: true
+
+  roles:
+    - role: minirhis-kickstart
+    - role: minirhis-aap-serve

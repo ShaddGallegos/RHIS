@@ -1,0 +1,41 @@
+---
+# Main entry for node_common role: includes modular task files for each concern.
+
+- name: Ensure facts are gathered
+  ansible.builtin.setup:
+
+- name: Include OS tasks
+  include_tasks: os.yml
+
+- name: Include Users tasks
+  include_tasks: users.yml
+
+- name: Include Firewall tasks
+  include_tasks: firewall.yml
+
+- name: Include SELinux tasks
+  include_tasks: selinux.yml
+
+- name: Include SSH tasks
+  include_tasks: ssh.yml
+
+- name: Include Sudo tasks
+  include_tasks: sudo.yml
+
+- name: Include Communication tasks
+  include_tasks: communication.yml
+
+- name: Include Downloads tasks
+  include_tasks: downloads.yml
+
+- name: Include AAP extract tasks
+  include_tasks: aap_extract.yml
+
+- name: Include Wrapper tasks
+  include_tasks: wrappers.yml
+
+- name: Include Tests tasks
+  include_tasks: tests.yml
+
+- name: Include Report tasks
+  include_tasks: report.yml

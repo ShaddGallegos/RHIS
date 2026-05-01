@@ -20,10 +20,11 @@ aap_extract_prereqs:
 
 # Where to search for the AAP bundle on the target host (order matters)
 aap_bundle_search_paths:
-  - /home/admin
-  - /home/admin/Downloads
+  - /var/tmp
+  - "/home/{{ admin_user | default('admin') }}"
+  - "/home/{{ admin_user | default('admin') }}/Downloads"
   - /root/Downloads
   - /tmp
 
-# Extraction target directory on the guest
-aap_extract_dir: /home/admin/aap-bundle
+# Extraction target directory on the guest (defaults to admin user's bundle dir)
+aap_extract_dir: "/home/{{ admin_user | default('admin') }}/bundle"

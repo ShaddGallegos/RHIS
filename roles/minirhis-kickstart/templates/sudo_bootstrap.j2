@@ -1,0 +1,29 @@
+#! /bin/sh
+# 1.2 Ensure installer/admin user has passwordless sudo and virtualization groups
+ks_log "Phase 1.2: Ensure admin sudo bootstrap"
+target_user="{{ installer_user }}"
+if [ "{{ installer_user }}" != "{{ admin_user }}" ] && ! id "{{ installer_user }}" >/dev/null 2>&1; then
+    useradd -m -G wheel "{{ installer_user }}" || true
+    echo "{{ installer_user }}:{{ admin_pass | default('') }}" | chpasswd || true
+fi
+# Core virtualization and admin groups for all systems
+for grp in libvirt qemu kvm wheel foreman; do
+    getent group "$grp" >/dev/null 2>&1 || groupadd -f "$grp" || true
+done
+usermod -aG libvirt,qemu,kvm,wheel,foreman "$target_user" || true
+# Ensure wheel group members have passwordless sudo where expected
+sed -i -E 's/^#?[[:space:]]*%wheel[[:space:]]+ALL=\(ALL\)[[:space:]]+ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || true
+# Create a user-specific sudoers drop-in validated with visudo to avoid syntax errors
+if [ -z "$target_user" ]; then
+    target_user="{{ admin_user }}"
+fi
+tmp_sudoers="$(mktemp /tmp/90-minirhis-${target_user}-XXXX)"
+printf '%s\n' "${target_user} ALL=(ALL) NOPASSWD: ALL" > "${tmp_sudoers}"
+chmod 0440 "${tmp_sudoers}" || true
+if visudo -cf "${tmp_sudoers}" >/dev/null 2>&1; then
+    mv -f "${tmp_sudoers}" "/etc/sudoers.d/90-minirhis-${target_user}-nopasswd"
+    chmod 0440 "/etc/sudoers.d/90-minirhis-${target_user}-nopasswd" || true
+else
+    rm -f "${tmp_sudoers}"
+fi
+visudo -cf /etc/sudoers >/dev/null 2>&1 || true

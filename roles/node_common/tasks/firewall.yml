@@ -1,0 +1,23 @@
+---
+# Firewall tasks are opt-in via `minirhis_enable_firewall` and `node_common_allowed_ports`.
+- name: Ensure firewall packages installed (if enabled)
+  ansible.builtin.package:
+    name: firewalld
+    state: present
+  when: minirhis_enable_firewall | default(false)
+
+- name: Ensure firewalld running and enabled (if enabled)
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+  when: minirhis_enable_firewall | default(false)
+
+- name: Open firewall ports when list provided
+  ansible.builtin.firewalld:
+    port: "{{ item }}/tcp"
+    permanent: true
+    state: enabled
+    immediate: yes
+  loop: "{{ node_common_allowed_ports | default([]) }}"
+  when: minirhis_enable_firewall | default(false)

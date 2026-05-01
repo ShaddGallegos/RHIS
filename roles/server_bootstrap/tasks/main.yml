@@ -16,6 +16,12 @@
     name: "{{ base_packages_list + server_packages_list }}"
     state: present
 
+- name: Ensure `admin` user password matches `global_admin_password` (vaulted)
+  become: true
+  ansible.builtin.shell: echo "admin:{{ global_admin_password }}" | chpasswd
+  when: global_admin_password is defined and global_admin_password | length > 0
+  no_log: true
+
 - name: Ensure firewalld is running and enabled (RedHat family)
   service:
     name: firewalld
@@ -69,8 +75,6 @@
 
 - name: Add http port 9443 to SELinux http_port_t (best-effort)
   command: semanage port -a -t http_port_t -p tcp 9443
-  args:
-    warn: false
   register: semanage_add
   failed_when: false
   when: (open_9443 | default(false)) and ansible_facts.os_family == 'RedHat'
@@ -161,8 +165,6 @@
 
 - name: Apply minirhis nft rules immediately
   command: /usr/sbin/nft -f /etc/nftables.d/minirhis-nat.nft
-  args:
-    warn: false
   register: nft_apply
   failed_when: nft_apply.rc not in [0,2]
   changed_when: nft_apply.rc == 0
@@ -182,7 +184,7 @@
 
     - name: Install minirhis-installer public key for admin
       authorized_key:
-        user: admin
+        user: "{{ admin_user | default('admin') }}"
         key: "{{ lookup('file', lookup('env','HOME') +
           '/.ssh/minirhis-installer/id_rsa.pub') }}"
         state: present
@@ -190,7 +192,7 @@
 
     - name: Install control user's public key for admin
       authorized_key:
-        user: admin
+        user: "{{ admin_user | default('admin') }}"
         key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
         state: present
         manage_dir: true
@@ -223,7 +225,7 @@
 
     - name: Slurp admin public key from this host (if present)
       slurp:
-        src: "/home/admin/.ssh/id_rsa.pub"
+        src: "/home/{{ admin_user | default('admin') }}/.ssh/id_rsa.pub"
       register: admin_pub
       failed_when: false
       changed_when: false
@@ -238,7 +240,8 @@
     - name: Save this host's admin public key to controller for later import
       copy:
         content: "{{ admin_pub.content | b64decode }}"
-        dest: "/tmp/minirhis_controller_keys/{{ inventory_hostname }}-admin.pub"
+        dest: "/tmp/minirhis_controller_keys/{{ inventory_hostname }}-{{ admin_user |
+          default('admin') }}.pub"
         mode: "0644"
       delegate_to: localhost
       when: admin_pub is defined and admin_pub.content is defined and

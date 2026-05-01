@@ -3,6 +3,24 @@
 # This task retries extraction to handle transient failures and ensures required
 # decompressors (zstd, xz, gzip, bzip2) are present via defaults.
 
+- name: Ensure admin home exists and bundle extract dir is present
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ admin_user | default('admin') }}"
+    group: "{{ admin_user | default('admin') }}"
+    mode: "0755"
+  loop:
+    - { path: "/home/{{ admin_user | default('admin') }}" }
+    - { path: "{{ aap_extract_dir }}" }
+
+- name: Normalize AAP bundle URL from environment variables
+  set_fact:
+    aap_bundle_url: "{{ aap_bundle_url | default(AAP_BUNDLE_URL | default('')) }}"
+
+- name: Ensure search paths include /var/tmp (where node_common places downloads)
+  set_fact:
+    aap_bundle_search_paths: "{{ (aap_bundle_search_paths | default([])) + ['/var/tmp'] | unique }}"
 - name: Find AAP staged bundle on host
   find:
     paths: "{{ aap_bundle_search_paths }}"
@@ -19,17 +37,23 @@
   set_fact:
     aap_bundle_path: "{{ aap_bundle_search.files[0].path }}"
 
+- name: Check for existing extraction marker
+  stat:
+    path: "{{ aap_extract_dir }}/.minirhis_extracted"
+  register: aap_existing_marker
+  ignore_errors: true
+
 - name: Create extraction directory
   file:
     path: "{{ aap_extract_dir }}"
     state: directory
-    owner: admin
-    group: admin
+    owner: "{{ admin_user | default('admin') }}"
+    group: "{{ admin_user | default('admin') }}"
     mode: "0755"
 
 - name: Extract bundle (retry up to 3 times)
   become: yes
-  become_user: admin
+  become_user: "{{ admin_user | default('admin') }}"
   shell: |
     set -euo pipefail
     mkdir -p "{{ aap_extract_dir }}"
@@ -40,19 +64,22 @@
   retries: 3
   delay: 8
   until: aap_extract.rc == 0
+  when: not (aap_existing_marker.stat.exists | default(false))
 
 - name: Verify extraction produced files
   command: bash -lc "[ -n \"$(ls -A '{{ aap_extract_dir }}' 2>/dev/null)\" ]"
   register: aap_extract_verify
   failed_when: aap_extract_verify.rc != 0
+  when: not (aap_existing_marker.stat.exists | default(false))
 
 - name: Make sure extracted files are readable by admin
   file:
     path: "{{ aap_extract_dir }}"
-    owner: admin
-    group: admin
+    owner: "{{ admin_user | default('admin') }}"
+    group: "{{ admin_user | default('admin') }}"
     recurse: yes
-  when: aap_extract_verify is defined
+  when: aap_extract_verify is defined or not (aap_existing_marker.stat.exists |
+    default(false))
 
 - name: Copy any .j2 templates from bundle into /etc/ansible/templates (if present)
   find:
@@ -77,4 +104,14 @@
     group: root
     mode: "0644"
   loop: "{{ aap_j2_templates.files }}"
-  when: aap_j2_templates.files | length > 0
+  when: (aap_j2_templates.files | length > 0) and (not
+    (aap_existing_marker.stat.exists | default(false)))
+
+- name: Ensure extraction marker file exists
+  file:
+    path: "{{ aap_extract_dir }}/.minirhis_extracted"
+    state: touch
+    owner: "{{ admin_user | default('admin') }}"
+    mode: "0644"
+  become: true
+  when: not (aap_existing_marker.stat.exists | default(false))

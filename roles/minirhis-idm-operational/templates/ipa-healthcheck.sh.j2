@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+code=$(curl -k -sS -o /dev/null -w "%{http_code}" https://localhost/ipa/ui/ || echo 000)
+if [[ "$code" =~ ^(200|301|302|303|307|308|401|403)$ ]]; then
+  echo "IDM_HEALTH_OK:$code"
+  exit 0
+else
+  echo "IDM_HEALTH_BAD:$code"
+  exit 1
+fi

@@ -1,0 +1,9 @@
+---
+# Defaults for minirhis-kickstart role
+kickstart_output_dir: "/var/lib/minirhis/kickstart"
+minirhis_temp_enable_rc_local_exec: "1"
+
+# Optional overrides
+installer_user: ""
+admin_user: ""
+admin_pass: ""

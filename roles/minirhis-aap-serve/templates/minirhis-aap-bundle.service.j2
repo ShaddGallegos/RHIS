@@ -1,0 +1,14 @@
+[Unit]
+Description=MINIRHIS AAP bundle HTTP server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ aap_bundle_dir }}
+ExecStart=/bin/sh -c 'cd "{{ aap_bundle_dir }}" && exec python3 -u -m http.server {{ host_port }} --bind {{ host_int_ip }} >> "{{ aap_http_log }}" 2>&1'
+Restart=no
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

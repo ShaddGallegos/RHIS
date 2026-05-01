@@ -977,8 +977,8 @@ kickstart_user_sudo_bootstrap_block() {
     local role_name="${1:-}"
     cat <<EOF
 # 1.2 Ensure installer/admin user has passwordless sudo and virtualization groups
-    ks_log "Phase 1.2: Ensure admin sudo bootstrap"
-    target_user="${INSTALLER_USER:-${ADMIN_USER:-admin}}"
+ks_log "Phase 1.2: Ensure admin sudo bootstrap"
+target_user="${INSTALLER_USER:-${ADMIN_USER}}"
 if [ "${INSTALLER_USER:-${ADMIN_USER}}" != "${ADMIN_USER}" ] && ! id "${INSTALLER_USER:-${ADMIN_USER}}" >/dev/null 2>&1; then
     useradd -m -G wheel "${INSTALLER_USER:-${ADMIN_USER}}" || true
     echo "${INSTALLER_USER:-${ADMIN_USER}}:${ADMIN_PASS}" | chpasswd || true
@@ -988,21 +988,9 @@ for grp in libvirt qemu kvm wheel foreman; do
     getent group "$grp" >/dev/null 2>&1 || groupadd -f "$grp" || true
 done
 usermod -aG libvirt,qemu,kvm,wheel,foreman "$target_user" || true
-# Ensure wheel group members have passwordless sudo where expected
 sed -i -E 's/^#?[[:space:]]*%wheel[[:space:]]+ALL=\(ALL\)[[:space:]]+ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || true
-# Create a user-specific sudoers drop-in validated with visudo to avoid syntax errors
-if [ -z "${target_user}" ]; then
-    target_user="admin"
-fi
-tmp_sudoers="$(mktemp /tmp/90-minirhis-${target_user}-XXXX)"
-printf '%s\n' "${target_user} ALL=(ALL) NOPASSWD: ALL" > "${tmp_sudoers}"
-chmod 0440 "${tmp_sudoers}" || true
-if visudo -cf "${tmp_sudoers}" >/dev/null 2>&1; then
-    mv -f "${tmp_sudoers}" "/etc/sudoers.d/90-minirhis-${target_user}-nopasswd"
-    chmod 0440 "/etc/sudoers.d/90-minirhis-${target_user}-nopasswd" || true
-else
-    rm -f "${tmp_sudoers}"
-fi
+printf '%s\n' "$target_user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-minirhis-nopasswd
+chmod 0440 /etc/sudoers.d/90-minirhis-nopasswd
 visudo -cf /etc/sudoers >/dev/null 2>&1 || true
 EOF
 }
@@ -1595,19 +1583,21 @@ fi
 
 # SSH login access banner with node and RHIS entry points.
 cat > /etc/motd <<MINIRHIS_MOTD
-                                            _.---._
-                                 _.-'       `-._
-                          .-'   .-"""-.      `-.
-                     .'    .'  _   _`.       `.
-                 /     /   (_) (_) \        \
-                /     |       ___   |        \
-            ;      |      (___)  |         ;
-            |       \             /        |
-            ;        `.         .'         ;
-                \          `-._.-'           /
-                 `.                           .'
-                      `-.                   _.-'
-                                `--..________..--'
+[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@@@[1;31m###########%[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@@[1;31m###############%[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@[1;31m#################[1;37m@@@@@@@@@@@@       @@@@@@@@@@@@@@@@@@@@  @@@@   @@@@@   @@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@[1;31m##################[1;37m@@@@@@@@@@@   @@@   #@@@@@@@@@@@@@@@@@  @@@@   @@@@@   @@@@@@@@@@@   @@@@@@
+[1;37m@@@[1;31m#####   [1;31m&###############[1;37m@@@@@@@@@@@   @@@@   @       @@@        @@@@   @@@@@   @       &@       @@@
+[1;37m@@[1;31m#######      [1;31m############[1;37m@@@@@@@@@@@         @   @@@   @   @@@@  @@@@           @@@@@@   @@   @@@@@@
+[1;37m@@@[1;31m#########                [1;31m###[1;37m@@@@@@@   @@   @@     ,,,,@   @@@@  @@@@   @@@@@   @   **   @@   @@@@@@
+[1;37m@@@@@[1;31m###########%         [1;31m######[1;37m@@@@@@   @@@   @@       @@@        @@@@   @@@@@   @        @@&    *@@@
+[1;37m@@@@@@@[1;31m#########################[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@@@[1;31m####################&[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@@@@@@@@[1;31m#############[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+[1;37m@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
                                                      R E D   H A T
 
@@ -1934,10 +1924,7 @@ generate_local_roles_ansible_cfg() {
     local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
     local_inventory_name="$(basename "${MINIRHIS_INVENTORY_FILE}")"
     local_inventory="${SCRIPT_DIR}/container/roles/inventory/${local_inventory_name}"
-    # include the repository `roles/` directory so local and container runs can
-    # discover roles defined at the repository root (append to the generated
-    # `roles_path` used when rendering `container/roles/ansible.cfg`).
-    local_roles_path="${SCRIPT_DIR}/container/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/minirhis-builder-aap/roles:${SCRIPT_DIR}/roles"
+    local_roles_path="${SCRIPT_DIR}/container/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/minirhis-builder-aap/roles"
     local_ssh_key="~/.ssh/id_rsa"
     local_fact_cache="${HOME}/.ansible/conf/${MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME}"
     local_log_path="${HOME}/.ansible/conf/${AAP_ANSIBLE_LOG_BASENAME}"
@@ -2669,9 +2656,9 @@ apply_cli_overrides() {
         RUN_ONCE=1
     fi
 
-    # Full-stack demo CLI shortcut should run unattended from command line.
-    # Keep explicit --non-interactive optional by auto-enabling it here.
-    if [ -n "${CLI_DEMO:-}" ] && [ -n "${CLI_MINIRHIS:-}" ]; then
+    # Full-stack demo CLI shortcut should run unattended from command line,
+    # unless the caller explicitly asked to reconfigure and needs prompts.
+    if [ -n "${CLI_DEMO:-}" ] && [ -n "${CLI_MINIRHIS:-}" ] && [ -z "${CLI_RECONFIGURE:-}" ]; then
         NONINTERACTIVE=1
         RUN_ONCE=1
     fi
@@ -2862,6 +2849,27 @@ normalize_shared_env_vars() {
     IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-${ADMIN_PASS}}"
     IPADM_PASSWORD="${IPADM_PASSWORD:-${IDM_ADMIN_PASS:-${ADMIN_PASS}}}"
     IPAADMIN_PASSWORD="${IPAADMIN_PASSWORD:-${IDM_ADMIN_PASS:-${ADMIN_PASS}}}"
+
+    # FreeIPA requires admin/DS passwords to be at least 8 characters.
+    # Keep ADMIN_PASS unchanged (it may be used for host logins), but normalize
+    # IdM-specific credentials to a safe minimum for unattended ipa-server-install.
+    if [ -n "${IDM_ADMIN_PASS:-}" ] && [ "${#IDM_ADMIN_PASS}" -lt 8 ]; then
+        local _idm_seed _idm_fallback
+        _idm_seed="${IDM_ADMIN_PASS:-${ADMIN_PASS:-minirhis}}"
+        _idm_fallback="${_idm_seed}"
+        while [ "${#_idm_fallback}" -lt 8 ]; do
+            _idm_fallback="${_idm_fallback}9"
+        done
+        print_warning "IDM_ADMIN_PASS is shorter than 8 characters; using a normalized IdM-specific password for FreeIPA install."
+        IDM_ADMIN_PASS="${_idm_fallback}"
+    fi
+
+    if [ -z "${IPADM_PASSWORD:-}" ] || [ "${#IPADM_PASSWORD}" -lt 8 ]; then
+        IPADM_PASSWORD="${IDM_ADMIN_PASS}"
+    fi
+    if [ -z "${IPAADMIN_PASSWORD:-}" ] || [ "${#IPAADMIN_PASSWORD}" -lt 8 ]; then
+        IPAADMIN_PASSWORD="${IDM_ADMIN_PASS}"
+    fi
 
     INTERNAL_NETWORK="${INTERNAL_NETWORK:-10.168.0.0}"
     NETMASK="${NETMASK:-${SAT_NETMASK:-${AAP_NETMASK:-${IDM_NETMASK:-255.255.0.0}}}}"
@@ -3087,6 +3095,10 @@ normalize_shared_env_vars() {
     AAP_ADMIN_PASS="${AAP_ADMIN_PASS:-${ADMIN_PASS}}"
     IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-${ADMIN_PASS}}"
     IDM_DS_PASS="${IDM_DS_PASS:-${ADMIN_PASS}}"
+
+    if [ -z "${IDM_DS_PASS:-}" ] || [ "${#IDM_DS_PASS}" -lt 8 ]; then
+        IDM_DS_PASS="${IDM_ADMIN_PASS}"
+    fi
 
     SAT_NETMASK="${SAT_NETMASK:-$NETMASK}"
     AAP_NETMASK="${AAP_NETMASK:-$NETMASK}"
@@ -4000,10 +4012,13 @@ show_menu() {
     echo "     - Run config sequence only (Requires build env.yml and vault file)"
     echo "  7) Setup Rootless Podman"
     echo "     - configure subuid/subgid, linger, and runtime dir"
+    echo "  8) Repair Web UIs"
+    echo "     - probe IdM / Satellite / AAP from installer host"
+    echo "     - auto-installs FreeIPA if absent, restarts services, re-runs AAP installer if needed"
     echo ""
     echo "  0) Exit"
     echo ""
-    read -r -p "Enter choice [0-7]: " choice
+    read -r -p "Enter choice [0-8]: " choice
 }
 
 select_stack_sizing_profile() {
@@ -4011,6 +4026,12 @@ select_stack_sizing_profile() {
 
     if is_noninteractive; then
         print_step "NONINTERACTIVE mode: keeping DEMO_MODE=${DEMO_MODE:-0} (0=SOE, 1=Demo)."
+        return 0
+    fi
+
+    if is_demo; then
+        DEMO_MODE="1"
+        print_step "DEMO mode requested: auto-selecting Demo/Education/PoC sizing (option 2)."
         return 0
     fi
 
@@ -5608,6 +5629,188 @@ install_container() {
     echo "Exec into the container: podman exec -it ${MINIRHIS_CONTAINER_NAME} /bin/bash"
 }
 
+# ---------------------------------------------------------------------------
+# repair_web_uis — top-level hands-free Web UI repair
+#
+# Probes all three UIs (IdM, Satellite, AAP) from the installer host.
+# For each unreachable endpoint it runs targeted remediation:
+#   IdM       — installs FreeIPA if absent, else restarts ipa/httpd
+#   Satellite — restarts satellite-maintain services
+#   AAP       — triggers containerised installer if containers absent,
+#               else restarts automation-gateway
+# Re-probes after each fix and prints a final reachability summary.
+# Called automatically after every orchestration run (no human input).
+# ---------------------------------------------------------------------------
+repair_web_uis() {
+    local _root_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
+    local _cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
+    local _vault_arg=""
+    local _inv="${MINIRHIS_INVENTORY_FILE}"
+    local _repair_failures=0
+    local _idm_ok=0 _sat_ok=0 _aap_ok=0
+
+    [ -f "${_cfg}" ] || _cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
+
+    if [ -r "${ANSIBLE_VAULT_PASS_FILE}" ]; then
+        _vault_arg="--vault-password-file ${ANSIBLE_VAULT_PASS_FILE}"
+    fi
+
+    # ── Helper: probe a URL from the installer host ────────────────────────
+    _rwu_probe() {
+        local _label="$1" _url="$2" _code
+        _code="$(curl -k -sS -o /dev/null -w "%{http_code}" --connect-timeout 8 --max-time 25 "${_url}" 2>/dev/null || true)"
+        case "${_code}" in
+            200|301|302|303|307|308|401|403)
+                print_success "Web UI reachable: ${_label} (HTTP ${_code})"
+                return 0 ;;
+            *)
+                print_warning "Web UI unreachable: ${_label} (HTTP ${_code:-no-response})"
+                return 1 ;;
+        esac
+    }
+
+    # ── Helper: run ad-hoc shell on an inventory target ────────────────────
+    _rwu_shell() {
+        local _target="$1" _cmd="$2" _extra="${3:---one-line}"
+        if [ -n "${_root_pass}" ]; then
+            ANSIBLE_CONFIG="${_cfg}" \
+                ansible "${_target}" --inventory "${_inv}" ${_vault_arg} \
+                --extra-vars "@${ANSIBLE_ENV_FILE}" \
+                -e "ansible_user=root" \
+                -e "ansible_password=${_root_pass}" \
+                -e "ansible_become=false" \
+                -e "ansible_become_password=${_root_pass}" \
+                -m shell -a "${_cmd}" ${_extra} 2>&1
+        else
+            ANSIBLE_CONFIG="${_cfg}" \
+                ansible "${_target}" --inventory "${_inv}" ${_vault_arg} \
+                --extra-vars "@${ANSIBLE_ENV_FILE}" \
+                -m shell -a "${_cmd}" ${_extra} 2>&1
+        fi
+    }
+
+    print_step "===== Repair Web UIs: probing endpoints from installer host ====="
+
+    # ── IdM ─────────────────────────────────────────────────────────────────
+    if _rwu_probe "IdM" "https://${IDM_IP}/ipa/ui/"; then
+        _idm_ok=1
+    else
+        print_step "Repair IdM: checking FreeIPA installation state..."
+        local _ipa_state
+        _ipa_state="$(_rwu_shell "idm" \
+            'test -f /etc/ipa/default.conf && echo IPA_CONFIGURED || echo IPA_NOT_CONFIGURED' \
+            "--one-line" 2>/dev/null || echo "IPA_UNREACHABLE")"
+
+        if printf '%s\n' "${_ipa_state}" | grep -q 'IPA_NOT_CONFIGURED'; then
+            # FreeIPA is absent — run the full install playbook
+            print_step "Repair IdM: FreeIPA not installed — running idm-install.yml (this takes ~5 min)..."
+            local _ipapass="${IPAADMIN_PASSWORD:-${IPADM_PASSWORD:-${IDM_ADMIN_PASS:-${_root_pass}}}}"
+            # Enforce FreeIPA 8-character minimum
+            while [ "${#_ipapass}" -lt 8 ]; do _ipapass="${_ipapass}9"; done
+            ANSIBLE_CONFIG="${_cfg}" \
+            ANSIBLE_ROLES_PATH="${SCRIPT_DIR}/roles:${SCRIPT_DIR}/container/roles" \
+            ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME:-rhis-repair.log}" \
+                ansible-playbook \
+                    --inventory "${_inv}" \
+                    ${_vault_arg} \
+                    --extra-vars "@${ANSIBLE_ENV_FILE}" \
+                    -e "admin_pass=${_root_pass}" \
+                    -e "global_admin_password=${_root_pass}" \
+                    -e "idm_admin_pass=${_ipapass}" \
+                    -e "ipaadmin_password=${_ipapass}" \
+                    -e "idm_realm=${IDM_REALM:-PROD.SPG}" \
+                    -e "idm_domain=${IDM_DOMAIN:-prod.spg}" \
+                    -e "ansible_user=root" \
+                    -e "ansible_password=${_root_pass}" \
+                    -e "ansible_become=false" \
+                    --limit idm_primary \
+                    "${SCRIPT_DIR}/playbooks/idm-install.yml" 2>&1 | tail -60 || \
+                print_warning "Repair IdM: idm-install.yml did not complete cleanly; see log."
+        elif printf '%s\n' "${_ipa_state}" | grep -q 'IPA_CONFIGURED'; then
+            # FreeIPA installed but services down — restart
+            print_step "Repair IdM: FreeIPA installed — restarting ipa/httpd services..."
+            _rwu_shell "idm" \
+                'ipactl status >/dev/null 2>&1 || ipactl start >/dev/null 2>&1 || true; systemctl restart httpd pki-tomcatd@pki-tomcat >/dev/null 2>&1 || true' \
+                "--one-line" >/dev/null 2>&1 || true
+        else
+            print_warning "Repair IdM: VM unreachable — skipping IdM repair."
+        fi
+
+        if _rwu_probe "IdM (post-repair)" "https://${IDM_IP}/ipa/ui/"; then
+            _idm_ok=1
+        else
+            _repair_failures=$((_repair_failures + 1))
+        fi
+    fi
+
+    # ── Satellite ───────────────────────────────────────────────────────────
+    if _rwu_probe "Satellite" "https://${SAT_IP}/users/login"; then
+        _sat_ok=1
+    else
+        print_step "Repair Satellite: restarting Satellite services..."
+        _rwu_shell "scenario_satellite" \
+            'satellite-maintain service restart >/dev/null 2>&1 || true; systemctl restart httpd >/dev/null 2>&1 || true' \
+            "--one-line" >/dev/null 2>&1 || true
+
+        if _rwu_probe "Satellite (post-repair)" "https://${SAT_IP}/users/login"; then
+            _sat_ok=1
+        else
+            _repair_failures=$((_repair_failures + 1))
+        fi
+    fi
+
+    # ── AAP ─────────────────────────────────────────────────────────────────
+    if _rwu_probe "AAP" "https://${AAP_IP}/"; then
+        _aap_ok=1
+    else
+        print_step "Repair AAP: checking Podman container status..."
+        local _aap_ctr_state
+        _aap_ctr_state="$(_rwu_shell "aap" \
+            "podman ps --format '{{.Names}}' 2>/dev/null | grep -q automation-gateway && echo AAP_CTR_UP || echo AAP_CTR_DOWN" \
+            "--one-line" 2>/dev/null || echo "AAP_CTR_DOWN")"
+
+        if printf '%s\n' "${_aap_ctr_state}" | grep -q 'AAP_CTR_DOWN'; then
+            # Containers absent — trigger the containerised installer
+            print_step "Repair AAP: containers not running — starting AAP containerised installer (this can take 30-60 min)..."
+            local _aap_setup="/home/admin/aap-setup"
+            local _aap_cols="${_aap_setup}/collections"
+            local _aap_pb="${_aap_cols}/ansible_collections/ansible/containerized_installer/playbooks/install.yml"
+            # Prefer DEMO-inventory; fall back to plain inventory
+            _rwu_shell "aap" \
+                "_inv_file=${_aap_setup}/DEMO-inventory; test -f \${_inv_file} || _inv_file=${_aap_setup}/inventory; cd ${_aap_setup} && env ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i \${_inv_file} ${_aap_pb} > /tmp/aap-repair-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -20 /tmp/aap-repair-install.log; echo AAP_INSTALL_FAIL; }" \
+                "--timeout 5400" 2>&1 | tail -20 || \
+                print_warning "Repair AAP: installer did not complete cleanly; check /tmp/aap-repair-install.log on ${AAP_IP}."
+        else
+            # Containers present but gateway not responding — restart it
+            print_step "Repair AAP: containers present — restarting automation-gateway..."
+            _rwu_shell "aap" \
+                'podman restart automation-gateway >/dev/null 2>&1 || true; sleep 8' \
+                "--one-line" >/dev/null 2>&1 || true
+        fi
+
+        if _rwu_probe "AAP (post-repair)" "https://${AAP_IP}/"; then
+            _aap_ok=1
+        else
+            _repair_failures=$((_repair_failures + 1))
+        fi
+    fi
+
+    # ── Summary ─────────────────────────────────────────────────────────────
+    echo ""
+    printf "  %-12s  https://%s/ipa/ui/      %s\n"     "IdM"       "${IDM_IP}" "$([ "${_idm_ok}" -eq 1 ] && echo '✔ UP' || echo '✘ DOWN')"
+    printf "  %-12s  https://%s/users/login  %s\n"  "Satellite"  "${SAT_IP}" "$([ "${_sat_ok}" -eq 1 ] && echo '✔ UP' || echo '✘ DOWN')"
+    printf "  %-12s  https://%s/             %s\n"        "AAP"  "${AAP_IP}" "$([ "${_aap_ok}" -eq 1 ] && echo '✔ UP' || echo '✘ DOWN')"
+    echo ""
+
+    if [ "${_repair_failures}" -eq 0 ]; then
+        print_success "All Web UIs are reachable and healthy."
+        return 0
+    fi
+
+    print_warning "Repair Web UIs: ${_repair_failures} endpoint(s) still unreachable after remediation."
+    return 1
+}
+
 run_container_prescribed_sequence() {
     if ! is_enabled "${MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY:-1}"; then
         print_step "Container auto-config is disabled (MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=${MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY})."
@@ -5625,21 +5828,35 @@ run_container_prescribed_sequence() {
     print_step "Prescribed order: IdM -> Satellite -> AAP"
     run_minirhis_config_as_code || {
         print_warning "Automatic prescribed sequence did not complete cleanly."
-        print_warning "You can re-run by selecting menu option 2 again or invoking the same playbooks manually."
+        print_warning "Attempting Web UI repair pass before giving up..."
+        repair_web_uis || true
         return 1
     }
 
     print_success "Automatic prescribed sequence completed."
+    print_step "Running hands-free Web UI readiness check and repair pass..."
+    repair_web_uis || print_warning "Some Web UIs may still be starting up; run menu option 8 to re-check."
 }
 
 run_container_config_only() {
     print_step "Running container-config-only workflow"
-    install_container || return 1
+    # If Podman rootless is unavailable, proceed with direct VM provisioning.
+    if ! install_container; then
+        print_warning "Container deployment failed (Podman rootless unavailable on this system)."
+        print_step "Falling back to direct VM provisioning workflow without container orchestration."
+        print_step "This will generate kickstarts/OEMDRV, create MINIRHIS VMs, and continue configuration automatically"
+        create_minirhis_vms || return 1
+        print_step "Running hands-free Web UI readiness check and repair pass..."
+        repair_web_uis || print_warning "Some Web UIs may still be starting up; run menu option 8 to re-check."
+        return 0
+    fi
 
     if ! preflight_config_as_code_targets; then
         print_step "Prerequisites for config-only are missing; auto-running VM provisioning workflow"
         print_step "This will generate kickstarts/OEMDRV, create MINIRHIS VMs, and continue configuration automatically"
         create_minirhis_vms || return 1
+        print_step "Running hands-free Web UI readiness check and repair pass..."
+        repair_web_uis || print_warning "Some Web UIs may still be starting up; run menu option 8 to re-check."
         return 0
     fi
 
@@ -10210,6 +10427,9 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
     run_post_install_healthcheck() {
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
         local local_failures=0
+        local idm_health_ok=0
+        local sat_health_ok=0
+        local aap_health_ok=0
 
         healthcheck_exec_ansible_shell() {
             local _target="$1"
@@ -10306,6 +10526,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         if [ "${run_idm}" -eq 1 ]; then
         if healthcheck_run_shell "idm" "IdM web/service readiness" "${idm_check}"; then
             print_success "Healthcheck passed: IdM"
+            idm_health_ok=1
         else
             local_failures=$((local_failures + 1))
             print_warning "Healthcheck failed: IdM"
@@ -10314,12 +10535,14 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 healthcheck_run_shell "idm" "IdM autofix action" "${idm_fix}" || true
                 if healthcheck_run_shell "idm" "IdM post-autofix verification" "${idm_check}"; then
                     print_success "IdM recovered after autofix."
+                    idm_health_ok=1
                     local_failures=$((local_failures - 1))
                 elif is_enabled "${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
                     print_warning "Healthcheck rerun: IdM component playbook"
                     if run_phase_playbook_with_auth_fallback "Healthcheck repair — IdM" "idm" "/minirhis/minirhis-builder-idm/main.yml" && \
                        healthcheck_run_shell "idm" "IdM post-rerun verification" "${idm_check}"; then
                         print_success "IdM recovered after targeted component rerun."
+                        idm_health_ok=1
                         local_failures=$((local_failures - 1))
                     else
                         dump_idm_network_diagnostics || true
@@ -10349,6 +10572,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         if [ "${run_satellite}" -eq 1 ]; then
         if healthcheck_run_shell "scenario_satellite" "Satellite web/service readiness" "${sat_check}"; then
             print_success "Healthcheck passed: Satellite"
+            sat_health_ok=1
         else
             local_failures=$((local_failures + 1))
             print_warning "Healthcheck failed: Satellite"
@@ -10357,12 +10581,14 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 healthcheck_run_shell "scenario_satellite" "Satellite autofix action" "${sat_fix}" || true
                 if healthcheck_run_shell "scenario_satellite" "Satellite post-autofix verification" "${sat_check}"; then
                     print_success "Satellite recovered after autofix."
+                    sat_health_ok=1
                     local_failures=$((local_failures - 1))
                 elif is_enabled "${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
                     print_warning "Healthcheck rerun: Satellite component playbook"
                     if run_phase_playbook_with_auth_fallback "Healthcheck repair — Satellite" "scenario_satellite" "/minirhis/minirhis-builder-satellite/main.yml" && \
                        healthcheck_run_shell "scenario_satellite" "Satellite post-rerun verification" "${sat_check}"; then
                         print_success "Satellite recovered after targeted component rerun."
+                        sat_health_ok=1
                         local_failures=$((local_failures - 1))
                     else
                         dump_satellite_rhsm_diagnostics || true
@@ -10379,9 +10605,10 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         local aap_check='ss -ltn | grep -q ":443\\b"; curl -k -sS https://localhost/api/v2/ping/ 2>/dev/null | grep -q '"'"'version'"'"'; echo "AAP_HEALTH_OK:api-v2-ping"'
         local aap_fix='systemctl enable --now firewalld >/dev/null 2>&1 || true; firewall-cmd --permanent --add-service=https >/dev/null 2>&1 || true; firewall-cmd --permanent --add-service=cockpit >/dev/null 2>&1 || true; firewall-cmd --reload >/dev/null 2>&1 || true; systemctl enable --now podman >/dev/null 2>&1 || true; systemctl restart podman >/dev/null 2>&1 || true; systemctl enable --now cockpit.socket >/dev/null 2>&1 || true; true'
 
-        if [ "${aap_status}" = "success" ] || [ "${aap_status}" = "success-after-retry" ]; then
+        if [ "${run_aap}" -eq 1 ]; then
             if healthcheck_run_shell "aap" "AAP web/service readiness" "${aap_check}"; then
                 print_success "Healthcheck passed: AAP"
+                aap_health_ok=1
             else
                 local_failures=$((local_failures + 1))
                 print_warning "Healthcheck failed: AAP"
@@ -10390,19 +10617,59 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                     healthcheck_run_shell "aap" "AAP autofix action" "${aap_fix}" || true
                     if healthcheck_run_shell "aap" "AAP post-autofix verification" "${aap_check}"; then
                         print_success "AAP recovered after autofix."
+                        aap_health_ok=1
                         local_failures=$((local_failures - 1))
                     elif is_enabled "${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"; then
                         print_warning "Healthcheck rerun: AAP component playbook"
                         if run_phase_playbook_with_auth_fallback "Healthcheck repair — AAP" "aap" "/minirhis/minirhis-builder-aap/minirhis-builder-aap/main.yml" && \
                            healthcheck_run_shell "aap" "AAP post-rerun verification" "${aap_check}"; then
                             print_success "AAP recovered after targeted component rerun."
+                            aap_health_ok=1
                             local_failures=$((local_failures - 1))
                         fi
                     fi
                 fi
             fi
         else
-            print_warning "Skipping AAP post-install healthcheck because AAP phase status is '${aap_status}'."
+            print_step "Skipping AAP post-install healthcheck (component scope: ${component_scope})."
+        fi
+
+        # Installer-side endpoint probes catch network/firewall issues that can be
+        # missed by localhost checks inside each VM.
+        probe_ui_endpoint_from_installer() {
+            local _label="$1"
+            local _url="$2"
+            local _code=""
+
+            _code="$(curl -k -sS -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 20 "${_url}" 2>/dev/null || true)"
+            case "${_code}" in
+                200|301|302|303|307|308|401|403)
+                    print_success "Installer probe passed: ${_label} (${_code})"
+                    return 0
+                    ;;
+                *)
+                    print_warning "Installer probe failed: ${_label} (${_code:-no-response})"
+                    return 1
+                    ;;
+            esac
+        }
+
+        if [ "${run_idm}" -eq 1 ] && [ "${idm_health_ok}" -eq 1 ]; then
+            if ! probe_ui_endpoint_from_installer "IdM UI via IP" "https://${IDM_IP}/ipa/ui/"; then
+                local_failures=$((local_failures + 1))
+            fi
+        fi
+
+        if [ "${run_satellite}" -eq 1 ] && [ "${sat_health_ok}" -eq 1 ]; then
+            if ! probe_ui_endpoint_from_installer "Satellite UI via IP" "https://${SAT_IP}/users/login"; then
+                local_failures=$((local_failures + 1))
+            fi
+        fi
+
+        if [ "${run_aap}" -eq 1 ] && [ "${aap_health_ok}" -eq 1 ]; then
+            if ! probe_ui_endpoint_from_installer "AAP UI via IP" "https://${AAP_IP}/"; then
+                local_failures=$((local_failures + 1))
+            fi
         fi
 
         if [ "${local_failures}" -ne 0 ]; then
@@ -10571,17 +10838,35 @@ ensure_jq() {
 # ─── Credential store: ~/.ansible/conf/env.yml ────────────────────────────────
 # Ensure ansible-vault exists.
 ensure_ansible_vault() {
-    if command -v ansible-vault >/dev/null 2>&1; then
+    # Prefer a local isolated venv if present and usable
+    if [ -x "$HOME/.ansible/venv-ansible-core/bin/ansible-vault" ]; then
+        ANSIBLE_VAULT_CMD="$HOME/.ansible/venv-ansible-core/bin/ansible-vault"
         return 0
     fi
 
-    print_warning "ansible-vault not found. Attempting to install ansible-core..."
+    # If system ansible-vault exists, sanity-check it is functional
+    if command -v ansible-vault >/dev/null 2>&1; then
+        local candidate
+        candidate="$(command -v ansible-vault)"
+        if "$candidate" --version >/dev/null 2>&1; then
+            ANSIBLE_VAULT_CMD="$candidate"
+            return 0
+        fi
+        # fallthrough to try installing or using venv
+    fi
+
+    print_warning "ansible-vault not found or not functioning. Attempting to install ansible-core..."
     sudo dnf install -y --nogpgcheck ansible-core >/dev/null 2>&1 || {
         print_warning "Could not install ansible-core. Please install ansible-vault and re-run."
         return 1
     }
 
-    command -v ansible-vault >/dev/null 2>&1
+    if command -v ansible-vault >/dev/null 2>&1; then
+        ANSIBLE_VAULT_CMD="$(command -v ansible-vault)"
+        return 0
+    fi
+
+    return 1
 }
 
 # Ensure vault password file exists at ~/.ansible/conf/.vaultpass.txt (chmod 600).
@@ -10637,7 +10922,9 @@ read_ansible_env_content() {
     if grep -q '^\$ANSIBLE_VAULT;' "$ANSIBLE_ENV_FILE" 2>/dev/null; then
         ensure_ansible_vault || return 1
         ensure_vault_password_file || return 1
-        ANSIBLE_ENV_CONTENT="$(ansible-vault view --vault-password-file "$ANSIBLE_VAULT_PASS_FILE" "$ANSIBLE_ENV_FILE" 2>/dev/null || true)"
+        # Use resolved ANSIBLE_VAULT_CMD when available (fallback to ansible-vault)
+        ANSIBLE_VAULT_CMD="${ANSIBLE_VAULT_CMD:-$(command -v ansible-vault 2>/dev/null || true)}"
+        ANSIBLE_ENV_CONTENT="$(${ANSIBLE_VAULT_CMD} view --vault-password-file "$ANSIBLE_VAULT_PASS_FILE" "$ANSIBLE_ENV_FILE" 2>/dev/null || true)"
         if [ -z "$ANSIBLE_ENV_CONTENT" ]; then
             print_warning "Failed to decrypt $ANSIBLE_ENV_FILE."
             return 1
@@ -10646,6 +10933,44 @@ read_ansible_env_content() {
         ANSIBLE_ENV_CONTENT="$(cat "$ANSIBLE_ENV_FILE" 2>/dev/null || true)"
     fi
 
+    return 0
+}
+
+recreate_ansible_env_via_prompts_if_decryptable() {
+    # If env.yml exists and is vault-encrypted and decryptable, recreate it
+    # by prompting the user for values and re-writing the encrypted file.
+    [ -f "$ANSIBLE_ENV_FILE" ] || return 0
+    if is_noninteractive; then
+        print_warning "Noninteractive mode: skipping env.yml recreation."
+        return 0
+    fi
+    if ! grep -q '^\$ANSIBLE_VAULT;' "$ANSIBLE_ENV_FILE" 2>/dev/null; then
+        return 0
+    fi
+
+    ensure_ansible_vault || return 1
+    ensure_vault_password_file || return 1
+    ANSIBLE_VAULT_CMD="${ANSIBLE_VAULT_CMD:-$(command -v ansible-vault 2>/dev/null || true)}"
+    if [ -z "$ANSIBLE_VAULT_CMD" ]; then
+        print_warning "ansible-vault not available; cannot verify env.yml decryption"
+        return 1
+    fi
+
+    if "$ANSIBLE_VAULT_CMD" view --vault-password-file "$ANSIBLE_VAULT_PASS_FILE" "$ANSIBLE_ENV_FILE" >/dev/null 2>&1; then
+        print_step "Encrypted env file decryptable: recreating via interactive prompts."
+        local bak
+        bak="${ANSIBLE_ENV_FILE}.bak.$(date +%s)"
+        cp -a "$ANSIBLE_ENV_FILE" "$bak" 2>/dev/null || print_warning "Could not backup $ANSIBLE_ENV_FILE to $bak"
+        rm -f "$ANSIBLE_ENV_FILE"
+        FORCE_PROMPT_ALL=1
+        prompt_all_env_options_once || { print_warning "Env recreation aborted by user"; FORCE_PROMPT_ALL=0; return 1; }
+        FORCE_PROMPT_ALL=0
+        normalize_shared_env_vars
+        print_success "Recreated encrypted env file at $ANSIBLE_ENV_FILE (backup: $bak)"
+    else
+        print_warning "Existing env.yml is not decryptable with $ANSIBLE_VAULT_PASS_FILE; skipping recreation."
+        return 1
+    fi
     return 0
 }
 
@@ -11057,8 +11382,15 @@ MINIRHIS_ENV_EOF
         return 0
     fi
 
-    ansible-vault encrypt --vault-password-file "$ANSIBLE_VAULT_PASS_FILE" "$tmp_env" >/dev/null 2>&1 || {
-        print_warning "Failed to encrypt $tmp_env with ansible-vault."
+    ANSIBLE_VAULT_CMD="${ANSIBLE_VAULT_CMD:-$(command -v ansible-vault 2>/dev/null || true)}"
+    if [ -z "$ANSIBLE_VAULT_CMD" ]; then
+        print_warning "ansible-vault not found; cannot encrypt $tmp_env."
+        rm -f "$tmp_env"
+        return 1
+    fi
+
+    "$ANSIBLE_VAULT_CMD" encrypt --vault-password-file "$ANSIBLE_VAULT_PASS_FILE" "$tmp_env" >/dev/null 2>&1 || {
+        print_warning "Failed to encrypt $tmp_env with $ANSIBLE_VAULT_CMD."
         rm -f "$tmp_env"
         return 1
     }
@@ -15910,8 +16242,12 @@ create_minirhis_vms() {
     if setup_minirhis_ssh_mesh; then
         ssh_mesh_bootstrap_ok=1
     else
-        if is_enabled "${MINIRHIS_ALLOW_DEFERRED_SSH_MESH:-0}"; then
-            print_warning "SSH mesh bootstrap did not complete cleanly; deferred mode enabled (MINIRHIS_ALLOW_DEFERRED_SSH_MESH=1), will retry after config-as-code once nodes are fully initialized."
+        if is_enabled "${MINIRHIS_ALLOW_DEFERRED_SSH_MESH:-0}" || is_demo; then
+            if is_enabled "${MINIRHIS_ALLOW_DEFERRED_SSH_MESH:-0}"; then
+                print_warning "SSH mesh bootstrap did not complete cleanly; deferred mode enabled (MINIRHIS_ALLOW_DEFERRED_SSH_MESH=1), will retry after config-as-code once nodes are fully initialized."
+            else
+                print_warning "SSH mesh bootstrap did not complete cleanly during DEMO mode; auto-deferring bootstrap and retrying after config-as-code once nodes are fully initialized."
+            fi
         else
             print_warning "SSH mesh bootstrap is required before continuing. Aborting now."
             print_warning "If you intentionally want deferred behavior, set MINIRHIS_ALLOW_DEFERRED_SSH_MESH=1 and re-run."
@@ -15922,10 +16258,6 @@ create_minirhis_vms() {
     print_phase 4 8 "SSH mesh validation"
     if [ "${ssh_mesh_bootstrap_ok}" -eq 1 ]; then
         validate_minirhis_ssh_mesh || print_warning "SSH mesh validation reported failures; continuing."
-        # Ensure installer <-> admin SSH key exchange across all RHIS server types
-        if ! ensure_installer_admin_ssh_exchange; then
-            print_warning "Installer <-> admin SSH key exchange reported issues; continuing."
-        fi
     else
         print_step "Skipping early SSH mesh validation because bootstrap was deferred."
     fi
@@ -16135,6 +16467,10 @@ setup_minirhis_ssh_mesh() {
     mesh_pass="${ADMIN_PASS:-}"
     ssh_bootstrap_retries="${MINIRHIS_SSH_BOOTSTRAP_RETRIES:-45}"
     ssh_bootstrap_delay="${MINIRHIS_SSH_BOOTSTRAP_DELAY:-10}"
+    if [ -z "${MINIRHIS_SSH_BOOTSTRAP_RETRIES:-}" ] && is_demo; then
+        # Fresh DEMO guests often need more first-boot time before SSH + accounts are ready.
+        ssh_bootstrap_retries=90
+    fi
     if is_enabled "${MINIRHIS_REQUIRE_ROOT_SSH_MESH:-0}"; then
         root_mesh_required=1
     fi
@@ -16506,11 +16842,11 @@ validate_minirhis_ssh_mesh() {
             # Try with MINIRHIS installer key first (installer host key is pushed to each node's authorized_keys
             # during mesh setup to root only, so this path is typically not used for node-to-node admin mesh.
             if [ -f "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-}" ] && \
-               ssh -i "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ${mesh_user}@"$src_ip" "$validation_cmd" >/dev/null 2>&1; then
+               ssh -i "${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY}" -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "${mesh_user}@${src_ip}" "$validation_cmd" >/dev/null 2>&1; then
                 print_step "SSH mesh OK: ${src_name} -> ${dst_name}"
-            elif [ -n "$mesh_pass" ] && sshpass -p "$mesh_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 ${mesh_user}@"$src_ip" "$validation_cmd" >/dev/null 2>&1; then
+            elif [ -n "$mesh_pass" ] && sshpass -p "$mesh_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "${mesh_user}@${src_ip}" "$validation_cmd" >/dev/null 2>&1; then
                 print_step "SSH mesh OK: ${src_name} -> ${dst_name}"
-            elif [ -n "$root_pass" ] && sshpass -p "$root_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 root@"$src_ip" "$validation_cmd" >/dev/null 2>&1; then
+            elif [ -n "$root_pass" ] && sshpass -p "$root_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "root@${src_ip}" "$validation_cmd" >/dev/null 2>&1; then
                 print_step "SSH mesh OK via root fallback: ${src_name} -> ${dst_name}"
             else
                 print_warning "SSH mesh FAILED: ${src_name} -> ${dst_name}"
@@ -16528,7 +16864,7 @@ validate_minirhis_ssh_mesh() {
                 dst_name="${dst%%:*}"
                 dst_ip="${dst##*:}"
                 validation_cmd="ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -o ConnectTimeout=8 root@${dst_ip} 'echo ok-root:${dst_name}'"
-                if sshpass -p "$root_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 root@"$src_ip" "$validation_cmd" >/dev/null 2>&1; then
+                if sshpass -p "$root_pass" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "root@${src_ip}" "$validation_cmd" >/dev/null 2>&1; then
                     print_step "Root SSH mesh OK: ${src_name} -> ${dst_name}"
                 else
                     print_warning "Root SSH mesh FAILED: ${src_name} -> ${dst_name}"
@@ -16589,24 +16925,15 @@ ensure_local_installer_user_passwordless_sudo() {
     fi
 
     print_step "Ensuring passwordless sudo for installer user ${current_user}"
-    if [ -z "${current_user}" ]; then
-        current_user="admin"
-        sudoers_file="/etc/sudoers.d/90-minirhis-${current_user}-nopasswd"
+    if ! printf '%s\n' "${current_user} ALL=(ALL) NOPASSWD: ALL" | sudo tee "${sudoers_file}" >/dev/null 2>&1; then
+        print_warning "Could not create ${sudoers_file}; passwordless sudo for ${current_user} is not configured."
+        return 1
     fi
 
-    tmpfile="$(mktemp /tmp/90-minirhis-${current_user}-XXXX)"
-    printf '%s\n' "${current_user} ALL=(ALL) NOPASSWD: ALL" > "${tmpfile}"
-    chmod 0440 "${tmpfile}" || true
-    if sudo visudo -cf "${tmpfile}" >/dev/null 2>&1; then
-        if ! sudo mv -f "${tmpfile}" "${sudoers_file}" >/dev/null 2>&1; then
-            print_warning "Could not move ${tmpfile} to ${sudoers_file}; passwordless sudo not configured."
-            rm -f "${tmpfile}" || true
-            return 1
-        fi
-        sudo chmod 0440 "${sudoers_file}" >/dev/null 2>&1 || true
-    else
-        print_warning "sudoers validation failed for temp file; not installing passwordless sudo for ${current_user}."
-        rm -f "${tmpfile}" || true
+    sudo chmod 0440 "${sudoers_file}" >/dev/null 2>&1 || true
+    if ! sudo visudo -cf /etc/sudoers >/dev/null 2>&1; then
+        print_warning "sudoers validation failed after writing ${sudoers_file}; rolling back."
+        sudo rm -f "${sudoers_file}" >/dev/null 2>&1 || true
         return 1
     fi
 
@@ -16631,7 +16958,9 @@ ensure_host_installer_keys_on_satellite() {
 
     [ -n "${sat_ip}" ] || return 1
 
-    for key_file in "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY:-}"; do
+    # Support a single path or a whitespace-separated list of paths
+    IFS=$' \t\n' read -r -a _installer_pub_keys <<< "${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY:-}"
+    for key_file in "${_installer_pub_keys[@]}"; do
         [ -n "${key_file}" ] || continue
         [ -r "${key_file}" ] || continue
         key_content="$(cat "${key_file}" 2>/dev/null || true)"
@@ -16677,86 +17006,6 @@ ensure_host_installer_keys_on_satellite() {
         print_step "Installer-host keys synchronized to ${target_user}@${sat_host} (${sat_ip})"
     done
 
-    return 0
-}
-
-# Ensure installer <-> admin SSH key exchange across all RHIS server types.
-ensure_installer_admin_ssh_exchange() {
-    local installer_pub_file="${MINIRHIS_INSTALLER_SSH_PUBLIC_KEY:-"${HOME}/.ssh/minirhis-installer/id_rsa.pub"}"
-    local installer_pub installer_pub_b64
-    local admin_user="${ADMIN_USER:-admin}"
-    local admin_pass="${ADMIN_PASS:-}"
-    local root_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
-    local -a nodes
-
-    if [ ! -r "${installer_pub_file}" ]; then
-        print_warning "Installer public key not found at ${installer_pub_file}; skipping installer/admin key exchange."
-        return 1
-    fi
-
-    installer_pub="$(cat "${installer_pub_file}" 2>/dev/null || true)"
-    installer_pub_b64="$(printf '%s' "${installer_pub}" | base64 -w0 2>/dev/null || true)"
-    if [ -z "${installer_pub}" ] || [ -z "${installer_pub_b64}" ]; then
-        print_warning "Installer public key empty or unreadable; skipping installer/admin key exchange."
-        return 1
-    fi
-
-    [ -n "${SAT_IP:-}" ] && nodes+=("${SAT_IP}:satellite")
-    [ -n "${AAP_IP:-}" ] && nodes+=("${AAP_IP}:aap")
-    [ -n "${IDM_IP:-}" ] && nodes+=("${IDM_IP}:idm")
-
-    if [ "${#nodes[@]}" -eq 0 ]; then
-        print_warning "No RHIS node IPs configured; skipping installer/admin key exchange."
-        return 1
-    fi
-
-    if ! command -v sshpass >/dev/null 2>&1; then
-        print_step "Installing sshpass for remote key exchange"
-        sudo dnf install -y --nogpgcheck sshpass >/dev/null 2>&1 || true
-    fi
-
-    print_step "Synchronizing installer <-> admin SSH keys to nodes: ${nodes[*]}"
-    for n in "${nodes[@]}"; do
-        local ip="${n%%:*}"
-        local name="${n##*:}"
-        local append_cmd read_pub
-
-        # Push installer public key into admin user's authorized_keys on the node.
-        append_cmd="target_home=\"\$(getent passwd '${admin_user}' 2>/dev/null | cut -d: -f6)\"; [ -n \"\$target_home\" ] || target_home=\"/home/${admin_user}\"; install -d -m 700 \"\$target_home/.ssh\"; touch \"\$target_home/.ssh/authorized_keys\"; printf '%s\\n' '${installer_pub}' >> \"\$target_home/.ssh/authorized_keys\"; sort -u \"\$target_home/.ssh/authorized_keys\" -o \"\$target_home/.ssh/authorized_keys\"; chown '${admin_user}:${admin_user}' \"\$target_home/.ssh/authorized_keys\" 2>/dev/null || true; chmod 600 \"\$target_home/.ssh/authorized_keys\""
-
-        if [ -n "${admin_pass}" ]; then
-            sshpass -p "${admin_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "${admin_user}@${ip}" "${append_cmd}" >/dev/null 2>&1 || true
-        elif [ -n "${root_pass}" ]; then
-            # Root fallback: append to admin's home as root
-            append_cmd_root="install -d -m 700 /home/${admin_user}/.ssh 2>/dev/null || true; touch /home/${admin_user}/.ssh/authorized_keys; printf '%s\\n' '${installer_pub}' >> /home/${admin_user}/.ssh/authorized_keys; sort -u /home/${admin_user}/.ssh/authorized_keys -o /home/${admin_user}/.ssh/authorized_keys; chown ${admin_user}:${admin_user} /home/${admin_user}/.ssh/authorized_keys 2>/dev/null || true; chmod 600 /home/${admin_user}/.ssh/authorized_keys"
-            sshpass -p "${root_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "root@${ip}" "${append_cmd_root}" >/dev/null 2>&1 || true
-        else
-            print_warning "Skipping installer -> ${admin_user} key push to ${name} (${ip}): no admin or root password available"
-        fi
-
-        # Pull admin public key from node and add it to installer host's authorized_keys.
-        read_pub=""
-        if [ -n "${admin_pass}" ]; then
-            read_pub="$(sshpass -p "${admin_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "${admin_user}@${ip}" 'cat ~/.ssh/id_rsa.pub' 2>/dev/null || true)"
-        fi
-        if [ -z "${read_pub}" ] && [ -n "${root_pass}" ]; then
-            read_pub="$(sshpass -p "${root_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 "root@${ip}" 'cat /home/${admin_user}/.ssh/id_rsa.pub 2>/dev/null || cat /root/.ssh/id_rsa.pub 2>/dev/null || true' 2>/dev/null || true)"
-        fi
-
-        if [ -n "${read_pub}" ]; then
-            mkdir -p "${HOME}/.ssh" >/dev/null 2>&1 || true
-            touch "${HOME}/.ssh/authorized_keys" >/dev/null 2>&1 || true
-            if ! grep -qxF "${read_pub}" "${HOME}/.ssh/authorized_keys" 2>/dev/null; then
-                printf '%s\n' "${read_pub}" >> "${HOME}/.ssh/authorized_keys"
-                sort -u "${HOME}/.ssh/authorized_keys" -o "${HOME}/.ssh/authorized_keys" || true
-            fi
-        else
-            print_warning "Could not retrieve ${admin_user} public key from ${name} (${ip})"
-        fi
-    done
-
-    chmod 600 "${HOME}/.ssh/authorized_keys" >/dev/null 2>&1 || true
-    print_success "Installer <-> admin SSH keys synchronized across RHIS nodes"
     return 0
 }
 
@@ -17384,6 +17633,8 @@ main() {
     if [ ! -f "$ANSIBLE_ENV_FILE" ]; then
         load_preseed_env
     fi
+    # If env.yml can be decrypted, recreate it interactively (backup then re-prompt).
+    recreate_ansible_env_via_prompts_if_decryptable || true
     load_ansible_env_file
     normalize_shared_env_vars
 
@@ -17559,6 +17810,7 @@ main() {
 			5) generate_oemdrv_kickstarts_only ;;
             6) show_configure_existing_submenu || { print_warning "Configure Existing Stack workflow failed"; exit 1; } ;;
             7) ensure_rootless_podman && print_success "Rootless Podman is ready." || print_warning "Rootless Podman setup did not complete; see messages above." ;;
+            8) repair_web_uis || print_warning "One or more Web UIs are still unreachable; see messages above." ;;
             # Backward-compatible hidden menu choices for existing automation/CLI shortcuts
             9) install_satellite_only || { print_warning "Satellite-only workflow failed"; exit 1; } ;;
             10) install_idm_only || { print_warning "IdM-only workflow failed"; exit 1; } ;;

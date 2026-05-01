@@ -1,0 +1,8 @@
+---
+- name: Satellite node provisioning (skeleton)
+  hosts: satellite
+  become: true
+  vars:
+    node_type: satellite
+  roles:
+    - role: node_common

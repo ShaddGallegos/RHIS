@@ -1,0 +1,10 @@
+---
+# Sudoers: optionally enable passwordless wheel via `minirhis_enable_wheel_sudo`
+- name: Ensure passwordless sudo for wheel group
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers
+    regexp: "^%wheel\\s+ALL=\\(ALL\\)\\s+NOPASSWD: ALL"
+    line: "%wheel ALL=(ALL) NOPASSWD: ALL"
+    validate: "visudo -cf %s"
+  when: minirhis_enable_wheel_sudo | default(false)
+  become: true

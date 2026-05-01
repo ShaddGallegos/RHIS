@@ -1,0 +1,75 @@
+---
+---
+# Extended tests: verify downloads, packages, users, services and simple connectivity
+
+- name: Check downloaded AAP bundle exists
+  ansible.builtin.stat:
+    path: "/var/tmp/{{ AAP_BUNDLE_URL | basename }}"
+  register: aap_bundle_stat
+  when: AAP_BUNDLE_URL is defined and (AAP_BUNDLE_URL | length) > 0
+
+- name: Fail if AAP bundle missing after download
+  ansible.builtin.fail:
+    msg: "AAP bundle not found at /var/tmp/{{ AAP_BUNDLE_URL | basename }}"
+  when: (AAP_BUNDLE_URL is defined) and (aap_bundle_stat is defined) and (not
+    aap_bundle_stat.stat.exists)
+
+- name: Ping communication hosts (TCP 22) with wait_for when configured
+  ansible.builtin.wait_for:
+    host: "{{ item.ip }}"
+    port: 22
+    timeout: 10
+  loop: "{{ minirhis_communication_hosts | default([]) }}"
+  when: minirhis_communication_hosts is defined
+
+- name: Check required packages are installed (driven by node_test_packages or node_packages)
+  ansible.builtin.shell:
+    cmd: "rpm -q {{ item }}"
+  register: pkg_check
+  failed_when: pkg_check.rc != 0
+  loop: "{{ node_test_packages | default(node_packages | default([])) }}"
+  when: (node_test_packages | default(node_packages | default([]))) | length > 0
+
+- name: Ensure expected users exist when `node_common_users` provided
+  ansible.builtin.shell:
+    cmd: "getent passwd {{ item.name }}"
+  register: user_check
+  failed_when: user_check.rc != 0
+  loop: "{{ node_common_users | default([]) }}"
+  when: node_common_users is defined and (node_common_users | length) > 0
+
+- name: Check configured services are active (node_test_services)
+  ansible.builtin.shell:
+    cmd: "systemctl is-active {{ item }}"
+  register: svc_check
+  failed_when: svc_check.rc != 0
+  loop: "{{ node_test_services | default([]) }}"
+  when: node_test_services is defined and (node_test_services | length) > 0
+
+- name: Run node install checks (commands that must exit 0)
+  ansible.builtin.shell:
+    cmd: "{{ item.cmd }}"
+  register: install_check
+  failed_when: install_check.rc != 0
+  loop: "{{ node_install_checks | default([]) }}"
+  when: node_install_checks is defined and (node_install_checks | length) > 0
+
+- name: Run node config tests (commands that must exit 0)
+  ansible.builtin.shell:
+    cmd: "{{ item.cmd }}"
+  register: config_check
+  failed_when: config_check.rc != 0
+  loop: "{{ node_config_tests | default([]) }}"
+  when: node_config_tests is defined and (node_config_tests | length) > 0
+
+- name: Run node integration tests (optional)
+  ansible.builtin.shell:
+    cmd: "{{ item.cmd }}"
+  register: integration_check
+  failed_when: integration_check.rc != 0
+  loop: "{{ node_integration_tests | default([]) }}"
+  when: node_integration_tests is defined and (node_integration_tests | length) > 0
+
+- name: Include node-type specific tests
+  include_tasks: "tests_{{ node_type }}.yml"
+  when: node_type is defined

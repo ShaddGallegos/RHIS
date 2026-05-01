@@ -1,0 +1,7 @@
+# IdM operational playbook (post-install tasks)
+- name: Configure IdM operational settings (post-install)
+  hosts: idm
+  become: true
+  gather_facts: true
+  roles:
+    - minirhis-idm-operational

@@ -1,0 +1,8 @@
+---
+galaxy_info:
+  author: minirhis
+  description: Common node role for MINIRHIS (OS, users, firewall, selinux, ssh,
+    sudo, communication, downloads, tests, report)
+  license: MIT
+  min_ansible_version: 2.9
+dependencies: []

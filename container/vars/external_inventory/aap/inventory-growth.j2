@@ -54,8 +54,11 @@ postgresql_admin_username=postgres
 postgresql_admin_password={{ADMIN_PASS}}
 
 bundle_install=true
-# The bundle directory must include /bundle in the path
-bundle_dir='{{ lookup("ansible.builtin.env", "PWD") }}/bundle'
+# The bundle directory must include /bundle in the path. Place the downloaded
+# AAP tarball on the AAP host under `/home/{{ admin_user | default('admin') }}/` and
+# extract it into `/home/{{ admin_user | default('admin') }}/bundle` (recommended).
+# The installer will reference this path by default.
+bundle_dir='/home/{{ admin_user | default('admin') }}/bundle'
 
 
 redis_mode=standalone

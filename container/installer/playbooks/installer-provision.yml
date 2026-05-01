@@ -1,0 +1,8 @@
+---
+- name: Installer node provisioning (skeleton)
+  hosts: installer
+  become: true
+  vars:
+    node_type: installer
+  roles:
+    - role: node_common

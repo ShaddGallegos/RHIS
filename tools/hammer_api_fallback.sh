@@ -75,19 +75,25 @@ PY
 "$SEARCH_EXPR")
 
 set +e
-resp=$(curl -sS -k -u "$USER:$PASS" "$SAT_URL/api/v2/$API_PATH?search=$_enc_search" 2>/dev/null)
-rc=$?
+found=0
+for pref in "/katello/api/v2" "/api/v2"; do
+  resp=$(curl -sS -k -u "$USER:$PASS" "$SAT_URL${pref}/$API_PATH?search=$_enc_search" 2>/dev/null)
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    continue
+  fi
+  if echo "$resp" | grep -q '"total": *0'; then
+    continue
+  fi
+  echo "Resource exists (API): ${pref}/${API_PATH}?search=$SEARCH_EXPR" >&2
+  found=1
+  break
+done
 set -e
 
-if [ $rc -ne 0 ]; then
-  echo "API request failed (rc=$rc); running hammer fallback" >&2
-  exec "${HAMMER_CMD[@]}"
-fi
-
-if echo "$resp" | grep -q '"total": *0'; then
+if [ $found -ne 1 ]; then
   echo "Resource not found via API; running hammer fallback" >&2
   exec "${HAMMER_CMD[@]}"
 else
-  echo "Resource exists (API): $API_PATH?search=$SEARCH_EXPR" >&2
   exit 0
 fi

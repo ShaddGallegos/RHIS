@@ -1,0 +1,18 @@
+---
+# SSH configuration: optionally allow root login via `minirhis_permit_root_ssh`.
+- name: Ensure PermitRootLogin setting in sshd_config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin {{ 'yes' if (minirhis_permit_root_ssh | default(false))
+      else 'no' }}"
+    create: yes
+    backup: yes
+  become: true
+
+- name: Restart sshd when config changed (opt-in variable)
+  ansible.builtin.service:
+    name: sshd
+    state: restarted
+  when: minirhis_restart_sshd | default(false)
+  become: true

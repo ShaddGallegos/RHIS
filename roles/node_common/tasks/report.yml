@@ -1,0 +1,16 @@
+---
+# Minimal reporting: dump a small JSON summary to /var/tmp/minirhis-<node>-report.json
+- name: Build report facts
+  set_fact:
+    minirhis_report:
+      node: "{{ inventory_hostname }}"
+      node_type: "{{ node_type | default('unknown') }}"
+      packages: "{{ node_common_packages | default([]) }}"
+      users: "{{ node_common_users | default([]) | map(attribute='name') | list }}"
+
+- name: Write report JSON to /var/tmp
+  ansible.builtin.copy:
+    content: "{{ minirhis_report | to_nice_json }}\n"
+    dest: "/var/tmp/minirhis-{{ inventory_hostname }}-report.json"
+    mode: "0644"
+  become: true

@@ -1,0 +1,76 @@
+---
+# Consolidated operational tasks for IdM (post-install)
+- name: Ensure IPA backup directory exists
+  ansible.builtin.file:
+    path: "{{ ipa_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Deploy ipa-backup script
+  ansible.builtin.template:
+    src: ipa-backup.sh.j2
+    dest: "{{ ipa_backup_script_path }}"
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Ensure daily cron job for IPA backup
+  ansible.builtin.cron:
+    name: "{{ ipa_backup_cron_name }}"
+    minute: "0"
+    hour: "3"
+    job: "{{ ipa_backup_script_path }} >> /var/log/ipa-backup.log 2>&1"
+
+- name: Deploy healthcheck script
+  ansible.builtin.template:
+    src: ipa-healthcheck.sh.j2
+    dest: "{{ ipa_healthcheck_script_path }}"
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Ensure weekly healthcheck cron job
+  ansible.builtin.cron:
+    name: "ipa_healthcheck"
+    minute: "0"
+    hour: "4"
+    weekday: "0"
+    job: "{{ ipa_healthcheck_script_path }} >> /var/log/ipa-healthcheck.log 2>&1"
+
+- name: Ensure SELinux boolean httpd_can_network_connect is on (persistent)
+  ansible.builtin.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+
+- name: Enable and start cockpit.socket (optional)
+  ansible.builtin.systemd:
+    name: cockpit.socket
+    enabled: true
+    state: started
+  when: enable_cockpit | bool
+
+- name: Deploy logrotate config for IPA backups
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/minirhis-ipa-backup
+    content: |
+      /var/log/ipa-backup.log {
+          daily
+          rotate 7
+          compress
+          missingok
+          notifempty
+          create 0640 root root
+      }
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install installer public key for root (if provided)
+  ansible.builtin.authorized_key:
+    user: root
+    key: "{{ minirhis_installer_pubkey }}"
+    state: present
+  when: minirhis_installer_pubkey is defined and minirhis_installer_pubkey != ""

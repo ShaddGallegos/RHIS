@@ -1,0 +1,134 @@
+---
+# RHIS metadata — machine-readable inventory of core features, paths, and functions
+version: "1.0"
+last_updated: "2026-04-21"
+maintainer: "sgallego"
+notes: |
+  Machine-readable inventory of important paths, scripts, roles, playbooks,
+  and container names. Use this file to orient operators and automation.
+  Do not delete working artifacts without documented improvements, tests,
+  or a migration plan.
+
+paths:
+  vault_password_file: "~/.ansible/conf/.vaultpass.txt"
+  vault_env_file: "~/.ansible/conf/env.yml"
+  ansible_runtime_cfg: "~/.ansible/conf/minirhis-ansible.runtime.cfg"
+  vm_images_dir: "/var/lib/libvirt/images"
+  aap_bundle_dir: "/var/lib/libvirt/images/aap-bundle"
+  manifest_staging_dir: "/var/lib/libvirt/images/files"
+  repo_root: "."
+  orchestrator_script: "MiniRHIS.sh"
+  container_roles: "container/roles"
+  repo_roles: "roles"
+  playbooks_dir: "playbooks"
+  external_inventory: "container/vars/external_inventory/hosts.yml"
+  kickstarts_dir: "kickstarts"
+  artifacts_dir: "artifacts"
+  installer_keys: "~/.ssh/minirhis-installer"
+
+policies:
+  execution:
+    default_mode: host
+    allowed_modes:
+      - host
+      - container
+
+  secrets:
+    require_vault: true
+    vault_password_file: "~/.ansible/conf/.vaultpass.txt"
+    vault_env_file: "~/.ansible/conf/env.yml"
+
+  configuration_as_code:
+    required: true
+    primary_dirs:
+      - roles
+      - playbooks
+
+  snapshot:
+    require_before_offline_edit: true
+    images_dir: "/var/lib/libvirt/images"
+
+  guest_agent:
+    prefer: "qemu-guest-agent"
+
+  idempotence:
+    require_smoke_tests: true
+
+  ci_checks:
+    required: true
+    tools:
+      - ansible-lint
+      - yamllint
+      - "ansible-playbook --syntax-check"
+
+  network:
+    prefer_libvirt_api: true
+
+  metadata:
+    record_runs: true
+    runs_dir: "~/.ansible/conf/runs"
+
+  rules_source: "RULES.md"
+
+scripts:
+  - name: "MiniRHIS.sh"
+    functions:
+      - create_minirhis_vms
+      - run_minirhis_config_as_code
+      - generate_minirhis_ansible_cfg
+      - generate_local_roles_ansible_cfg
+      - run_local_role
+      - ensure_minirhis_installer_ssh_key
+      - set_or_prompt
+      - prompt_with_default
+      - show_menu
+
+roles_and_playbooks:
+  container_roles_path: "container/roles"
+  repo_roles_path: "roles"
+  fallback_playbooks:
+    - "playbooks/idm-install.yml"
+    - "playbooks/satellite-install.yml"
+    - "playbooks/aap-install.yml"
+  known_missing_container_roles:
+    - "minirhis-builder-idm"
+    - "minirhis-builder-satellite"
+    - "minirhis-builder-aap"
+  operational_roles:
+    - "minirhis-idm-operational"
+  role_usage:
+    minirhis-idm-operational:
+      path: "roles/minirhis-idm-operational"
+      playbook: "playbooks/idm-operational.yml"
+      host_group: "idm"
+      required_vars:
+        - "minirhis_installer_pubkey (optional, public key for installer root
+          access)"
+      example_run: |
+        ANSIBLE_CONFIG=~/.ansible/conf/minirhis-ansible.runtime.cfg \
+        ansible-playbook -i container/vars/external_inventory/hosts.yml playbooks/idm-operational.yml \
+          --limit idm --extra-vars @~/.ansible/conf/env.yml \
+          --vault-password-file ~/.ansible/conf/.vaultpass.txt -v
+
+containers:
+  provisioner:
+    container_name: "minirhis-provisioner"
+    image: "quay.io/parmstro/minirhis-provisioner-9-2.5"
+
+auth:
+  vault_use_policy: |
+    Always keep ~/.ansible/conf/.vaultpass.txt present for automated runs and
+    remediation. Verify only when missing. Use `ansible-vault` with
+    `--vault-password-file` for automation.
+
+operational_notes:
+  - "If automation reports the vault password file missing, check the host
+    user's ~/.ansible/conf directory and permissions (700) and file mode (600)."
+  - "Manifest zip files must be staged to /var/lib/libvirt/images/files/ for
+    installer steps."
+  - "When a container role is missing, the repo fallback is the top-level
+    `playbooks/` files; document any missing container roles in this metadata
+    file."
+  - "Do not remove working artifacts; prefer documenting changes and adding
+    migration steps."
+...

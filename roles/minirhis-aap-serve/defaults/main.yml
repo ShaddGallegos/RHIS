@@ -1,0 +1,8 @@
+---
+# Defaults for AAP bundle HTTP service
+aap_bundle_dir: "/var/lib/libvirt/images/aap-bundle"
+host_int_ip: "{{ HOST_INT_IP | default('10.168.0.1') }}"
+host_port: 8080
+aap_http_log: "/var/log/minirhis/aap-http.log"
+service_name: "minirhis-aap-bundle.service"
+firewalld_zone: "libvirt"

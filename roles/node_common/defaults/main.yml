@@ -1,0 +1,22 @@
+---
+# Defaults for node_common role
+node_packages: []
+node_artifacts: []
+node_rpms: []
+node_install_commands: []
+node_configs: []
+node_install_checks: []
+node_config_tests: []
+node_integration_tests: []
+node_wrapper_enabled: true
+
+# AAP bundle defaults (safe sane search paths)
+aap_bundle_search_paths:
+  - /var/tmp
+  - "/home/{{ admin_user | default('admin') }}"
+  - "/home/{{ admin_user | default('admin') }}/Downloads"
+  - /root/Downloads
+  - /tmp
+
+# Default extract dir if aap_extract_dir not set by aap-specific role
+aap_extract_dir: "/home/{{ admin_user | default('admin') }}/bundle"

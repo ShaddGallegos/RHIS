@@ -1,5 +1,4 @@
 ---
----
 # Prepare host for containerized AAP controller (idempotent)
 
 - name: Install bundle extraction prerequisites

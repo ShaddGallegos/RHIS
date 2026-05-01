@@ -310,149 +310,11 @@ Destroy demo resources and clean leftovers:
 
 [⬆ Back to top](#table-of-contents)
 
-MINIRHIS can run on headless systems (no display/keyboard) using environment variables and command-line flags instead of interactive prompts.
+MINIRHIS supports headless execution via environment files and `--env-file`.
 
-### Quick Start: Headless Container + VMs Deployment
-
-```bash
-# Create an environment file with all required values
-cat > /tmp/minirhis-headless.env << 'EOF'
-# Core Credentials
-RH_USER="your-rhn-username"
-RH_PASS="your-rhn-password"
-ADMIN_USER="rhisadmin"
-ADMIN_PASS="secure-admin-password"
-
-# IdM Configuration
-IDM_IP="10.168.128.3"
-IDM_NETMASK="255.255.255.0"
-IDM_GW="10.168.128.1"
-IDM_HOSTNAME="idm.example.com"
-IDM_ALIAS="idm"
-DOMAIN="example.com"
-IDM_DS_PASS="secure-ds-password"
-
-# Satellite Configuration
-SAT_IP="10.168.128.1"
-SAT_NETMASK="255.255.255.0"
-SAT_GW="10.168.128.1"
-SAT_HOSTNAME="satellite.example.com"
-SAT_ORG="Default_Organization"
-SAT_LOC="Default_Location"
-
-# AAP Configuration
-AAP_IP="10.168.128.2"
-AAP_NETMASK="255.255.255.0"
-AAP_GW="10.168.128.1"
-AAP_HOSTNAME="aap.example.com"
-AAP_ADMIN_USER="admin"
-AAP_ADMIN_EMAIL="admin@example.com"
-HUB_TOKEN="your-automation-hub-token"
-
-# Network Configuration
-HOST_EXT_IP="192.168.1.X"          # Your host's external IP
-HOST_INT_IP="10.168.128.1"          # Your host's internal network IP
-MGMT_NETWORK="10.168.128.0/24"
-
-# Feature Flags (optional - defaults shown)
-DEMO_MODE=0
-MINIRHIS_ENABLE_POST_HEALTHCHECK=1
-MINIRHIS_HEALTHCHECK_AUTOFIX=1
-EOF
-
-# Run headless installation (Container + VMs + Config-as-Code)
-./MiniRHIS.sh \
-  --non-interactive \
-  --menu-choice 5 \
-  --env-file /tmp/minirhis-headless.env
-```
-
-**Expected Flow:**
-
-1. Loads env vars from file
-2. Skips all interactive prompts
-3. Deploys container (Podman)
-4. Creates VM infrastructure (Virt-Manager)
-5. Runs config-as-code phases (IdM → Satellite → AAP)
-6. Exits with status code 0 on success
-
-### Required Environment Variables
-
-### Authentication (Required)
-
-```bash
-RH_USER="<Red Hat CDN username>"
-RH_PASS="<Red Hat CDN password>"
-ADMIN_USER="<local admin user>"
-ADMIN_PASS="<local admin password>"
-```
-
-### IdM Configuration (Required for Options 3-5)
-
-```bash
-IDM_IP="10.168.128.3"              # Static IP on internal network
-IDM_NETMASK="255.255.255.0"        # /24 = 255.255.255.0
-IDM_GW="10.168.128.1"              # Gateway (usually your host)
-IDM_HOSTNAME="idm.example.com"     # FQDN required
-IDM_ALIAS="idm"                    # Short name
-DOMAIN="example.com"               # Base domain
-IDM_DS_PASS="secure-password"      # Directory Service password
-```
-
-### Satellite Configuration (Required for Options 3-5)
-
-```bash
-SAT_IP="10.168.128.1"              # Static IP
-SAT_NETMASK="255.255.255.0"        
-SAT_GW="10.168.128.1"              
-SAT_HOSTNAME="satellite.example.com"
-SAT_ORG="Default_Organization"     # Satellite org name
-SAT_LOC="Default_Location"         # Satellite location
-```
-
-## AAP Configuration (Required for Options 3-5)
-
-```bash
-AAP_IP="10.168.128.2"              # Static IP
-AAP_NETMASK="255.255.255.0"        
-AAP_GW="10.168.128.1"              
-AAP_HOSTNAME="aap.example.com"     # FQDN required
-AAP_ADMIN_USER="admin"             
-AAP_ADMIN_EMAIL="admin@example.com"
-HUB_TOKEN="<your-hub-token>"       # Automation Hub token
-```
-
-### Network Configuration (Optional)
-
-```bash
-HOST_EXT_IP="192.168.1.100"        # External NIC IP (default: auto-detect)
-HOST_INT_IP="10.168.128.1"         # Internal NIC IP (default: 10.168.128.1)
-MGMT_NETWORK="10.168.128.0/24"     # Internal network (default: auto-calc)
-```
-
-### Exit Codes
-
-| Code | Meaning                               |
-| ---- | ------------------------------------- |
-| 0    | Success                               |
-| 1    | General error (check logs)            |
-| 2    | Invalid CLI flag                      |
-| 3    | Missing required environment variable |
-| 4    | Network/connectivity error            |
-| 5    | Container/VM operation failed         |
-
-### Expected Timeline
-
-| Phase             | Duration       | What's Happening                  |
-| ----------------- | -------------- | --------------------------------- |
-| Container setup   | 2-5 min        | Download image, run provisioner   |
-| VM creation       | 5-10 min       | Create 3 VMs, allocate storage    |
-| IdM install       | 15-20 min      | IdM server install + web UI ready |
-| Satellite install | 20-30 min      | Satellite installer runs          |
-| AAP install       | 10-15 min      | AAP setup + callback              |
-| **Total**         | **~60-90 min** | Complete deployment               |
-
----
+- Create an env file from the provided template `minirhis-headless.env.template` or use `--env-file` to pass values at runtime.
+- Do NOT commit secrets or credentials to the repository. Store secrets encrypted with `ansible-vault` (for example `~/.ansible/conf/env.yml`) or manage them outside version control.
+- See `CHECKLIST.md` and `inventory/README.md` for the minimal variables required for non-interactive runs.
 
 ## Headless Quick Reference
 
@@ -476,16 +338,16 @@ source /etc/minirhis/headless.env
 
 | Variable       | Purpose              | Example                 | Required     |
 | -------------- | -------------------- | ----------------------- | ------------ |
-| `RH_USER`      | Red Hat CDN username | `rh_user@example.com`   | Menu 1,2,4,5 |
-| `RH_PASS`      | Red Hat CDN password | `secure-pass`           | Menu 1,2,4,5 |
-| `ADMIN_PASS`   | Local admin password | `P@ssw0rd123!`          | Menu 3,4,5,7 |
+| `RH_USER`      | Red Hat CDN username | `<your-rh-username>`    | Menu 1,2,4,5 |
+| `RH_PASS`      | Red Hat CDN password | `<your-rh-password>`    | Menu 1,2,4,5 |
+| `ADMIN_PASS`   | Local admin password | `<your-admin-password>` | Menu 3,4,5,7 |
 | `IDM_IP`       | IdM VM IP (internal) | `10.168.128.3`          | Menu 3,4,5,7 |
 | `IDM_HOSTNAME` | IdM FQDN             | `idm.example.com`       | Menu 4,5,7   |
 | `SAT_IP`       | Satellite VM IP      | `10.168.128.1`          | Menu 3,4,5,7 |
 | `SAT_HOSTNAME` | Satellite FQDN       | `satellite.example.com` | Menu 4,5,7   |
 | `AAP_IP`       | AAP VM IP            | `10.168.128.2`          | Menu 3,4,5,7 |
 | `AAP_HOSTNAME` | AAP FQDN             | `aap.example.com`       | Menu 4,5,7   |
-| `HUB_TOKEN`    | Automation Hub token | `eyJ...`                | Menu 4,5,7   |
+| `HUB_TOKEN`    | Automation Hub token | `<your-hub-token>`      | Menu 4,5,7   |
 
 ---
 
@@ -502,9 +364,8 @@ source /etc/minirhis/headless.env
 env | grep -E "^(RH_|IDM_|SAT_|AAP_|ADMIN_|HUB_|DOMAIN|HOST_)"
 
 # Export individually if needed
-export RH_USER="username"
-export RH_PASS="password"
-export ADMIN_PASS="password"
+# Set required variables via your env file, or use Ansible Vault; avoid exporting
+# plaintext credentials on shared shells.
 ```
 
 #### Issue 2: "Cannot reach aap via SSH"

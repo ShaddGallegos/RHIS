@@ -41,7 +41,7 @@
 
     - name: Add collected node public keys to installer authorized_keys
       authorized_key:
-        user: admin
+        user: "{{ admin_user | default('admin') }}"
         key: "{{ lookup('file', item.path) }}"
       loop: "{{ collected_keys.files | default([]) }}"
       loop_control:

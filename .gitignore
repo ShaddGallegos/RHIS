@@ -164,3 +164,19 @@ hammers_sweep_report.md
 
 # Local/generated model training artifacts
 training_data/
+
+# Local Ansible env/vault and sensitive artifacts
+.ansible/
+.ansible/conf/
+.ansible/conf/env.yml
+.ansible/conf/.vaultpass*
+env.yml
+**/env.yml
+*.vault
+*.vaultpass
+*.pem
+*.key
+
+# User-collected artifacts and logs (do not commit runtime artifacts)
+artifacts_user/
+artifacts_user/**

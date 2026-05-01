@@ -1,0 +1,14 @@
+---
+# Defaults for RHSM registration role
+rh_user: ""
+rh_pass: ""
+cdn_organization_id: ""
+cdn_sat_activation_key: ""
+
+# Control behavior (can be overridden via inventory/env)
+minirhis_defer_component_install: "1"
+minirhis_skip_rhsm_register: 0
+
+# Registration retry policy
+rhsm_register_retries: 10
+rhsm_register_delay: 15

@@ -1,0 +1,8 @@
+---
+# Default variables for minirhis-idm-operational
+ipa_backup_dir: /var/backups/ipa
+ipa_backup_script_path: /usr/local/bin/ipa-backup.sh
+ipa_healthcheck_script_path: /usr/local/bin/ipa-healthcheck.sh
+ipa_backup_cron_name: ipa_backup
+enable_cockpit: true
+minirhis_installer_pubkey: ""

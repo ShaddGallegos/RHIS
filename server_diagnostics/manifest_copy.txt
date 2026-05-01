@@ -1,0 +1,14 @@
+Found in ~/Downloads:
+none
+
+Found in ~/.ansible/conf:
+-rw-r--r--. 1 sgallego sgallego 2506811 Apr 20 10:55 /home/sgallego/.ansible/conf/manifest.zip
+
+Copying to /var/lib/libvirt/images/files/ (using sudo)
+'/home/sgallego/.ansible/conf/manifest.zip' -> '/var/lib/libvirt/images/files/manifest.zip'
+
+Post-copy listing:
+total 2456
+drwxr-xr-x. 2 root root      26 Apr 21 15:50 .
+drwxr-xr-x. 6 root root    4096 Apr 21 14:22 ..
+-rw-r--r--. 1 root root 2506811 Apr 21 15:50 manifest.zip

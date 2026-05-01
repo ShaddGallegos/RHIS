@@ -5,4 +5,5 @@ galaxy_info:
     image pulls for AAP 2.6 controller and nodes.
   license: MIT
   min_ansible_version: 2.9
-dependencies: []
+dependencies:
+  - node_common
