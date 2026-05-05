@@ -3270,7 +3270,8 @@ set_or_prompt() {
         return 0
     fi
 
-    if is_noninteractive; then
+    # Treat explicit CLI request for demo full-stack as hands-free as well
+    if is_noninteractive || { [ -n "${CLI_DEMO:-}" ] && [ -n "${CLI_MINIRHIS:-}" ]; }; then
         print_warning "NONINTERACTIVE mode requires $var_name to be set."
         return 1
     fi
@@ -14757,6 +14758,25 @@ generate_idm_oemdrv_only() {
 
 generate_oemdrv_kickstarts_only() {
     local oemdrv_choice
+
+    # If running non-interactively (headless/demo fast-path), avoid any
+    # interactive submenu and execute the 'All' path so the flow remains
+    # hands-free. When interactive, present the submenu as before.
+    if is_noninteractive; then
+        print_step "Non-interactive mode: generating all OEMDRV Kickstarts"
+        print_step "Generating kickstarts and OEMDRV ISOs for all components"
+        ensure_kickstart_prereqs_ready "all" || return 1
+        normalize_shared_env_vars
+        ensure_iso_vars || return 1
+        sudo mkdir -p "${FILES_DIR}" "${KS_DIR}"
+        generate_satellite_618_kickstart || { print_warning "Satellite kickstart/OEMDRV generation failed."; return 1; }
+        generate_aap_kickstart           || { print_warning "AAP kickstart generation failed."; return 1; }
+        generate_idm_kickstart           || { print_warning "IdM kickstart generation failed."; return 1; }
+        validate_generated_kickstarts || true
+        print_success "All kickstart and OEMDRV artifacts generated successfully."
+        return 0
+    fi
+
     print_minirhis_header
     echo "Generate OEMDRV Kickstarts"
     echo ""
@@ -15943,38 +15963,56 @@ prompt_idm_details() {
 }
 
 generate_idm_kickstart() {
-    local ks_file="${KS_DIR}/idm.ks"
-    local tmp_ks
-    local idm_ext_mac idm_int_mac
-    local idm_prefix
-    local root_pass_hash admin_pass_hash
-    local bootstrap_ssh_keys
-    local ks_nogpg_policy
-    local ks_ssh_baseline
-    local ks_user_sudo_bootstrap
-    local ks_rhsm_register
-    local ks_rhc_connect
-    local ks_repo_enable_verify
-    local ks_nm_dual_nic
-    local ks_hosts_mapping
-    local ks_trust_bootstrap_keys
-    local ks_creator_baseline
-    local ks_perf_network_snapshot
-    local ks_runtime_exports
+    local oemdrv_choice
 
-    # Always start fresh — remove any previously generated kickstart
-    rm -f "${ks_file}" 2>/dev/null || true
+    # In non-interactive runs, avoid printing the submenu entirely and
+    # execute the 'All' path so headless flows remain hands-free.
+    if is_noninteractive; then
+        print_step "Non-interactive mode: generating all OEMDRV Kickstarts"
+        print_step "Generating kickstarts and OEMDRV ISOs for all components"
+        ensure_kickstart_prereqs_ready "all" || return 1
+        normalize_shared_env_vars
+        ensure_iso_vars || return 1
+        sudo mkdir -p "${FILES_DIR}" "${KS_DIR}"
+        generate_satellite_618_kickstart || { print_warning "Satellite kickstart/OEMDRV generation failed."; return 1; }
+        generate_aap_kickstart           || { print_warning "AAP kickstart generation failed."; return 1; }
+        generate_idm_kickstart           || { print_warning "IdM kickstart generation failed."; return 1; }
+        validate_generated_kickstarts || true
+        print_success "All kickstart and OEMDRV artifacts generated successfully."
+        return 0
+    fi
 
-    prompt_idm_details || return 1
-    ensure_iso_vars || return 1
-    ensure_ssh_keys || return 1
+    print_minirhis_header
+    echo "Generate OEMDRV Kickstarts"
+    echo ""
+    echo "  1) AAP OEMDRV kickstart"
+    echo "  2) IdM OEMDRV kickstart"
+    echo "  3) Satellite OEMDRV kickstart"
+    echo "  4) All"
+    echo "     - Satellite + AAP + IdM"
+    echo "  0) Back"
+    echo ""
+    read -r -p "Select component [0-4]: " oemdrv_choice
 
-    idm_ext_mac="$(get_vm_external_mac "idm")"
-    idm_int_mac="$(get_vm_internal_mac "idm")"
-    idm_prefix="$(netmask_to_prefix "${IDM_NETMASK}")"
-    print_kickstart_effective_values "IdM" "${IDM_IP}" "${IDM_HOSTNAME}" "${IDM_NETMASK}" "${IDM_GW}"
-    root_pass_hash="$(kickstart_password_hash "${ROOT_PASS:-${ADMIN_PASS}}")" || return 1
-    admin_pass_hash="$(kickstart_password_hash "${ADMIN_PASS}")" || return 1
+    case "${oemdrv_choice}" in
+        1) generate_aap_oemdrv_only || return 1 ;;
+        2) generate_idm_oemdrv_only || return 1 ;;
+        3) generate_satellite_oemdrv_only || return 1 ;;
+        4)
+            print_step "Generating kickstarts and OEMDRV ISOs for all components"
+            ensure_kickstart_prereqs_ready "all" || return 1
+            normalize_shared_env_vars
+            ensure_iso_vars || return 1
+            sudo mkdir -p "${FILES_DIR}" "${KS_DIR}"
+            generate_satellite_618_kickstart || { print_warning "Satellite kickstart/OEMDRV generation failed."; return 1; }
+            generate_aap_kickstart           || { print_warning "AAP kickstart generation failed."; return 1; }
+            generate_idm_kickstart           || { print_warning "IdM kickstart generation failed."; return 1; }
+            validate_generated_kickstarts || true
+            print_success "All kickstart and OEMDRV artifacts generated successfully."
+            ;;
+        0) return 0 ;;
+        *) print_warning "Invalid choice. Please select 0-4." ;;
+    esac
     bootstrap_ssh_keys="$(collect_bootstrap_public_keys)"
     ks_runtime_exports="$(kickstart_runtime_exports_block "${bootstrap_ssh_keys}")"
     prepare_kickstart_shared_blocks "idm" "${IDM_HOSTNAME}" "${IDM_IP}" \
