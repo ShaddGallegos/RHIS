@@ -1,0 +1,20 @@
+---
+- name: Deploy Satellite image-mode provisioning template
+  hosts: sat_primary:scenario_satellite
+  become: true
+  vars:
+    # set to true to attempt import via hammer CLI (requires hammer configured)
+    create_with_hammer: true
+    template_name: "Image mode kickstart default"
+    satellite_org: "Default Organization"
+    satellite_location: "Default Location"
+    # hostgroups to create and operate on
+    image_hostgroups:
+      - "RHEL10-DEV-Provision"
+      - "RHEL10-PROD-Provision"
+    image_hostgroup_os_major: "10"
+    # default root password used when creating hostgroups (read from ~/.ansible/conf/env.yml if possible)
+    satellite_admin_pass: "changeme"
+    provisioning_subnet: "internal-provision"
+  roles:
+    - role: minirhis-satellite-image

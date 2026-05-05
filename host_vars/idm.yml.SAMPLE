@@ -4,7 +4,7 @@
 
 ansible_user: "{{ admin_user | default('admin') }}"
 ansible_become: true
-ansible_password: "{{ global_admin_password | default('') }}"
+ansible_password: "{{ idm_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
 
 # IdM realm and domain are derived from the global DOMAIN / REALM values set
 # during provisioning.  Override here if they differ per host.
@@ -28,7 +28,7 @@ ansible_password: "{{ global_admin_password | default('') }}"
 #   - login: aap-svc
 #     random: true
 #   - login: minirhis-operator
-#     password: "{{ global_admin_password }}"
+#     password: "{{ aap_admin_pass | default(global_admin_password) }}"
 #
 # idm_password_policies:
 #   - group_name: global_policy

@@ -2,7 +2,7 @@
 # Install and manage a systemd service that serves the AAP bundle via Python http.server
 
 - name: Normalize variables
-  set_fact:
+  ansible.builtin.set_fact:
     aap_bundle_dir: "{{ aap_bundle_dir | default(AAP_BUNDLE_DIR |
       default('/var/lib/libvirt/images/aap-bundle')) }}"
     host_int_ip: "{{ host_int_ip | default(HOST_INT_IP | default('10.168.0.1')) }}"
@@ -34,7 +34,7 @@
     path: "{{ aap_http_log | dirname }}"
     state: directory
     owner: root
-    group: root
+    ansible.builtin.group: root
     mode: "0755"
   when: aap_bundle_stat.stat.exists | default(false)
   become: true

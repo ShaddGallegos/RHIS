@@ -120,32 +120,32 @@ inventory/**
 !inventory/README.md
 
 # Local fallback workspace synced from provisioner container (may include vault data)
-container/roles/**
+local/roles/**
 
 # MiniRHIS runtime secrets and generated container-side artifacts
 # Generated per-deployment host_vars (Ansible auto-resolves by FQDN hostname).
 # Created by generate_minirhis_host_vars() — do NOT commit these files.
-container/vars/external_inventory/host_vars/*.yml
-!container/vars/external_inventory/host_vars/README.md
+local/vars/external_inventory/host_vars/*.yml
+!local/vars/external_inventory/host_vars/README.md
 
 # Generated inventory files that may contain resolved live values — keep only
 # the placeholder template variants (hosts / hosts.yml) tracked.
-container/vars/external_inventory/hosts.generated
+local/vars/external_inventory/hosts.generated
 
-container/vars/ssh/id_rsa
-container/vars/ssh/id_rsa.pub
-container/vars/ssh/known_hosts
-container/vars/vault/.vaultpass.txt
-container/vars/vault/.vaultpass.container*
-container/vars/vault/env.yml
-container/vars/vault/minirhis-ansible.cfg
-container/vars/vault/ansible-provisioner.log
-container/vars/vault/manifest.zip
-container/vars/vault/facts-cache/
+local/vars/ssh/id_rsa
+local/vars/ssh/id_rsa.pub
+local/vars/ssh/known_hosts
+local/vars/vault/.vaultpass.txt
+local/vars/vault/.vaultpass.container*
+local/vars/vault/env.yml
+local/vars/vault/minirhis-ansible.cfg
+local/vars/vault/ansible-provisioner.log
+local/vars/vault/manifest.zip
+local/vars/vault/facts-cache/
 
 # MiniRHIS generated runtime version markers
-container/version24.txt
-container/version25.txt
+local/version24.txt
+local/version25.txt
 
 # MiniRHIS runtime package retry output
 failed_packages.txt

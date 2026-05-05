@@ -5,7 +5,7 @@ set -euo pipefail
 ANSIBLE_ENV_DIR="${ANSIBLE_ENV_DIR:-$HOME/.ansible/conf}"
 ANSIBLE_ENV_FILE="${ANSIBLE_ENV_FILE:-${ANSIBLE_ENV_DIR}/env.yml}"
 ANSIBLE_VAULT_PASS_FILE="${ANSIBLE_VAULT_PASS_FILE:-${ANSIBLE_ENV_DIR}/.vaultpass.txt}"
-INVENTORY="${MINIRHIS_INVENTORY_FILE:-${PWD}/container/vars/external_inventory/hosts.yml}"
+INVENTORY="${MINIRHIS_INVENTORY_FILE:-${PWD}/local/vars/external_inventory/hosts.yml}"
 LOG_DIR="${ANSIBLE_ENV_DIR}/logs"
 mkdir -p "${LOG_DIR}"
 
@@ -13,7 +13,7 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [node1 node2 ...]
 If no nodes provided, launches: installer idm satellite aap
-Each node will run its corresponding playbook under container/<node>/playbooks
+Each node will run its corresponding playbook under local/<node>/playbooks
 EOF
     exit 1
 }
@@ -28,7 +28,7 @@ if [ ${#nodes[@]} -eq 0 ]; then
 fi
 
 for node in "${nodes[@]}"; do
-    playbook="container/${node}/playbooks/${node}-provision.yml"
+    playbook="local/${node}/playbooks/${node}-provision.yml"
     logfile="${LOG_DIR}/${node}-provision.$(date +%s).log"
     cmd="ansible-playbook --inventory ${INVENTORY} --vault-password-file ${ANSIBLE_VAULT_PASS_FILE} --extra-vars @${ANSIBLE_ENV_FILE} ${playbook} 2>&1 | tee ${logfile}"
 

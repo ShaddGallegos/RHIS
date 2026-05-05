@@ -1,0 +1,6 @@
+---
+# Thin wrapper — delegates to shared local/playbooks/node-provision.yml
+- import_playbook: ../../playbooks/node-provision.yml
+  vars:
+    node_type: aap
+    target_hosts: aap

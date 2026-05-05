@@ -1,8 +1,0 @@
----
-- name: AAP node provisioning (skeleton)
-  hosts: aap
-  become: true
-  vars:
-    node_type: aap
-  roles:
-    - role: node_common

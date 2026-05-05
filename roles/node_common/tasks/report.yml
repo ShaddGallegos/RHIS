@@ -1,12 +1,34 @@
 ---
 # Minimal reporting: dump a small JSON summary to /var/tmp/minirhis-<node>-report.json
+- name: Set default Centene technology landscape
+  ansible.builtin.set_fact:
+    default_centene_technology_landscape:
+      - Artifactory
+      - BBSQL
+      - GitLab
+      - Claude
+      - Hadrian Automation
+      - Terraform
+      - Jira
+      - ServiceNow CI
+      - JWS
+      - AWS
+      - MCP
+      - CyberArk
+      - GitLab AI
+      - Linux Middleware (DAP)
+      - Black Beauty AI
+      - Flask
+      - Docker
+
 - name: Build report facts
-  set_fact:
+  ansible.builtin.set_fact:
     minirhis_report:
       node: "{{ inventory_hostname }}"
       node_type: "{{ node_type | default('unknown') }}"
       packages: "{{ node_common_packages | default([]) }}"
       users: "{{ node_common_users | default([]) | map(attribute='name') | list }}"
+      technology_landscape: "{{ centene_technology_landscape | default(default_centene_technology_landscape) }}"
 
 - name: Write report JSON to /var/tmp
   ansible.builtin.copy:

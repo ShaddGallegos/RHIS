@@ -1,0 +1,32 @@
+---
+- name: Ensure sgallego's public key is present for admin on all hosts
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    control_user: sgallego
+    # path to the public key on the controller (override if needed)
+    control_pubkey_path: "/home/{{ control_user }}/.ssh/id_rsa.pub"
+    admin_user: admin
+
+  tasks:
+    - name: Read control user's public key from controller
+      ansible.builtin.set_fact:
+        sgallego_pub: "{{ lookup('file', control_pubkey_path) }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Ensure admin .ssh directory exists
+      ansible.builtin.file:
+        path: "~{{ admin_user }}/.ssh"
+        state: directory
+        owner: "{{ admin_user }}"
+        group: "{{ admin_user }}"
+        mode: "0700"
+
+    - name: Install sgallego public key into admin authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ admin_user }}"
+        key: "{{ sgallego_pub }}"
+        state: present
+        manage_dir: false

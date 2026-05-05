@@ -1,12 +1,13 @@
 ---
 - name: Ensure qemu-img is present for verification
-  stat:
+  ansible.builtin.stat:
     path: /usr/bin/qemu-img
   register: qemu_img_verify_stat
 
 - name: Run qemu-img check on backup (best-effort)
-  become: yes
-  command: /usr/bin/qemu-img check {{ recovery_backup_dir }}/{{ vm_name }}.{{
+  become: true
+  ansible.builtin.command:
+    /usr/bin/qemu-img check {{ recovery_backup_dir }}/{{ vm_name }}.{{
     recovery_ts.stdout }}.qcow2
   register: qemu_img_check
   changed_when: false
@@ -14,14 +15,13 @@
   when: qemu_img_verify_stat.stat.exists
 
 - name: Compute sha256 checksum of backup (for audit)
-  become: yes
-  command: sha256sum {{ recovery_backup_dir }}/{{ vm_name }}.{{ recovery_ts.stdout
-    }}.qcow2
+  become: true
+  ansible.builtin.command: sha256sum {{ recovery_backup_dir }}/{{ vm_name }}.{{ recovery_ts.stdout }}.qcow2
   register: backup_sha256
   changed_when: false
 
 - name: Show verification results
-  debug:
+  ansible.builtin.debug:
     msg:
       - "qemu-img check: {{ qemu_img_check.stdout | default('not-run') }}"
       - "backup sha256: {{ backup_sha256.stdout }}"

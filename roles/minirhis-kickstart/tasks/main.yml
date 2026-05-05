@@ -2,7 +2,7 @@
 # Render kickstart %post snippet templates to a well-known directory.
 
 - name: Normalize kickstart variables
-  set_fact:
+  ansible.builtin.set_fact:
     installer_user: "{{ installer_user | default(INSTALLER_USER | default(ADMIN_USER
       | default('admin'))) }}"
     admin_user: "{{ admin_user | default(ADMIN_USER | default('admin')) }}"
@@ -17,7 +17,7 @@
     state: directory
     mode: "0755"
     owner: root
-    group: root
+    ansible.builtin.group: root
   become: true
 
 - name: Render SSH baseline kickstart snippet
@@ -26,7 +26,7 @@
     dest: "{{ kickstart_output_dir }}/ssh_baseline.sh"
     mode: "0644"
     owner: root
-    group: root
+    ansible.builtin.group: root
   become: true
 
 - name: Render sudo bootstrap kickstart snippet
@@ -35,10 +35,10 @@
     dest: "{{ kickstart_output_dir }}/sudo_bootstrap.sh"
     mode: "0644"
     owner: root
-    group: root
+    ansible.builtin.group: root
   become: true
 
 - name: Expose kickstart snippet paths as facts
-  set_fact:
+  ansible.builtin.set_fact:
     kickstart_ssh_baseline: "{{ kickstart_output_dir }}/ssh_baseline.sh"
     kickstart_sudo_bootstrap: "{{ kickstart_output_dir }}/sudo_bootstrap.sh"

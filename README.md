@@ -651,6 +651,11 @@ persisted in encrypted `~/.ansible/conf/env.yml` (for example:
 `SAT_FIREWALLD_SERVICES_JSON`, `SAT_PROVISIONING_*`, `SAT_DNS_ZONE`,
 `SAT_DNS_REVERSE_ZONE`).
 
+Prompt simplification defaults:
+
+- `MINIRHIS_PROMPT_COMPONENT_OVERRIDES=0` (default): do not prompt for per-component override fields that duplicate shared values (for example component domain/realm/password overrides). These fields auto-inherit from shared values.
+- `MINIRHIS_PROMPT_COMPONENT_OVERRIDES=1`: prompt for all component-specific override fields during `--reconfigure`.
+
 ---
 
 ## Kickstart generation
@@ -881,7 +886,7 @@ Use:
 
 ### Ports used by the workflow
 
-- `3000/tcp` — MINIRHIS container/web application
+- `3000/tcp` — MINIRHIS local/web application
 - `8080/tcp` — temporary AAP bundle HTTP server during provisioning
 - `18080/tcp` — MINIRHIS CMDB / HTML dashboard on the Satellite node
 
@@ -1110,7 +1115,13 @@ Runtime debugging artifacts created during recent troubleshooting runs are writt
 - `artifacts_user/controller-logs-aap.prod.spg.tar.gz`
 - `artifacts_user/aap-root-ca.pem`
 
-Quick TLS verification using the extracted CA (no install):
+Quick TLS verification using the extracted CA (no install). Note: AAP gateway listens on port 443 by default (configurable via `AAP_GATEWAY_HTTPS_PORT`):
+
+```
+openssl s_client -connect 10.168.128.2:443 -servername aap.prod.spg -CAfile artifacts_user/aap-root-ca.pem
+```
+
+If using a custom port (e.g., `AAP_GATEWAY_HTTPS_PORT=8446`):
 
 ```
 openssl s_client -connect 10.168.128.2:8446 -servername aap.prod.spg -CAfile artifacts_user/aap-root-ca.pem

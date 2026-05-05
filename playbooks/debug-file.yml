@@ -1,0 +1,12 @@
+---
+- name: Debug simple file task
+  hosts: sat_primary
+  become: true
+  tasks:
+    - name: Ensure /tmp/minirhis_debug exists
+      ansible.builtin.file:
+        path: /tmp/minirhis_debug
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'

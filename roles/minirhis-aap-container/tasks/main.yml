@@ -2,60 +2,61 @@
 # Prepare host for containerized AAP controller (idempotent)
 
 - name: Install bundle extraction prerequisites
-  package:
+  ansible.builtin.package:
     name: "{{ aap_extract_prereqs }}"
     state: present
 
 - name: Ensure qemu-guest-agent is installed
-  package:
+  ansible.builtin.package:
     name: qemu-guest-agent
     state: present
-  ignore_errors: yes
+  failed_when: false
 
 - name: Ensure qemu-guest-agent enabled and started
-  service:
+  ansible.builtin.service:
     name: qemu-guest-agent
     enabled: true
     state: started
-  ignore_errors: yes
+  failed_when: false
 
 - name: Ensure podman package is installed
-  package:
+  ansible.builtin.package:
     name: "{{ podman_pkg }}"
     state: present
 
 - name: Ensure crun is installed (recommended runtime)
-  package:
+  ansible.builtin.package:
     name: "{{ crun_pkg }}"
     state: present
-  ignore_errors: yes
+  failed_when: false
 
 - name: Ensure AAP controller volumes exist
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     owner: 0
-    group: 0
+    ansible.builtin.group: 0
     mode: "0755"
   loop: "{{ aap_controller_volumes }}"
 
 - name: Include bundle extraction tasks
-  include_tasks: extract_bundle.yml
+  ansible.builtin.include_tasks: extract_bundle.yml
 
 - name: Pull AAP controller image (placeholder)
-  become: yes
-  command: podman pull {{ aap_controller_image }}
+  become: true
+  ansible.builtin.command: podman pull {{ aap_controller_image }}
   register: podman_pull
   changed_when: podman_pull.rc == 0 and 'Downloaded' in (podman_pull.stdout +
     podman_pull.stderr)
   failed_when: podman_pull.rc != 0 and 'not found' not in (podman_pull.stdout +
     podman_pull.stderr)
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Ensure systemd unit stub for AAP controller container (will not run
     automatically)
-  copy:
+  ansible.builtin.copy:
     dest: /etc/systemd/system/aap-controller-container.service
+    mode: "0644"
     content: |
       [Unit]
       Description=AAP controller container (placeholder)

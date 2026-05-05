@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ANSIBLE_ENV_DIR="${ANSIBLE_ENV_DIR:-$HOME/.ansible/conf}"
-INVENTORY="${MINIRHIS_INVENTORY_FILE:-${PWD}/container/vars/external_inventory/hosts.yml}"
+INVENTORY="${MINIRHIS_INVENTORY_FILE:-${PWD}/local/vars/external_inventory/hosts.yml}"
 VAULT_PASS_FILE="${ANSIBLE_VAULT_PASS_FILE:-${ANSIBLE_ENV_DIR}/.vaultpass.txt}"
 LOG_DIR="${LOG_DIR:-${ANSIBLE_ENV_DIR}/logs}"
 

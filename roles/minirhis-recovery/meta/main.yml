@@ -4,5 +4,5 @@ galaxy_info:
   description: Recovery helpers for VM image backup, key injection and basic
     remediation tasks.
   license: MIT
-  min_ansible_version: 2.9
+  min_ansible_version: "2.9"
 dependencies: []

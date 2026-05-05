@@ -1,33 +1,34 @@
 ---
 # Main entry for minirhis-recovery role
 - name: Ensure recovery backup dir exists
-  file:
+  ansible.builtin.file:
     path: "{{ recovery_backup_dir }}"
     state: directory
     owner: root
-    group: root
+    ansible.builtin.group: root
     mode: "0755"
 
 - name: Create timestamp for this run
-  command: date +%Y%m%dT%H%M%S
+  ansible.builtin.command: date +%Y%m%dT%H%M%S
   register: recovery_ts
   changed_when: false
 
 - name: Set image_path fact (default from vm_name)
-  set_fact:
-    image_path: "{{ vm_image_path | default('/var/lib/libvirt/images/' + vm_name +
+  ansible.builtin.set_fact:
+    image_path:
+      "{{ vm_image_path | default('/var/lib/libvirt/images/' + vm_name +
       '.qcow2') }}"
 
 - name: Snapshot image (qemu-img convert)
-  include_tasks: snapshot.yml
+  ansible.builtin.include_tasks: snapshot.yml
 
 - name: Include guestmount tasks
-  include_tasks: guestmount.yml
+  ansible.builtin.include_tasks: guestmount.yml
 
 - name: Backup created message
-  debug:
+  ansible.builtin.debug:
     msg: "Backup created: {{ recovery_backup_dir }}/{{ vm_name }}.{{
       recovery_ts.stdout }}.qcow2"
 
 - name: Run verification tasks (qemu-img check, checksum)
-  include_tasks: verify.yml
+  ansible.builtin.include_tasks: verify.yml

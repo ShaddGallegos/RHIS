@@ -3,8 +3,29 @@
 
 set -e
 
+MINIRHIS_EMIT_EXIT_MARKER="${MINIRHIS_EMIT_EXIT_MARKER:-1}"
+trap '_minirhis_rc=$?; if [ "${MINIRHIS_EMIT_EXIT_MARKER:-1}" = "1" ]; then echo "RHIS_EXIT:${_minirhis_rc}"; fi' EXIT
+
 if [ -t 0 ] && [ -t 1 ]; then
     reset || true
+fi
+
+# Global ANSI color helpers (can be disabled via MINIRHIS_ENABLE_COLORS=0)
+# Default to enabled; allow override from environment/vault
+MINIRHIS_ENABLE_COLORS=${MINIRHIS_ENABLE_COLORS:-1}
+if [ "${MINIRHIS_ENABLE_COLORS}" -ne 0 ] && [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    BLUE='\033[0;34m'
+    YELLOW='\033[1;33m'
+    CYAN='\033[0;36m'
+    BOLD='\033[1m'
+    DIM='\033[2m'
+    NC='\033[0m'
+    export ANSIBLE_FORCE_COLOR=1
+else
+    RED='' GREEN='' BLUE='' YELLOW='' CYAN='' BOLD='' DIM='' NC=''
+    export ANSIBLE_FORCE_COLOR=0
 fi
 
 # Core path/runtime defaults (kept near the top so all later vars/functions can rely on them).
@@ -19,9 +40,27 @@ KS_DIR="${KS_DIR:-/var/lib/libvirt/images/kickstarts}"
 FILES_DIR="${FILES_DIR:-/var/lib/libvirt/images/files}"
 OEMDRV_ISO="${OEMDRV_ISO:-$ISO_DIR/OEMDRV.iso}"
 
+# Control whether Satellite installer attempts Insights registration. Default: 0 (disabled for demo).
+MINIRHIS_REGISTER_WITH_INSIGHTS=${MINIRHIS_REGISTER_WITH_INSIGHTS:-0}
+if [ "${MINIRHIS_REGISTER_WITH_INSIGHTS}" -ne 0 ]; then
+    REGISTER_WITH_INSIGHTS_FLAG="--register-with-insights"
+else
+    REGISTER_WITH_INSIGHTS_FLAG=""
+fi
+
 ANSIBLE_ENV_DIR="${ANSIBLE_ENV_DIR:-$HOME/.ansible/conf}"
 ANSIBLE_ENV_FILE="${ANSIBLE_ENV_FILE:-$ANSIBLE_ENV_DIR/env.yml}"
-ANSIBLE_VAULT_PASS_FILE="${ANSIBLE_VAULT_PASS_FILE:-$HOME/.ansible/conf/.vaultpass.txt}"
+DEFAULT_ANSIBLE_VAULT_PASS_FILE_TEXT="$HOME/.ansible/conf/.vaultpass.text"
+DEFAULT_ANSIBLE_VAULT_PASS_FILE_TXT="$HOME/.ansible/conf/.vaultpass.txt"
+if [ -z "${ANSIBLE_VAULT_PASS_FILE:-}" ]; then
+    if [ -s "$DEFAULT_ANSIBLE_VAULT_PASS_FILE_TEXT" ]; then
+        ANSIBLE_VAULT_PASS_FILE="$DEFAULT_ANSIBLE_VAULT_PASS_FILE_TEXT"
+    elif [ -s "$DEFAULT_ANSIBLE_VAULT_PASS_FILE_TXT" ]; then
+        ANSIBLE_VAULT_PASS_FILE="$DEFAULT_ANSIBLE_VAULT_PASS_FILE_TXT"
+    else
+        ANSIBLE_VAULT_PASS_FILE="$DEFAULT_ANSIBLE_VAULT_PASS_FILE_TEXT"
+    fi
+fi
 
 MINIRHIS_ANSIBLE_CFG_BASENAME="${MINIRHIS_ANSIBLE_CFG_BASENAME:-minirhis-ansible.cfg}"
 MINIRHIS_ANSIBLE_CFG_VAULT_HOST="${MINIRHIS_ANSIBLE_CFG_VAULT_HOST:-$ANSIBLE_ENV_DIR/${MINIRHIS_ANSIBLE_CFG_BASENAME}}"
@@ -38,7 +77,7 @@ MINIRHIS_ANSIBLE_FACT_CACHE_TIMEOUT="${MINIRHIS_ANSIBLE_FACT_CACHE_TIMEOUT:-8640
 
 MINIRHIS_CONTAINER_IMAGE="${MINIRHIS_CONTAINER_IMAGE:-quay.io/parmstro/minirhis-provisioner-9-2.5}"
 MINIRHIS_CONTAINER_NAME="${MINIRHIS_CONTAINER_NAME:-minirhis-provisioner}"
-MINIRHIS_INVENTORY_DIR="${MINIRHIS_INVENTORY_DIR:-$SCRIPT_DIR/container/vars/external_inventory}"
+MINIRHIS_INVENTORY_DIR="${MINIRHIS_INVENTORY_DIR:-$SCRIPT_DIR/local/vars/external_inventory}"
 MINIRHIS_INVENTORY_FILE="${MINIRHIS_INVENTORY_FILE:-$MINIRHIS_INVENTORY_DIR/hosts.yml}"
 MINIRHIS_CONTAINER_INVENTORY_FILE="${MINIRHIS_CONTAINER_INVENTORY_FILE:-/minirhis/vars/external_inventory/$(basename "${MINIRHIS_INVENTORY_FILE}")}"
 MINIRHIS_HOST_VARS_DIR="${MINIRHIS_HOST_VARS_DIR:-$SCRIPT_DIR/host_vars}"
@@ -52,7 +91,7 @@ RH_OSINFO="${RH_OSINFO:-linux2024}"
 
 # Optional local role fallback controls.
 MINIRHIS_LOCAL_ROLE_FALLBACK="${MINIRHIS_LOCAL_ROLE_FALLBACK:-1}"
-MINIRHIS_LOCAL_ROLE_WORKDIR="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
+MINIRHIS_LOCAL_ROLE_WORKDIR="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/local/roles}"
 
 CLI_MENU_CHOICE=""
 CLI_NONINTERACTIVE=""
@@ -145,6 +184,9 @@ MINIRHIS_REQUIRE_ROOT_SSH_MESH="${MINIRHIS_REQUIRE_ROOT_SSH_MESH:-0}"
 MINIRHIS_ENABLE_PRECHECK_ADHOC="${MINIRHIS_ENABLE_PRECHECK_ADHOC:-0}"
 # Guard to ensure the full prompt wizard runs at most once per process.
 MINIRHIS_PROMPTS_COMPLETED="${MINIRHIS_PROMPTS_COMPLETED:-0}"
+# Keep per-component override prompts optional to reduce setup complexity.
+# Set to 1 to prompt for component-specific overrides (password/domain/realm).
+MINIRHIS_PROMPT_COMPONENT_OVERRIDES="${MINIRHIS_PROMPT_COMPONENT_OVERRIDES:-0}"
 # Defer heavy component installation/configuration out of kickstart %post and
 # execute it post-boot through run_minirhis_config_as_code.
 # Keeps role-specific kickstart provisioning (CPU/RAM/disk/network/hostname)
@@ -189,8 +231,8 @@ SAT_USE_NON_IDM_CERTS="${SAT_USE_NON_IDM_CERTS:-}"
 # Prefer the current container layout, but keep backward compatibility with
 # the legacy top-level inventory/aap path.
 if [ -z "${AAP_INVENTORY_TEMPLATE_DIR:-}" ]; then
-    if [ -d "$SCRIPT_DIR/container/vars/external_inventory/aap" ]; then
-        AAP_INVENTORY_TEMPLATE_DIR="$SCRIPT_DIR/container/vars/external_inventory/aap"
+    if [ -d "$SCRIPT_DIR/local/vars/external_inventory/aap" ]; then
+        AAP_INVENTORY_TEMPLATE_DIR="$SCRIPT_DIR/local/vars/external_inventory/aap"
     else
         AAP_INVENTORY_TEMPLATE_DIR="$SCRIPT_DIR/inventory/aap"
     fi
@@ -202,10 +244,10 @@ AAP_INVENTORY_GROWTH_TEMPLATE="${AAP_INVENTORY_GROWTH_TEMPLATE:-}"
 AAP_PG_DATABASE="${AAP_PG_DATABASE:-}"
 AAP_LIGHTSPEED_HOST="${AAP_LIGHTSPEED_HOST:-${AAP_HOSTNAME:-aap.example.com}}"
 AAP_LIGHTSPEED_ADMIN_USER="${AAP_LIGHTSPEED_ADMIN_USER:-${ADMIN_USER:-admin}}"
-AAP_LIGHTSPEED_ADMIN_PASSWORD="${AAP_LIGHTSPEED_ADMIN_PASSWORD:-${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}}"
+AAP_LIGHTSPEED_ADMIN_PASSWORD="${AAP_LIGHTSPEED_ADMIN_PASSWORD:-${AAP_ADMIN_PASS:-${ADMIN_PASS:-${SAT_ADMIN_PASS:-}}}}"
 AAP_LIGHTSPEED_ADMIN_EMAIL="${AAP_LIGHTSPEED_ADMIN_EMAIL:-${ADMIN_USER:-admin}@${DOMAIN:-example.com}}"
-AAP_LIGHTSPEED_PG_HOST="${AAP_LIGHTSPEED_PG_HOST:-${AAP_HOSTNAME:-aap.example.com}}"
-AAP_LIGHTSPEED_PG_PASSWORD="${AAP_LIGHTSPEED_PG_PASSWORD:-${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}}"
+AAP_LIGHTSPEED_PG_HOST="${AAP_LIGHTSPEED_PG_HOST:-${AAP_HOSTNAME:-}}"
+AAP_LIGHTSPEED_PG_PASSWORD="${AAP_LIGHTSPEED_PG_PASSWORD:-${AAP_ADMIN_PASS:-${ADMIN_PASS:-${SAT_ADMIN_PASS:-}}}}"
 AAP_LIGHTSPEED_CHATBOT_MODEL_URL="${AAP_LIGHTSPEED_CHATBOT_MODEL_URL:-<set your own>}"
 AAP_LIGHTSPEED_CHATBOT_MODEL_API_KEY="${AAP_LIGHTSPEED_CHATBOT_MODEL_API_KEY:-<set your own>}"
 AAP_LIGHTSPEED_CHATBOT_MODEL_ID="${AAP_LIGHTSPEED_CHATBOT_MODEL_ID:-<set your own>}"
@@ -225,7 +267,7 @@ INSTALLER_USER="${INSTALLER_USER:-${ADMIN_USER:-admin}}"
 
 # Shared identity/network defaults (single source of truth)
 ADMIN_USER="${ADMIN_USER:-admin}"
-ADMIN_PASS="${ADMIN_PASS:-}"  # must be set via vault, env file, or interactive prompt
+ADMIN_PASS="${ADMIN_PASS:-${AAP_ADMIN_PASS:-}}"  # shared fallback; vault (aap_admin_pass) is canonical — no literal default
 ROOT_PASS="${ROOT_PASS:-}"
 DOMAIN="${DOMAIN:-example.com}"
 REALM="${REALM:-EXAMPLE.COM}"
@@ -280,7 +322,7 @@ SAT_SSL_CERTS_DIR="${SAT_SSL_CERTS_DIR:-/root/.sat_ssl/}"
 CDN_ORGANIZATION_ID="${CDN_ORGANIZATION_ID:-}"
 CDN_SAT_ACTIVATION_KEY="${CDN_SAT_ACTIVATION_KEY:-}"
 SAT_FIREWALLD_ZONE="${SAT_FIREWALLD_ZONE:-public}"
-SAT_FIREWALLD_INTERFACE="${SAT_FIREWALLD_INTERFACE:-eth1}"
+SAT_FIREWALLD_INTERFACE="${SAT_FIREWALLD_INTERFACE:-eth0}"
 SAT_PROVISIONING_SUBNET="${SAT_PROVISIONING_SUBNET:-10.168.0.0}"
 SAT_PROVISIONING_NETMASK="${SAT_PROVISIONING_NETMASK:-255.255.0.0}"
 SAT_PROVISIONING_GW="${SAT_PROVISIONING_GW:-10.168.0.1}"
@@ -424,13 +466,16 @@ MINIRHIS_DEMOKILL_RESET_TERMINAL="${MINIRHIS_DEMOKILL_RESET_TERMINAL:-1}"
 print_step() {
     local msg
     msg="$(sanitize_log_message "$*")"
-    echo -e "${BLUE}[STEP]${NC} ${msg}"
+    # Steps are intentionally uncolored for clarity in logs and progress lines
+    echo -e "[STEP] ${msg}"
 }
 
 print_success() {
     local msg
     msg="$(sanitize_log_message "$*")"
     echo -e "${GREEN}[SUCCESS]${NC} ${msg}"
+    # Also emit a plain, machine-friendly marker for logs
+    echo "PASS: ${msg}"
 }
 
 # Print an updating progress bar for long-running retry loops. Prints a single
@@ -456,7 +501,48 @@ print_progress_bar() {
     bar_empty="$(printf '%*s' "${empty}" '' | tr ' ' '.')"
 
     # Print carriage-return-updating progress line (no final newline).
-    printf '\r%b %s [%s%s] (%d/%d) ' "${BLUE}[STEP]${NC}" "${label}" "${bar_filled}" "${bar_empty}" "${current}" "${total}"
+    printf '\r%s %s [%s%s] (%d/%d) ' "[STEP]" "${label}" "${bar_filled}" "${bar_empty}" "${current}" "${total}"
+}
+
+sleep_with_spinner() {
+    # sleep_with_spinner <seconds> [message]
+    local secs="${1:-0}"
+    local msg="${2:-Waiting...}"
+    local spin_chars='|/-\\'
+    local i=0
+    local start now remaining
+    start=$(date +%s)
+    end=$((start + secs))
+    while [ $(date +%s) -lt $end ]; do
+        now=$(date +%s)
+        remaining=$(( end - now ))
+        local idx=$(( i % 4 ))
+        local char="${spin_chars:idx:1}"
+        printf '\r\033[K[STEP] %s %s (%ds remaining)' "${msg}" "${char}" "${remaining}"
+        i=$((i+1))
+        sleep 1
+    done
+    printf '\r\033[K[STEP] %s (done)\n' "${msg}"
+}
+
+# Minimal spinner tick for short polling sleeps (non-verbose)
+spinner_tick() {
+    # spinner_tick <seconds>
+    local secs="${1:-1}"
+    local spin_chars='|/-\\'
+    local i=0
+    local start now end
+    start=$(date +%s)
+    end=$((start + secs))
+    while [ $(date +%s) -lt $end ]; do
+        now=$(date +%s)
+        local idx=$(( i % 4 ))
+        local char="${spin_chars:idx:1}"
+        printf '\r\033[K[STEP] %s' "${char}"
+        i=$((i+1))
+        sleep 1
+    done
+    printf '\r\033[K'
 }
 
 print_warning() {
@@ -466,7 +552,18 @@ print_warning() {
         MINIRHIS_TEST_WARNING_COUNT=$((MINIRHIS_TEST_WARNING_COUNT + 1))
         printf '%s\n' "${msg}" >> "${MINIRHIS_TEST_WARNING_FILE}"
     fi
-    echo -e "${YELLOW}[WARNING]${NC} ${msg}"
+    # Map warnings to red to make failures/warnings easy to spot
+    echo -e "${RED}[WARNING]${NC} ${msg}"
+    # Emit plain warning marker for easy grepping in logs
+    echo "WARN: ${msg}"
+}
+
+print_error() {
+    local msg
+    msg="$(sanitize_log_message "$*")"
+    echo -e "${RED}[ERROR]${NC} ${msg}"
+    # Emit plain failure marker for easy grepping in logs
+    echo "FAIL: ${msg}" >&2
 }
 
 print_phase() {
@@ -686,7 +783,7 @@ Options:
     --config-aap             Run config-as-code roles for AAP node only
     --config-all             Run config-as-code roles for all nodes (IdM -> Satellite -> AAP)
     --config-rhis-aap        (Re-)configure RHIS Builder projects, credentials, and templates in AAP only
-    --local                  Prefer local ${USER} repo execution for reruns/fallbacks (uses container/roles)
+    --local                  Prefer local ${USER} repo execution for reruns/fallbacks (uses local/roles)
     --container              Prefer minirhis_provisioner execution context (default)
     --minirhis, --rhis           Run full stack workflow (IdM -> Satellite -> AAP)
     --satellite              Run Satellite 6.18-only workflow (standalone submenu)
@@ -979,6 +1076,10 @@ kickstart_user_sudo_bootstrap_block() {
 # 1.2 Ensure installer/admin user has passwordless sudo and virtualization groups
 ks_log "Phase 1.2: Ensure admin sudo bootstrap"
 target_user="${INSTALLER_USER:-${ADMIN_USER}}"
+# Ensure we never write an empty sudoers entry; fall back to admin
+if [ -z "${target_user:-}" ]; then
+    target_user="${ADMIN_USER:-admin}"
+fi
 if [ "${INSTALLER_USER:-${ADMIN_USER}}" != "${ADMIN_USER}" ] && ! id "${INSTALLER_USER:-${ADMIN_USER}}" >/dev/null 2>&1; then
     useradd -m -G wheel "${INSTALLER_USER:-${ADMIN_USER}}" || true
     echo "${INSTALLER_USER:-${ADMIN_USER}}:${ADMIN_PASS}" | chpasswd || true
@@ -1150,7 +1251,7 @@ EOF
         ks_log "  attempt ${try} failed -- last subscription-manager error:"
         subscription-manager status 2>&1 | while IFS= read -r _l; do ks_log "    sm: ${_l}"; done || true
         subscription-manager clean >/dev/null 2>&1 || true
-        sleep 15
+        sleep_with_spinner 15 "  Retrying subscription-manager registration"
     done
     ks_log "ERROR: RHSM registration failed after 10 retries"
     subscription-manager status 2>&1 | while IFS= read -r _l; do ks_log "  sm: ${_l}"; done || true
@@ -1661,6 +1762,8 @@ local_tmp = ~/.ansible/tmp
 remote_tmp = ~/.ansible/tmp
 host_key_checking = False
 retry_files_enabled = False
+    # Suppress deprecation warnings for demo runs; override in ansible.cfg if needed
+    deprecation_warnings = False
 MINIRHIS_ANSIBLE_CFG
     chown "$_user:$_user" "$target_home/.ansible.cfg"
     chmod 0644 "$target_home/.ansible.cfg"
@@ -1815,6 +1918,7 @@ inventory = ${MINIRHIS_CONTAINER_INVENTORY_FILE}
 host_key_checking = False
 retry_files_enabled = False
 interpreter_python = auto_silent
+roles_path = ${SCRIPT_DIR}/roles:${SCRIPT_DIR}/local/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-aap/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-aap/minirhis-builder-aap/roles
 remote_tmp = /var/tmp
 forks = ${MINIRHIS_ANSIBLE_FORKS}
 timeout = ${MINIRHIS_ANSIBLE_TIMEOUT}
@@ -1908,7 +2012,7 @@ EOF
     return 0
 }
 
-# Keep local developer ansible.cfg in container/roles aligned with the same
+# Keep local developer ansible.cfg in local/roles aligned with the same
 # runtime defaults used for MINIRHIS provisioner runs, including galaxy endpoints
 # and token source (vault_console_redhat_token/HUB_TOKEN).
 generate_local_roles_ansible_cfg() {
@@ -1921,14 +2025,14 @@ generate_local_roles_ansible_cfg() {
     local local_fact_cache
     local local_log_path
 
-    local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
+    local_cfg="${SCRIPT_DIR}/local/roles/ansible.cfg"
     local_inventory_name="$(basename "${MINIRHIS_INVENTORY_FILE}")"
-    local_inventory="${SCRIPT_DIR}/container/roles/inventory/${local_inventory_name}"
-    local_roles_path="${SCRIPT_DIR}/container/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/roles:${SCRIPT_DIR}/container/roles/minirhis-builder-aap/minirhis-builder-aap/roles"
+    local_inventory="${SCRIPT_DIR}/local/roles/inventory/${local_inventory_name}"
+    local_roles_path="${SCRIPT_DIR}/roles:${SCRIPT_DIR}/local/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-satellite/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-idm/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-aap/roles:${SCRIPT_DIR}/local/roles/minirhis-builder-aap/minirhis-builder-aap/roles"
     local_ssh_key="~/.ssh/id_rsa"
     local_fact_cache="${HOME}/.ansible/conf/${MINIRHIS_ANSIBLE_FACT_CACHE_BASENAME}"
     local_log_path="${HOME}/.ansible/conf/${AAP_ANSIBLE_LOG_BASENAME}"
-    mkdir -p "${SCRIPT_DIR}/container/roles" "${local_fact_cache}" "${ANSIBLE_ENV_DIR}" || return 1
+    mkdir -p "${SCRIPT_DIR}/local/roles" "${local_fact_cache}" "${ANSIBLE_ENV_DIR}" || return 1
 
     tmp_cfg="$(mktemp "${ANSIBLE_ENV_DIR}/.local-roles-ansible.cfg.XXXXXX")" || return 1
 
@@ -2139,7 +2243,7 @@ sync_runtime_values_to_ansible_vault() {
                     echo ""
                     ;;
                 skipped)
-                    printf "${YELLOW}  ⊘  ${BOLD}%s${NC}${YELLOW}   [ SKIP ]${NC}\n" "${label}"
+                    printf "${BLUE}  ⊘  ${BOLD}%s${NC}${BLUE}   [ SKIP ]${NC}\n" "${label}"
                     [ -n "${details}" ] && printf "${DIM}       ↳  %s${NC}\n" "${details}"
                     echo ""
                     ;;
@@ -2154,14 +2258,14 @@ sync_runtime_values_to_ansible_vault() {
             "${passed_count}" "${total_count}" "${pass_bar}"
         printf "  ${RED}Failed   :  %d / %d   ${BOLD}%s${NC}\n" \
             "${MINIRHIS_TEST_FAILURE_COUNT}" "${total_count}" "${fail_bar}"
-        printf "  ${YELLOW}Skipped  :  %-3d${NC}\n" "${skipped_count}"
-        printf "  ${YELLOW}Warnings :  %-3d${NC}\n" "${MINIRHIS_TEST_WARNING_COUNT}"
+        printf "  ${BLUE}Skipped  :  %-3d${NC}\n" "${skipped_count}"
+        printf "  ${RED}Warnings :  %-3d${NC}\n" "${MINIRHIS_TEST_WARNING_COUNT}"
 
         if [ -s "${MINIRHIS_TEST_WARNING_FILE}" ]; then
             echo ""
-            printf "${YELLOW}  ⚠  Warnings collected during this run:${NC}\n"
+            printf "${RED}  ⚠  Warnings collected during this run:${NC}\n"
             while IFS= read -r wline; do
-                printf "  ${YELLOW}  · %s${NC}\n" "${wline}"
+                printf "  ${RED}  · %s${NC}\n" "${wline}"
             done < <(tail -n 20 "${MINIRHIS_TEST_WARNING_FILE}")
         fi
 
@@ -2240,12 +2344,12 @@ sync_runtime_values_to_ansible_vault() {
         minirhis_test_run_case "2) Container Deployment"                 install_container
         minirhis_test_run_case "3) Setup Virt-Manager Only"              setup_virt_manager
         echo ""
-        printf "${YELLOW}  ⊘  ${BOLD}4) Full Setup (Local + Virt-Manager)${NC}${YELLOW}   [ SKIP ]${NC}\n"
+        printf "${BLUE}  ⊘  ${BOLD}4) Full Setup (Local + Virt-Manager)${NC}${BLUE}   [ SKIP ]${NC}\n"
         printf "${DIM}       ↳  Covered by items 1 + 3 — avoids duplicate heavy provisioning.${NC}\n"
         minirhis_test_record_result "4) Full Setup (Local + Virt-Manager)" "skipped" \
             "Covered by test items 1 + 3 to avoid duplicate heavy provisioning."
         echo ""
-        printf "${YELLOW}  ⊘  ${BOLD}5) Full Setup (Container + Virt-Manager)${NC}${YELLOW}   [ SKIP ]${NC}\n"
+        printf "${BLUE}  ⊘  ${BOLD}5) Full Setup (Container + Virt-Manager)${NC}${BLUE}   [ SKIP ]${NC}\n"
         printf "${DIM}       ↳  Covered by items 2 + 3 — avoids duplicate heavy provisioning.${NC}\n"
         minirhis_test_record_result "5) Full Setup (Container + Virt-Manager)" "skipped" \
             "Covered by test items 2 + 3 to avoid duplicate heavy provisioning."
@@ -2712,32 +2816,40 @@ is_enabled() {
 probe_ssh_endpoint() {
     local ip="$1"
     local err
+    local ssh_key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}"
+    local ssh_user="${INSTALLER_USER:-admin}"
 
-    if timeout 5 ssh \
-        -o BatchMode=yes \
-        -o PreferredAuthentications=none \
-        -o PasswordAuthentication=no \
-        -o PubkeyAuthentication=no \
-        -o StrictHostKeyChecking=no \
-        -o UserKnownHostsFile=/dev/null \
-        -o ForwardX11=no \
-        -o ConnectTimeout=3 \
-        "root@${ip}" true >/dev/null 2>&1; then
-        return 0
+    # 1) Try key-based auth as installer/admin user (fast, preferred)
+    if [ -n "${ssh_key}" ] && [ -f "${ssh_key}" ]; then
+        if timeout 5 ssh -i "${ssh_key}" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ForwardX11=no \
+            -o ConnectTimeout=3 \
+            "${ssh_user}@${ip}" true >/dev/null 2>&1; then
+            return 0
+        fi
     fi
 
-    err="$(timeout 5 ssh \
-        -o BatchMode=yes \
-        -o PreferredAuthentications=none \
-        -o PasswordAuthentication=no \
-        -o PubkeyAuthentication=no \
-        -o StrictHostKeyChecking=no \
-        -o UserKnownHostsFile=/dev/null \
-        -o ForwardX11=no \
-        -o ConnectTimeout=3 \
-        "root@${ip}" true 2>&1 || true)"
+    # 2) Fallback: probe SSH port and attempt a no-auth probe to detect "auth failure" vs closed port
+    if timeout 3 bash -c "</dev/tcp/${ip}/22" >/dev/null 2>&1; then
+        err="$(timeout 5 ssh \
+            -o BatchMode=yes \
+            -o PreferredAuthentications=none \
+            -o PasswordAuthentication=no \
+            -o PubkeyAuthentication=no \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ForwardX11=no \
+            -o ConnectTimeout=3 \
+            "root@${ip}" true 2>&1 || true)"
 
-    printf '%s' "$err" | grep -Eqi 'permission denied|authentication failed|denied \(publickey\)|too many authentication failures'
+        # If SSH is reachable but auth is denied, treat as reachable (caller can handle auth failures)
+        printf '%s' "$err" | grep -Eqi 'permission denied|authentication failed|denied \(publickey\)|too many authentication failures' && return 0
+    fi
+
+    return 1
 }
 
 load_preseed_env() {
@@ -2837,18 +2949,30 @@ normalize_shared_env_vars() {
     fi
 
     DOMAIN="${DOMAIN:-${SAT_DOMAIN:-${AAP_DOMAIN:-${IDM_DOMAIN:-example.com}}}}"
+    # Clear placeholder values so a real domain can always seed REALM.
+    is_unresolved_template_value "${REALM:-}" && REALM=""
+    is_unresolved_template_value "${IDM_REALM:-}" && IDM_REALM=""
+    is_unresolved_template_value "${SAT_REALM:-}" && SAT_REALM=""
     REALM="${REALM:-${IDM_REALM:-${SAT_REALM:-}}}"
     [ -n "${REALM:-}" ] || REALM="$(to_upper "$DOMAIN")"
     [ -n "${REALM:-}" ] || REALM="EXAMPLE.COM"
 
     ADMIN_USER="${ADMIN_USER:-admin}"
-    # Global admin password is the authoritative root password for all systems.
-    # Do not infer it from per-system service/admin passwords.
-    ADMIN_PASS="${ADMIN_PASS:-}"
+    # Canonical shared admin password source: AAP_ADMIN_PASS (loaded from vault: ~/.ansible/conf/env.yml → aap_admin_pass).
+    # Keep ADMIN_PASS/SAT_ADMIN_PASS/IDM_ADMIN_PASS as compatibility aliases.
+    AAP_ADMIN_PASS="${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}"
+    if [ -z "${AAP_ADMIN_PASS:-}" ]; then
+        echo "[WARNING] AAP_ADMIN_PASS is empty — ensure ~/.ansible/conf/env.yml has aap_admin_pass set and vault is loaded" >&2
+    fi
+    ADMIN_PASS="${ADMIN_PASS:-${AAP_ADMIN_PASS}}"
+    SAT_ADMIN_PASS="${SAT_ADMIN_PASS:-${AAP_ADMIN_PASS}}"
+    SAT_INITIAL_ADMIN_PASS="${SAT_INITIAL_ADMIN_PASS:-${SAT_ADMIN_PASS}}"
     ROOT_PASS="${ROOT_PASS:-${ADMIN_PASS}}"
-    IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-${ADMIN_PASS}}"
-    IPADM_PASSWORD="${IPADM_PASSWORD:-${IDM_ADMIN_PASS:-${ADMIN_PASS}}}"
-    IPAADMIN_PASSWORD="${IPAADMIN_PASSWORD:-${IDM_ADMIN_PASS:-${ADMIN_PASS}}}"
+    IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-${AAP_ADMIN_PASS}}"
+    IPADM_PASSWORD="${IPADM_PASSWORD:-${IDM_ADMIN_PASS:-${AAP_ADMIN_PASS}}}"
+    IPAADMIN_PASSWORD="${IPAADMIN_PASSWORD:-${IDM_ADMIN_PASS:-${AAP_ADMIN_PASS}}}"
+    SAT_COMPUTE_PASSWORD="${SAT_COMPUTE_PASSWORD:-${AAP_ADMIN_PASS}}"
+    SAT_IMAGE_PASSWORD="${SAT_IMAGE_PASSWORD:-${AAP_ADMIN_PASS}}"
 
     # FreeIPA requires admin/DS passwords to be at least 8 characters.
     # Keep ADMIN_PASS unchanged (it may be used for host logins), but normalize
@@ -2996,7 +3120,7 @@ normalize_shared_env_vars() {
     AAP_DOMAIN="${AAP_DOMAIN:-$DOMAIN}"
     IDM_DOMAIN="${IDM_DOMAIN:-$DOMAIN}"
     SAT_FIREWALLD_ZONE="${SAT_FIREWALLD_ZONE:-public}"
-    SAT_FIREWALLD_INTERFACE="${SAT_FIREWALLD_INTERFACE:-eth1}"
+    SAT_FIREWALLD_INTERFACE="${SAT_FIREWALLD_INTERFACE:-eth0}"
     SAT_FIREWALLD_SERVICES_JSON="${SAT_FIREWALLD_SERVICES_JSON:-[\"ssh\",\"http\",\"https\"]}"
     SAT_PROVISIONING_SUBNET="${SAT_PROVISIONING_SUBNET:-10.168.0.0}"
     SAT_PROVISIONING_NETMASK="${SAT_PROVISIONING_NETMASK:-$NETMASK}"
@@ -3091,10 +3215,11 @@ normalize_shared_env_vars() {
 
     # Per-system admin passwords default to the shared admin password, but do
     # not override explicit per-role values when they are provided.
-    SAT_ADMIN_PASS="${SAT_ADMIN_PASS:-${ADMIN_PASS}}"
+    SAT_ADMIN_PASS="${SAT_ADMIN_PASS:-${AAP_ADMIN_PASS}}"
     AAP_ADMIN_PASS="${AAP_ADMIN_PASS:-${ADMIN_PASS}}"
-    IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-${ADMIN_PASS}}"
-    IDM_DS_PASS="${IDM_DS_PASS:-${ADMIN_PASS}}"
+    SAT_INITIAL_ADMIN_PASS="${SAT_INITIAL_ADMIN_PASS:-${SAT_ADMIN_PASS}}"
+    IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-${AAP_ADMIN_PASS}}"
+    IDM_DS_PASS="${IDM_DS_PASS:-${IDM_ADMIN_PASS:-${AAP_ADMIN_PASS}}}"
 
     if [ -z "${IDM_DS_PASS:-}" ] || [ "${#IDM_DS_PASS}" -lt 8 ]; then
         IDM_DS_PASS="${IDM_ADMIN_PASS}"
@@ -3137,8 +3262,25 @@ set_or_prompt() {
     fi
 
     if [ "$is_secret" = "1" ]; then
-        read -r -s -p "$prompt_label" prompt_value
-        echo ""
+        local confirm_value
+        while true; do
+            read -r -s -p "$prompt_label" prompt_value
+            echo ""
+
+            if [ -z "${prompt_value}" ]; then
+                print_warning "$var_name is required. Please provide a value."
+                continue
+            fi
+
+            read -r -s -p "Confirm ${prompt_text} [Required]" confirm_value
+            echo ""
+
+            if [ "${prompt_value}" != "${confirm_value}" ]; then
+                print_warning "Values did not match for $var_name. Please try again."
+                continue
+            fi
+            break
+        done
     else
         read -r -p "$prompt_label" prompt_value
     fi
@@ -3165,8 +3307,25 @@ set_or_prompt_optional() {
     fi
 
     if [ "$is_secret" = "1" ]; then
-        read -r -s -p "$prompt_label" prompt_value
-        echo ""
+        local confirm_value
+        while true; do
+            read -r -s -p "$prompt_label" prompt_value
+            echo ""
+
+            # Optional secret prompts can be left blank without confirmation.
+            if [ -z "${prompt_value}" ]; then
+                break
+            fi
+
+            read -r -s -p "Confirm ${prompt_text}" confirm_value
+            echo ""
+
+            if [ "${prompt_value}" != "${confirm_value}" ]; then
+                print_warning "Values did not match for $var_name. Please try again."
+                continue
+            fi
+            break
+        done
     else
         read -r -p "$prompt_label" prompt_value
     fi
@@ -3207,31 +3366,82 @@ prompt_with_default() {
 
     while true; do
         if [ "$is_secret" = "1" ]; then
+            local confirm_value="" using_default="0"
             read -r -s -p "$prompt_with_meta: " input_value
             echo ""
+
+            if [ -z "$input_value" ] && [ -n "$default_value" ]; then
+                input_value="$default_value"
+                using_default="1"
+            fi
+
+            if [ "$is_required" = "1" ] && [ -z "$input_value" ]; then
+                print_warning "$var_name is required. Please provide a value."
+                continue
+            fi
+
+            if is_unresolved_template_value "$input_value"; then
+                print_warning "$var_name contains an unresolved template placeholder. Please provide an actual value."
+                continue
+            fi
+
+            # Require confirmation only when user typed a new secret value.
+            if [ -n "$input_value" ] && [ "$using_default" != "1" ]; then
+                read -r -s -p "Confirm ${prompt_with_meta}: " confirm_value
+                echo ""
+                if [ "$input_value" != "$confirm_value" ]; then
+                    print_warning "Values did not match for $var_name. Please try again."
+                    continue
+                fi
+            fi
+
+            printf -v "$var_name" '%s' "$input_value"
+            return 0
         else
             if [ -n "$default_value" ]; then
                 read -r -p "$prompt_with_meta [$default_value]: " input_value
             else
                 read -r -p "$prompt_with_meta: " input_value
             fi
+
+            [ -n "$input_value" ] || input_value="$default_value"
+
+            if [ "$is_required" = "1" ] && [ -z "$input_value" ]; then
+                print_warning "$var_name is required. Please provide a value."
+                continue
+            fi
+
+            if is_unresolved_template_value "$input_value"; then
+                print_warning "$var_name contains an unresolved template placeholder. Please provide an actual value."
+                continue
+            fi
+
+            printf -v "$var_name" '%s' "$input_value"
+            return 0
         fi
-
-        [ -n "$input_value" ] || input_value="$default_value"
-
-        if [ "$is_required" = "1" ] && [ -z "$input_value" ]; then
-            print_warning "$var_name is required. Please provide a value."
-            continue
-        fi
-
-        if is_unresolved_template_value "$input_value"; then
-            print_warning "$var_name contains an unresolved template placeholder. Please provide an actual value."
-            continue
-        fi
-
-        printf -v "$var_name" '%s' "$input_value"
-        return 0
     done
+}
+
+should_prompt_component_overrides() {
+    case "${FORCE_PROMPT_ALL:-0}" in
+        1|true|TRUE|yes|YES|on|ON)
+            return 0
+            ;;
+    esac
+    case "${MINIRHIS_PROMPT_COMPONENT_OVERRIDES:-0}" in
+        1|true|TRUE|yes|YES|on|ON)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+set_if_unset() {
+    local var_name="$1"
+    local default_value="$2"
+    if [ -z "${!var_name:-}" ] || is_unresolved_template_value "${!var_name:-}"; then
+        printf -v "$var_name" '%s' "$default_value"
+    fi
 }
 
 # Platform helper functions (hoisted to top-level so prompts can call them
@@ -3746,74 +3956,6 @@ prompt_platform_choice() {
             done
         }
 
-        prompt_platform_connection_details() {
-            local platform
-            platform="$(normalize_platform_value "$1")"
-
-            echo ""
-            echo "=== Platform Connection Details (${platform}) ==="
-            case "${platform}" in
-                libvirt)
-                    prompt_with_default LIBVIRT_URI "libvirt connection URI" "${LIBVIRT_URI:-qemu:///system}" 0 1 || return 1
-                    prompt_with_default LIBVIRT_STORAGE_POOL "libvirt storage pool" "${LIBVIRT_STORAGE_POOL:-default}" 0 1 || return 1
-                    prompt_with_default LIBVIRT_NETWORK "libvirt network" "${LIBVIRT_NETWORK:-default}" 0 1 || return 1
-                    ;;
-                vmware)
-                    prompt_with_default VMWARE_VCENTER_HOST "vCenter hostname or IP" "${VMWARE_VCENTER_HOST:-}" 0 1 || return 1
-                    prompt_with_default VMWARE_USERNAME "vCenter username" "${VMWARE_USERNAME:-}" 0 1 || return 1
-                    prompt_with_default VMWARE_PASSWORD "vCenter password" "${VMWARE_PASSWORD:-}" 1 1 || return 1
-                    prompt_with_default VMWARE_DATACENTER "VMware datacenter" "${VMWARE_DATACENTER:-}" 0 1 || return 1
-                    prompt_with_default VMWARE_CLUSTER "VMware cluster" "${VMWARE_CLUSTER:-}" 0 1 || return 1
-                    ;;
-                nutanix)
-                    prompt_with_default NUTANIX_ENDPOINT "Nutanix Prism endpoint" "${NUTANIX_ENDPOINT:-}" 0 1 || return 1
-                    prompt_with_default NUTANIX_USERNAME "Nutanix username" "${NUTANIX_USERNAME:-}" 0 1 || return 1
-                    prompt_with_default NUTANIX_PASSWORD "Nutanix password" "${NUTANIX_PASSWORD:-}" 1 1 || return 1
-                    prompt_with_default NUTANIX_CLUSTER "Nutanix cluster" "${NUTANIX_CLUSTER:-}" 0 1 || return 1
-                    ;;
-                openshift|openshift-virt)
-                    prompt_with_default OPENSHIFT_API_URL "OpenShift API URL" "${OPENSHIFT_API_URL:-}" 0 1 || return 1
-                    prompt_with_default OPENSHIFT_USERNAME "OpenShift username" "${OPENSHIFT_USERNAME:-}" 0 1 || return 1
-                    prompt_with_default OPENSHIFT_TOKEN "OpenShift token" "${OPENSHIFT_TOKEN:-}" 1 1 || return 1
-                    prompt_with_default OPENSHIFT_NAMESPACE "OpenShift namespace" "${OPENSHIFT_NAMESPACE:-openshift-cnv}" 0 1 || return 1
-                    ;;
-                aws)
-                    prompt_with_default AWS_ACCESS_KEY_ID "AWS access key ID" "${AWS_ACCESS_KEY_ID:-}" 0 1 || return 1
-                    prompt_with_default AWS_SECRET_ACCESS_KEY "AWS secret access key" "${AWS_SECRET_ACCESS_KEY:-}" 1 1 || return 1
-                    prompt_with_default AWS_SESSION_TOKEN "AWS session token (optional)" "${AWS_SESSION_TOKEN:-}" 1 0 || return 1
-                    prompt_with_default AWS_DEFAULT_REGION "AWS region" "${AWS_DEFAULT_REGION:-us-east-1}" 0 1 || return 1
-                    prompt_with_default AWS_VPC_ID "AWS VPC ID (optional)" "${AWS_VPC_ID:-}" 0 0 || return 1
-                    prompt_with_default AWS_SUBNET_ID "AWS subnet ID (optional)" "${AWS_SUBNET_ID:-}" 0 0 || return 1
-                    ;;
-                azure)
-                    prompt_with_default AZURE_SUBSCRIPTION_ID "Azure subscription ID" "${AZURE_SUBSCRIPTION_ID:-}" 0 1 || return 1
-                    prompt_with_default AZURE_TENANT_ID "Azure tenant ID" "${AZURE_TENANT_ID:-}" 0 1 || return 1
-                    prompt_with_default AZURE_CLIENT_ID "Azure client/application ID" "${AZURE_CLIENT_ID:-}" 0 1 || return 1
-                    prompt_with_default AZURE_CLIENT_SECRET "Azure client secret" "${AZURE_CLIENT_SECRET:-}" 1 1 || return 1
-                    prompt_with_default AZURE_RESOURCE_GROUP "Azure resource group" "${AZURE_RESOURCE_GROUP:-}" 0 1 || return 1
-                    prompt_with_default AZURE_LOCATION "Azure region/location" "${AZURE_LOCATION:-eastus}" 0 1 || return 1
-                    ;;
-                gcp)
-                    prompt_with_default GCP_PROJECT_ID "GCP project ID" "${GCP_PROJECT_ID:-}" 0 1 || return 1
-                    prompt_with_default GCP_REGION "GCP region" "${GCP_REGION:-us-central1}" 0 1 || return 1
-                    prompt_with_default GCP_ZONE "GCP zone" "${GCP_ZONE:-us-central1-a}" 0 1 || return 1
-                    prompt_with_default GCP_SERVICE_ACCOUNT_FILE "GCP service account JSON path" "${GCP_SERVICE_ACCOUNT_FILE:-}" 0 1 || return 1
-                    ;;
-                baremetal)
-                    prompt_with_default BMC_TYPE "BMC type (redfish/idrac/ipmi/ilo)" "${BMC_TYPE:-redfish}" 0 1 || return 1
-                    prompt_with_default BMC_ENDPOINT "BMC or DRAC endpoint" "${BMC_ENDPOINT:-}" 0 1 || return 1
-                    prompt_with_default BMC_USERNAME "BMC username" "${BMC_USERNAME:-}" 0 1 || return 1
-                    prompt_with_default BMC_PASSWORD "BMC password" "${BMC_PASSWORD:-}" 1 1 || return 1
-                    prompt_with_default BMC_SYSTEM_ID "BMC system ID (optional)" "${BMC_SYSTEM_ID:-}" 0 0 || return 1
-                    prompt_with_default BAREMETAL_ISO_URL "ISO URL for virtual media / mount source" "${BAREMETAL_ISO_URL:-}" 0 1 || return 1
-                    prompt_with_default PXE_SERVER_URL "PXE server URL (optional)" "${PXE_SERVER_URL:-}" 0 0 || return 1
-                    ;;
-                *)
-                    print_warning "No platform credential prompts implemented for '${platform}'."
-                    ;;
-            esac
-        }
-
     print_minirhis_header
     echo "Platform Selection"
     echo "  ${label}"
@@ -3987,7 +4129,7 @@ show_menu() {
     print_minirhis_header
     echo "Deployment Scope : ${DEPLOYMENT_SCOPE:-local}"
     echo "Workspace        : ${SCRIPT_DIR}"
-    echo "Container Roles  : ${SCRIPT_DIR}/container/roles"
+    echo "Container Roles  : ${SCRIPT_DIR}/local/roles"
     echo ""
     echo "Core Workflow"
     echo "  1) Full Stack Build + Configure"
@@ -4192,7 +4334,7 @@ show_standalone_components_submenu() {
 
     print_minirhis_header
     echo "Component-Only Workflows"
-    echo "  Local role content: ${SCRIPT_DIR}/container/roles"
+    echo "  Local role content: ${SCRIPT_DIR}/local/roles"
     echo ""
     echo "  1) AAP 2.6 Only"
     echo "     - role: minirhis-builder-aap"
@@ -5413,7 +5555,7 @@ else:
 }
 
 sync_local_roles_to_container() {
-    local local_roles_dir="${SCRIPT_DIR}/container/roles"
+    local local_roles_dir="${SCRIPT_DIR}/local/roles"
     local tree sync_failed=0
     local rel_file
     local extra_role_dir
@@ -5442,11 +5584,11 @@ sync_local_roles_to_container() {
     # 'local' mode and should not perform any container-side syncs unless the
     # caller passed --container or set MINIRHIS_EXECUTION_MODE=container.
     if [ "${MINIRHIS_EXECUTION_MODE:-local}" != "container" ]; then
-        print_step "Skipping syncing local container/roles/* (MINIRHIS_EXECUTION_MODE=${MINIRHIS_EXECUTION_MODE:-local})"
+        print_step "Skipping syncing local local/roles/* (MINIRHIS_EXECUTION_MODE=${MINIRHIS_EXECUTION_MODE:-local})"
         return 0
     fi
 
-    print_step "Syncing local container/roles/* to provisioner container /minirhis/"
+    print_step "Syncing local local/roles/* to provisioner container /minirhis/"
     for tree in "${local_roles_dir}"/minirhis-builder-*/; do
         tree="$(basename "${tree}")"
         podman exec "${MINIRHIS_CONTAINER_NAME}" mkdir -p "/minirhis/${tree}" >/dev/null 2>&1 || true
@@ -5474,7 +5616,7 @@ sync_local_roles_to_container() {
         fi
     done
 
-    # Keep top-level container/roles assets in sync for local/adhoc runs inside
+    # Keep top-level local/roles assets in sync for local/adhoc runs inside
     # minirhis-provisioner (ansible.cfg and requirements files).
     for rel_file in "${top_level_assets[@]}"; do
         if [ -f "${local_roles_dir}/${rel_file}" ]; then
@@ -5540,7 +5682,7 @@ ensure_container_running() {
     }
 
     generate_local_roles_ansible_cfg || {
-        print_warning "Could not generate local roles ansible config at ${SCRIPT_DIR}/container/roles/ansible.cfg"
+        print_warning "Could not generate local roles ansible config at ${SCRIPT_DIR}/local/roles/ansible.cfg"
         return 1
     }
 
@@ -5643,11 +5785,12 @@ install_container() {
 # ---------------------------------------------------------------------------
 repair_web_uis() {
     local _root_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
-    local _cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
+    local _cfg="${SCRIPT_DIR}/local/roles/ansible.cfg"
     local _vault_arg=""
     local _inv="${MINIRHIS_INVENTORY_FILE}"
     local _repair_failures=0
     local _idm_ok=0 _sat_ok=0 _aap_ok=0
+    local _aap_https_port="${AAP_GATEWAY_HTTPS_PORT:-443}"
 
     [ -f "${_cfg}" ] || _cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
 
@@ -5689,6 +5832,29 @@ repair_web_uis() {
         fi
     }
 
+        # ── Helper: run ad-hoc shell as admin user (with sudo) on an inventory target ──
+        _rwu_admin_shell() {
+            local _target="$1" _cmd="$2" _extra="${3:---one-line}"
+            local _apass="${ADMIN_PASS:-${AAP_ADMIN_PASS:-}}"
+            ANSIBLE_CONFIG="${_cfg}" \
+                ansible "${_target}" --inventory "${_inv}" ${_vault_arg} \
+                -e "ansible_user=${ADMIN_USER:-admin}" \
+                -e "ansible_password=${_apass}" \
+                -e "ansible_become=true" \
+                -e "ansible_become_method=sudo" \
+                -e "ansible_become_password=${_apass}" \
+                -m shell -a "${_cmd}" ${_extra} 2>&1
+        }
+
+        # ── Helper: SSH shell direct via root key (bypasses Ansible inventory) ──
+        _rwu_root_key_shell() {
+            local _host="$1" _cmd="$2"
+            local _key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/id_ed25519}"
+            ssh -i "${_key}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+                -o ConnectTimeout=10 -o BatchMode=yes \
+                "root@${_host}" "${_cmd}" 2>&1
+        }
+
     print_step "===== Repair Web UIs: probing endpoints from installer host ====="
 
     # ── IdM ─────────────────────────────────────────────────────────────────
@@ -5708,7 +5874,7 @@ repair_web_uis() {
             # Enforce FreeIPA 8-character minimum
             while [ "${#_ipapass}" -lt 8 ]; do _ipapass="${_ipapass}9"; done
             ANSIBLE_CONFIG="${_cfg}" \
-            ANSIBLE_ROLES_PATH="${SCRIPT_DIR}/roles:${SCRIPT_DIR}/container/roles" \
+            ANSIBLE_ROLES_PATH="${SCRIPT_DIR}/roles:${SCRIPT_DIR}/local/roles" \
             ANSIBLE_LOG_PATH="${ANSIBLE_ENV_DIR}/${AAP_ANSIBLE_LOG_BASENAME:-rhis-repair.log}" \
                 ansible-playbook \
                     --inventory "${_inv}" \
@@ -5760,46 +5926,179 @@ repair_web_uis() {
     fi
 
     # ── AAP ─────────────────────────────────────────────────────────────────
-    if _rwu_probe "AAP" "https://${AAP_IP}/"; then
+    if _rwu_probe "AAP" "https://${AAP_IP}:${_aap_https_port}/"; then
         _aap_ok=1
     else
-        print_step "Repair AAP: checking Podman container status..."
+        print_step "Repair AAP: bootstrapping node prerequisites (podman, admin keys, bundle)..."
+        local _aap_nat_ip _aap_key
+        _aap_nat_ip="$(virsh domifaddr aap 2>/dev/null | awk '/ipv4/{gsub("/.*","",$4); print $4}' | head -1)"
+        _aap_key="${HOME}/.ssh/id_ed25519"
+        [ -r "${HOME}/.ssh/id_rsa" ] && _aap_key="${HOME}/.ssh/id_rsa"
+        [ -r "${HOME}/.ssh/id_ed25519" ] && _aap_key="${HOME}/.ssh/id_ed25519"
+
+        if [ -n "${_aap_nat_ip}" ]; then
+            local _bs_cmd
+            _bs_cmd='rpm -q podman >/dev/null 2>&1 || dnf install -y podman 2>&1 | tail -3; '
+            _bs_cmd="${_bs_cmd}"'echo "admin:'"${ADMIN_PASS}"'" | chpasswd; '
+            _bs_cmd="${_bs_cmd}"'grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config || { sed -i '"'"'s/^#\?PasswordAuthentication.*/PasswordAuthentication yes/'"'"' /etc/ssh/sshd_config && systemctl restart sshd; }; '
+            _bs_cmd="${_bs_cmd}"'mkdir -p /home/admin/.ssh && chmod 700 /home/admin/.ssh && chown admin:admin /home/admin/.ssh; '
+            _bs_cmd="${_bs_cmd}"'[ -f /home/admin/.ssh/id_rsa ] || su - admin -c "ssh-keygen -t rsa -N \"\" -f /home/admin/.ssh/id_rsa" 2>&1; '
+            _bs_cmd="${_bs_cmd}"'su - admin -c "cat /home/admin/.ssh/id_rsa.pub >> /home/admin/.ssh/authorized_keys && sort -u /home/admin/.ssh/authorized_keys > /tmp/_ak && mv /tmp/_ak /home/admin/.ssh/authorized_keys && chmod 600 /home/admin/.ssh/authorized_keys" 2>&1; '
+            _bs_cmd="${_bs_cmd}"'su - admin -c "ssh-keyscan -H localhost >> /home/admin/.ssh/known_hosts 2>/dev/null; sort -u /home/admin/.ssh/known_hosts > /tmp/_kh && mv /tmp/_kh /home/admin/.ssh/known_hosts" 2>&1; '
+            _bs_cmd="${_bs_cmd}"'loginctl enable-linger admin 2>/dev/null || true; '
+            _bs_cmd="${_bs_cmd}"'printf "%s\n" "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-minirhis-nopasswd && chmod 0440 /etc/sudoers.d/90-minirhis-nopasswd; '
+            _bs_cmd="${_bs_cmd}"'dnf clean all >/dev/null 2>&1 || true; '
+            _bs_cmd="${_bs_cmd}"'{ _blink=/home/admin/bundle; _found=""; for _d in /home/admin/aap-setup /home/admin/ansible-automation-platform-containerized-setup-bundle-*/; do [ -d "${_d}/bundle" ] && { _found="${_d}/bundle"; break; }; done; [ -n "${_found}" ] && { ln -sfn "${_found}" "${_blink}"; chown -h admin:admin "${_blink}"; } || true; }; '
+            _bs_cmd="${_bs_cmd}"'echo AAP_BOOTSTRAP_DONE'
+                # Fix known inventory issues: bundle_dir nested-quote bug, missing [database], collocated execution_nodes, placeholder lightspeed host
+                _bs_cmd="${_bs_cmd}"'; INV=/home/admin/aap-setup/inventory; [ -f "${INV}" ] && python3 -c "
+    import re, sys
+    with open(\"${INV}\") as f: c = f.read()
+    c = re.sub(r\"bundle_dir=.*\", \"bundle_dir=/home/admin/bundle\", c)
+    if \"[database]\" not in c: c = c.replace(\"[all:vars]\", \"[database]\naap.prod.spg\n\n[all:vars]\")
+    c = re.sub(r\"(\[execution_nodes\]\s*\n)(aap\.prod\.spg[^\n]*)\", r\"\1# \2  # collocated with controller - disabled\", c)
+    c = c.replace(\"[ansiblelightspeed]\naap.example.com\", \"# [ansiblelightspeed]\n# aap.example.com\")
+    c = re.sub(r\"lightspeed_pg_host=[^\\n]+\", \"lightspeed_pg_host=${AAP_HOSTNAME:-aap.prod.spg}\", c)
+    with open(\"${INV}\", \"w\") as f: f.write(c)
+    print(\"INV_FIXED\")
+    " 2>&1 || true'
+            _rwu_root_key_shell "${_aap_nat_ip}" "${_bs_cmd}" | grep -q 'AAP_BOOTSTRAP_DONE' && \
+                print_success "Repair AAP: node bootstrap complete." || \
+                print_warning "Repair AAP: bootstrap via ${_aap_nat_ip} may have had issues."
+        else
+            print_warning "Repair AAP: virsh NAT IP not found; using inventory-based bootstrap fallback."
+            _rwu_shell "aap" "${_bs_cmd}" "--one-line" 2>&1 | grep -q 'AAP_BOOTSTRAP_DONE' && \
+                print_success "Repair AAP: node bootstrap complete via inventory." || \
+                print_warning "Repair AAP: inventory bootstrap may have had issues."
+        fi
+
+        # Check container state (admin user; fall back to root via _rwu_shell)
         local _aap_ctr_state
-        _aap_ctr_state="$(_rwu_shell "aap" \
-            "podman ps --format '{{.Names}}' 2>/dev/null | grep -q automation-gateway && echo AAP_CTR_UP || echo AAP_CTR_DOWN" \
+        _aap_ctr_state="$(_rwu_admin_shell "aap" \
+            'su - admin -c "podman ps 2>/dev/null | grep -q gateway && echo AAP_CTR_UP || echo AAP_CTR_DOWN"' \
+            "--one-line" 2>/dev/null || \
+          _rwu_shell "aap" \
+            'id admin >/dev/null 2>&1 && su - admin -c "podman ps 2>/dev/null | grep -q gateway && echo AAP_CTR_UP || echo AAP_CTR_DOWN" || echo AAP_CTR_DOWN' \
             "--one-line" 2>/dev/null || echo "AAP_CTR_DOWN")"
 
         if printf '%s\n' "${_aap_ctr_state}" | grep -q 'AAP_CTR_DOWN'; then
-            # Containers absent — trigger the containerised installer
-            print_step "Repair AAP: containers not running — starting AAP containerised installer (this can take 30-60 min)..."
-            local _aap_setup="/home/admin/aap-setup"
-            local _aap_cols="${_aap_setup}/collections"
-            local _aap_pb="${_aap_cols}/ansible_collections/ansible/containerized_installer/playbooks/install.yml"
-            # Prefer DEMO-inventory; fall back to plain inventory
-            _rwu_shell "aap" \
-                "_inv_file=${_aap_setup}/DEMO-inventory; test -f \${_inv_file} || _inv_file=${_aap_setup}/inventory; cd ${_aap_setup} && env ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i \${_inv_file} ${_aap_pb} > /tmp/aap-repair-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -20 /tmp/aap-repair-install.log; echo AAP_INSTALL_FAIL; }" \
-                "--timeout 5400" 2>&1 | tail -20 || \
-                print_warning "Repair AAP: installer did not complete cleanly; check /tmp/aap-repair-install.log on ${AAP_IP}."
+            # Containers absent — run the containerised installer
+            print_step "Repair AAP: containers not running — starting AAP installer (30-60 min)..."
+            # Reset stale database schema (drop+recreate gateway db) if postgresql container is running
+            # This prevents migration conflicts from partial prior installs
+            local _db_reset_cmd
+            _db_reset_cmd='su - admin -c "podman exec postgresql psql -U postgres -tc \"SELECT 1 FROM pg_database WHERE datname='"'"'gateway'"'"'\" 2>/dev/null | grep -q 1" && su - admin -c "podman stop automation-gateway automation-gateway-proxy 2>/dev/null; podman exec postgresql psql -U postgres -c \"DROP DATABASE IF EXISTS gateway;\" && podman exec postgresql psql -U postgres -c \"CREATE DATABASE gateway OWNER gateway;\"" && echo DB_RESET_OK || echo DB_RESET_SKIP'
+            if [ -n "${_aap_nat_ip}" ]; then
+                _rwu_root_key_shell "${_aap_nat_ip}" "${_db_reset_cmd}" 2>&1 | grep -qE 'DB_RESET_OK|DB_RESET_SKIP' && \
+                    print_step "Repair AAP: gateway database reset for clean migration." || true
+            else
+                _rwu_shell "aap" "${_db_reset_cmd}" "--one-line" 2>&1 | grep -qE 'DB_RESET_OK|DB_RESET_SKIP' && \
+                    print_step "Repair AAP: gateway database reset for clean migration." || true
+            fi
+            local _aap_setup _aap_cols _aap_pb _aap_inv _install_cmd
+            _aap_setup="/home/admin/aap-setup"
+            _aap_cols="${_aap_setup}/collections"
+            _aap_pb="${_aap_cols}/ansible_collections/ansible/containerized_installer/playbooks/install.yml"
+            _aap_inv="${_aap_setup}/inventory"
+            # Ensure PostgreSQL contrib extensions are present for Automation Hub (hstore),
+            # then run the installer with explicit bundle_dir and validate_certs args.
+            _install_cmd='if command -v podman >/dev/null 2>&1 && podman ps -a --format "{{.Names}}" | grep -qx postgresql; then podman start postgresql >/dev/null 2>&1 || true; podman exec postgresql sh -lc "dnf install -y postgresql-contrib >/dev/null 2>&1 || true" || true; podman exec postgresql psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_available_extensions WHERE name='"'"'hstore'"'"'" | grep -q 1 && echo AAP_PG_HSTORE_OK || echo AAP_PG_HSTORE_WARN; fi; touch /tmp/aap-install.log && chown admin:admin /tmp/aap-install.log; su - admin -c "cd ${_aap_setup} && ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i ${_aap_inv} ${_aap_pb} -e bundle_dir=/home/admin/bundle -e validate_certs=false > /tmp/aap-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -30 /tmp/aap-install.log >&2; echo AAP_INSTALL_FAIL; }"'
+            if [ -n "${_aap_nat_ip}" ]; then
+                _rwu_root_key_shell "${_aap_nat_ip}" "${_install_cmd}" 2>&1 | tail -30 || \
+                    print_warning "Repair AAP: installer run via ${_aap_nat_ip} may have had issues."
+            else
+                _rwu_admin_shell "aap" \
+                    "if command -v podman >/dev/null 2>&1 && podman ps -a --format \"{{.Names}}\" | grep -qx postgresql; then podman start postgresql >/dev/null 2>&1 || true; podman exec postgresql sh -lc 'dnf install -y postgresql-contrib >/dev/null 2>&1 || true' || true; podman exec postgresql psql -U postgres -d postgres -tAc \"SELECT 1 FROM pg_available_extensions WHERE name='hstore'\" | grep -q 1 && echo AAP_PG_HSTORE_OK || echo AAP_PG_HSTORE_WARN; fi; cd ${_aap_setup} && ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i ${_aap_inv} ${_aap_pb} -e bundle_dir=/home/admin/bundle -e validate_certs=false > /tmp/aap-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -20 /tmp/aap-install.log; echo AAP_INSTALL_FAIL; }" \
+                    "--timeout 5400" 2>&1 | tail -30 || \
+                    print_warning "Repair AAP: installer did not complete cleanly; check /tmp/aap-install.log on ${AAP_IP}."
+            fi
+            # Fix TLS key/cert permissions so nginx (UID 999 inside container) can read them.
+            # The AAP installer creates certs as 0400 admin:admin; the automation-gateway container
+            # runs nginx as UID 999 (no user namespace) which cannot read owner-only files.
+            # Also ensure directory traversal is open so the bind-mounted files are reachable.
+            local _tls_fix_cmd
+            _tls_fix_cmd='chmod o+rx /home/admin /home/admin/aap /home/admin/aap/gateway /home/admin/aap/gateway/etc 2>/dev/null || true; chmod 0444 /home/admin/aap/gateway/etc/gateway.key /home/admin/aap/gateway/etc/gateway.cert /home/admin/aap/gateway/etc/redis.key /home/admin/aap/gateway/etc/redis.cert 2>/dev/null || true; echo TLS_FIX_DONE'
+            if [ -n "${_aap_nat_ip}" ]; then
+                _rwu_root_key_shell "${_aap_nat_ip}" "${_tls_fix_cmd}" 2>&1 | grep -q 'TLS_FIX_DONE' && \
+                    print_step "Repair AAP: gateway TLS permissions fixed." || true
+            else
+                _rwu_shell "aap" "${_tls_fix_cmd}" "--one-line" 2>&1 | grep -q 'TLS_FIX_DONE' && \
+                    print_step "Repair AAP: gateway TLS permissions fixed." || true
+            fi
+            # Start (or restart) automation-gateway via systemd user service
+            local _gw_start_cmd
+            _gw_start_cmd='su - admin -c "XDG_RUNTIME_DIR=/run/user/$(id -u admin) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u admin)/bus systemctl --user restart automation-gateway.service 2>&1"; sleep 20; ss -tlnp | grep -q :'"${_aap_https_port}"' && echo GW_UP || echo GW_DOWN'
+            if [ -n "${_aap_nat_ip}" ]; then
+                _rwu_root_key_shell "${_aap_nat_ip}" "${_gw_start_cmd}" 2>&1 | grep -q 'GW_UP' && \
+                    print_success "Repair AAP: automation-gateway started on port ${_aap_https_port}." || \
+                    print_warning "Repair AAP: port ${_aap_https_port} not listening after gateway start attempt."
+            else
+                _rwu_shell "aap" "${_gw_start_cmd}" "--one-line" 2>&1 | grep -q 'GW_UP' && \
+                    print_success "Repair AAP: automation-gateway started on port ${_aap_https_port}." || \
+                    print_warning "Repair AAP: port ${_aap_https_port} not listening after gateway start attempt."
+            fi
         else
-            # Containers present but gateway not responding — restart it
-            print_step "Repair AAP: containers present — restarting automation-gateway..."
-            _rwu_shell "aap" \
-                'podman restart automation-gateway >/dev/null 2>&1 || true; sleep 8' \
-                "--one-line" >/dev/null 2>&1 || true
+            # Containers present but gateway not responding — fix TLS perms and restart via systemd
+            print_step "Repair AAP: containers present — fixing TLS perms and restarting automation-gateway..."
+            local _ctr_fix_cmd
+            _ctr_fix_cmd='chmod o+rx /home/admin /home/admin/aap /home/admin/aap/gateway /home/admin/aap/gateway/etc 2>/dev/null || true; chmod 0444 /home/admin/aap/gateway/etc/gateway.key /home/admin/aap/gateway/etc/gateway.cert /home/admin/aap/gateway/etc/redis.key /home/admin/aap/gateway/etc/redis.cert 2>/dev/null || true; su - admin -c "XDG_RUNTIME_DIR=/run/user/$(id -u admin) DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u admin)/bus systemctl --user restart automation-gateway.service 2>&1"; sleep 20; ss -tlnp | grep -q :'"${_aap_https_port}"' && echo GW_UP || echo GW_DOWN'
+            if [ -n "${_aap_nat_ip}" ]; then
+                _rwu_root_key_shell "${_aap_nat_ip}" "${_ctr_fix_cmd}" 2>&1 | grep -q 'GW_UP' && \
+                    print_success "Repair AAP: automation-gateway restarted on port ${_aap_https_port}." || \
+                    print_warning "Repair AAP: port ${_aap_https_port} not listening after restart."
+            else
+                _rwu_shell "aap" "${_ctr_fix_cmd}" "--one-line" 2>&1 | grep -q 'GW_UP' && \
+                    print_success "Repair AAP: automation-gateway restarted on port ${_aap_https_port}." || \
+                    print_warning "Repair AAP: port ${_aap_https_port} not listening after restart."
+            fi
         fi
 
-        if _rwu_probe "AAP (post-repair)" "https://${AAP_IP}/"; then
+        if _rwu_probe "AAP (post-repair)" "https://${AAP_IP}:${_aap_https_port}/"; then
             _aap_ok=1
         else
             _repair_failures=$((_repair_failures + 1))
         fi
     fi
-
+    # ── Retry probe loop (services may take time to start after repair) ──────
+    # After repair actions are applied, services (especially AAP gateway) can take
+    # several minutes to fully start.  Poll up to MINIRHIS_WEB_UI_PROBE_RETRIES
+    # times (default 3) with MINIRHIS_WEB_UI_PROBE_INTERVAL seconds (default 60)
+    # between attempts before declaring a hard failure.
+    local _max_probe_retries="${MINIRHIS_WEB_UI_PROBE_RETRIES:-3}"
+    local _probe_interval="${MINIRHIS_WEB_UI_PROBE_INTERVAL:-60}"
+    local _probe_attempt=1
+    while [ "${_repair_failures}" -gt 0 ] && [ "${_probe_attempt}" -lt "${_max_probe_retries}" ]; do
+        _probe_attempt=$((_probe_attempt + 1))
+        print_step "Web UI(s) still down — re-probe ${_probe_attempt}/${_max_probe_retries} in ${_probe_interval}s (services may still be starting)..."
+        sleep_with_spinner "${_probe_interval}" "Waiting for web UI(s) to come up"
+        _repair_failures=0
+        if [ "${_idm_ok}" -eq 0 ]; then
+            if _rwu_probe "IdM (retry ${_probe_attempt})" "https://${IDM_IP}/ipa/ui/"; then
+                _idm_ok=1
+            else
+                _repair_failures=$((_repair_failures + 1))
+            fi
+        fi
+        if [ "${_sat_ok}" -eq 0 ]; then
+            if _rwu_probe "Satellite (retry ${_probe_attempt})" "https://${SAT_IP}/users/login"; then
+                _sat_ok=1
+            else
+                _repair_failures=$((_repair_failures + 1))
+            fi
+        fi
+        if [ "${_aap_ok}" -eq 0 ]; then
+            if _rwu_probe "AAP (retry ${_probe_attempt})" "https://${AAP_IP}:${_aap_https_port}/"; then
+                _aap_ok=1
+            else
+                _repair_failures=$((_repair_failures + 1))
+            fi
+        fi
+    done
     # ── Summary ─────────────────────────────────────────────────────────────
     echo ""
     printf "  %-12s  https://%s/ipa/ui/      %s\n"     "IdM"       "${IDM_IP}" "$([ "${_idm_ok}" -eq 1 ] && echo '✔ UP' || echo '✘ DOWN')"
     printf "  %-12s  https://%s/users/login  %s\n"  "Satellite"  "${SAT_IP}" "$([ "${_sat_ok}" -eq 1 ] && echo '✔ UP' || echo '✘ DOWN')"
-    printf "  %-12s  https://%s/             %s\n"        "AAP"  "${AAP_IP}" "$([ "${_aap_ok}" -eq 1 ] && echo '✔ UP' || echo '✘ DOWN')"
+    printf "  %-12s  https://%s:%s/        %s\n"        "AAP"  "${AAP_IP}" "${_aap_https_port}" "$([ "${_aap_ok}" -eq 1 ] && echo '✔ UP' || echo '✘ DOWN')"
     echo ""
 
     if [ "${_repair_failures}" -eq 0 ]; then
@@ -5807,7 +6106,9 @@ repair_web_uis() {
         return 0
     fi
 
-    print_warning "Repair Web UIs: ${_repair_failures} endpoint(s) still unreachable after remediation."
+    print_error "FATAL: ${_repair_failures} Web UI(s) still unreachable after all repair and retry attempts."
+    print_error "IdM, Satellite, and AAP Web UIs must ALL be accessible for the installation to be complete."
+    print_error "Review the component logs above, fix the underlying issue, then re-run menu option 8."
     return 1
 }
 
@@ -5828,14 +6129,22 @@ run_container_prescribed_sequence() {
     print_step "Prescribed order: IdM -> Satellite -> AAP"
     run_minirhis_config_as_code || {
         print_warning "Automatic prescribed sequence did not complete cleanly."
-        print_warning "Attempting Web UI repair pass before giving up..."
-        repair_web_uis || true
+        print_step "Attempting Web UI repair pass — all three Web UIs must be accessible before declaring failure..."
+        if repair_web_uis; then
+            print_success "All Web UIs came up after repair — installation is successful despite earlier errors."
+            return 0
+        fi
+        print_error "FATAL: One or more Web UIs failed to come up after config-as-code failure and repair attempts."
         return 1
     }
 
     print_success "Automatic prescribed sequence completed."
     print_step "Running hands-free Web UI readiness check and repair pass..."
-    repair_web_uis || print_warning "Some Web UIs may still be starting up; run menu option 8 to re-check."
+    if ! repair_web_uis; then
+        print_error "FATAL: One or more Web UIs are still unreachable after all repair attempts."
+        print_error "Installation cannot be declared complete. All three Web UIs must be accessible."
+        return 1
+    fi
 }
 
 run_container_config_only() {
@@ -5847,7 +6156,7 @@ run_container_config_only() {
         print_step "This will generate kickstarts/OEMDRV, create MINIRHIS VMs, and continue configuration automatically"
         create_minirhis_vms || return 1
         print_step "Running hands-free Web UI readiness check and repair pass..."
-        repair_web_uis || print_warning "Some Web UIs may still be starting up; run menu option 8 to re-check."
+        repair_web_uis || { print_error "FATAL: One or more Web UIs are still unreachable after all repair attempts."; return 1; }
         return 0
     fi
 
@@ -5856,7 +6165,7 @@ run_container_config_only() {
         print_step "This will generate kickstarts/OEMDRV, create MINIRHIS VMs, and continue configuration automatically"
         create_minirhis_vms || return 1
         print_step "Running hands-free Web UI readiness check and repair pass..."
-        repair_web_uis || print_warning "Some Web UIs may still be starting up; run menu option 8 to re-check."
+        repair_web_uis || { print_error "FATAL: One or more Web UIs are still unreachable after all repair attempts."; return 1; }
         return 0
     fi
 
@@ -5933,78 +6242,6 @@ detect_host_os_family() {
     print_step "Detected host OS profile: ${MINIRHIS_DETECTED_OS}"
     return 0
 }
-
-prompt_local_vm_client() {
-    local choice=""
-    print_minirhis_header
-    echo "Local Virtualization Client"
-    echo ""
-    echo "  0) Back"
-    case "${MINIRHIS_DETECTED_OS:-linux}" in
-        linux-rhel-family|linux)
-            echo "  1) Libvirt (KVM) [recommended/default]"
-            echo "  2) Vagrant + libvirt"
-            echo "  3) Other"
-            read -r -p "Choose local VM client [0-3, default 1]: " choice
-            case "${choice:-1}" in
-                0) return 10 ;;
-                2) MINIRHIS_VM_CLIENT="vagrant-libvirt" ;;
-                3) MINIRHIS_VM_CLIENT="other" ;;
-                *) MINIRHIS_VM_CLIENT="libvirt" ;;
-            esac
-            ;;
-        macos)
-            echo "  1) VMware Fusion [recommended/default]"
-            echo "  2) Parallels"
-            echo "  3) UTM/QEMU"
-            read -r -p "Choose local VM client [0-3, default 1]: " choice
-            case "${choice:-1}" in
-                0) return 10 ;;
-                2) MINIRHIS_VM_CLIENT="parallels" ;;
-                3) MINIRHIS_VM_CLIENT="utm-qemu" ;;
-                *) MINIRHIS_VM_CLIENT="vmware-fusion" ;;
-            esac
-            ;;
-        windows)
-            echo "  1) Hyper-V [recommended/default]"
-            echo "  2) VirtualBox"
-            echo "  3) VMware Workstation"
-            read -r -p "Choose local VM client [0-3, default 1]: " choice
-            case "${choice:-1}" in
-                0) return 10 ;;
-                2) MINIRHIS_VM_CLIENT="virtualbox" ;;
-                3) MINIRHIS_VM_CLIENT="vmware-workstation" ;;
-                *) MINIRHIS_VM_CLIENT="hyperv" ;;
-            esac
-            ;;
-        *)
-            MINIRHIS_VM_CLIENT="libvirt"
-            ;;
-    esac
-
-    print_step "Selected local VM client: ${MINIRHIS_VM_CLIENT}"
-    return 0
-}
-
-prepare_selected_local_vm_client() {
-    case "${MINIRHIS_VM_CLIENT:-libvirt}" in
-        libvirt|vagrant-libvirt)
-            print_step "Preparing local libvirt/KVM prerequisites"
-            ensure_platform_packages_for_virt_manager || return 1
-            ensure_libvirtd || return 1
-            configure_libvirt_networks || return 1
-            ;;
-        vmware-fusion|parallels|utm-qemu|hyperv|virtualbox|vmware-workstation|other)
-            print_warning "Selected VM client '${MINIRHIS_VM_CLIENT}' requires platform-specific setup outside this script."
-            print_warning "Continuing with MINIRHIS kickstart + provisioning workflow where possible."
-            ;;
-        *)
-            print_warning "Unknown local VM client '${MINIRHIS_VM_CLIENT}', continuing without automated client setup."
-            ;;
-    esac
-    return 0
-}
-
 prompt_remote_virtualization_platform() {
     local choice=""
     print_minirhis_header
@@ -6163,7 +6400,9 @@ run_component_config_scope() {
     local sat_pre_use_idm="${SATELLITE_PRE_USE_IDM:-false}"
     local -a targets=()
 
-    install_container || return 1
+    if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ]; then
+        install_container || return 1
+    fi
 
     case "${scope}" in
         idm)
@@ -6280,9 +6519,9 @@ satellite_url: "https://${SAT_IP:-10.168.128.1}"
 
 sync_plans:
     - name: "weekly_minirhis_sync"
-        interval: "weekly"
-        enabled: true
-        sync_date: "${sync_date}"
+      interval: "weekly"
+      enabled: true
+      sync_date: "${sync_date}"
 
 EOF
 
@@ -6290,13 +6529,13 @@ EOF
                                 cat >> "${profile_path}" <<'EOF'
 product_plans:
     - name: "Red Hat Enterprise Linux for x86_64"
-        plan: "weekly_minirhis_sync"
+      plan: "weekly_minirhis_sync"
     - name: "Red Hat Satellite Client"
-        plan: "weekly_minirhis_sync"
+      plan: "weekly_minirhis_sync"
     - name: "Red Hat Ansible Automation Platform"
-        plan: "weekly_minirhis_sync"
+      plan: "weekly_minirhis_sync"
     - name: "Red Hat Enterprise Linux Server"
-        plan: "weekly_minirhis_sync"
+      plan: "weekly_minirhis_sync"
 
 EOF
                 else
@@ -6310,29 +6549,29 @@ EOF
                                 cat >> "${profile_path}" <<'EOF'
 repository_sets:
     - name: "Red Hat Enterprise Linux 9 for x86_64 - BaseOS (RPMs)"
-        product: "Red Hat Enterprise Linux for x86_64"
-        repository_list:
-            - releasever: "9"
-                basearch: "x86_64"
+      product: "Red Hat Enterprise Linux for x86_64"
+      repository_list:
+        - releasever: "9"
+          basearch: "x86_64"
     - name: "Red Hat Enterprise Linux 9 for x86_64 - AppStream (RPMs)"
-        product: "Red Hat Enterprise Linux for x86_64"
-        repository_list:
-            - releasever: "9"
-                basearch: "x86_64"
+      product: "Red Hat Enterprise Linux for x86_64"
+      repository_list:
+        - releasever: "9"
+          basearch: "x86_64"
     - name: "Red Hat Satellite Client 6 for RHEL 9 x86_64 (RPMs)"
-        product: "Red Hat Enterprise Linux for x86_64"
-        repository_list:
-            - basearch: "x86_64"
+      product: "Red Hat Enterprise Linux for x86_64"
+      repository_list:
+        - basearch: "x86_64"
     - name: "Red Hat Enterprise Linux 10 for x86_64 - BaseOS (RPMs)"
-        product: "Red Hat Enterprise Linux for x86_64"
-        repository_list:
-            - releasever: "10"
-                basearch: "x86_64"
+      product: "Red Hat Enterprise Linux for x86_64"
+      repository_list:
+        - releasever: "10"
+          basearch: "x86_64"
     - name: "Red Hat Enterprise Linux 10 for x86_64 - AppStream (RPMs)"
-        product: "Red Hat Enterprise Linux for x86_64"
-        repository_list:
-            - releasever: "10"
-                basearch: "x86_64"
+      product: "Red Hat Enterprise Linux for x86_64"
+      repository_list:
+        - releasever: "10"
+          basearch: "x86_64"
 
 EOF
                 else
@@ -6345,97 +6584,97 @@ EOF
                 cat >> "${profile_path}" <<'EOF'
 lifecycle_environments:
     - name: "DEV_RHEL_9_X86_64"
-        label: "dev_rhel_9_x86_64"
-        description: "Development lifecycle for RHEL 9"
-        organization: "{{ satellite_organization }}"
-        prior: "Library"
+      label: "dev_rhel_9_x86_64"
+      description: "Development lifecycle for RHEL 9"
+      organization: "{{ satellite_organization }}"
+      prior: "Library"
     - name: "TEST_RHEL_9_X86_64"
-        label: "test_rhel_9_x86_64"
-        description: "Test lifecycle for RHEL 9"
-        organization: "{{ satellite_organization }}"
-        prior: "DEV_RHEL_9_X86_64"
+      label: "test_rhel_9_x86_64"
+      description: "Test lifecycle for RHEL 9"
+      organization: "{{ satellite_organization }}"
+      prior: "DEV_RHEL_9_X86_64"
     - name: "PROD_RHEL_9_X86_64"
-        label: "prod_rhel_9_x86_64"
-        description: "Production lifecycle for RHEL 9"
-        organization: "{{ satellite_organization }}"
-        prior: "TEST_RHEL_9_X86_64"
+      label: "prod_rhel_9_x86_64"
+      description: "Production lifecycle for RHEL 9"
+      organization: "{{ satellite_organization }}"
+      prior: "TEST_RHEL_9_X86_64"
     - name: "DEV_RHEL_10_X86_64"
-        label: "dev_rhel_10_x86_64"
-        description: "Development lifecycle for RHEL 10"
-        organization: "{{ satellite_organization }}"
-        prior: "Library"
+      label: "dev_rhel_10_x86_64"
+      description: "Development lifecycle for RHEL 10"
+      organization: "{{ satellite_organization }}"
+      prior: "Library"
     - name: "TEST_RHEL_10_X86_64"
-        label: "test_rhel_10_x86_64"
-        description: "Test lifecycle for RHEL 10"
-        organization: "{{ satellite_organization }}"
-        prior: "DEV_RHEL_10_X86_64"
+      label: "test_rhel_10_x86_64"
+      description: "Test lifecycle for RHEL 10"
+      organization: "{{ satellite_organization }}"
+      prior: "DEV_RHEL_10_X86_64"
     - name: "PROD_RHEL_10_X86_64"
-        label: "prod_rhel_10_x86_64"
-        description: "Production lifecycle for RHEL 10"
-        organization: "{{ satellite_organization }}"
-        prior: "TEST_RHEL_10_X86_64"
+      label: "prod_rhel_10_x86_64"
+      description: "Production lifecycle for RHEL 10"
+      organization: "{{ satellite_organization }}"
+      prior: "TEST_RHEL_10_X86_64"
 
 content_views:
     - name: "RHEL_9_X86_64"
-        desc: "RHEL 9 content view"
-        repositories:
-            - name: "rhel-9-for-x86_64-baseos-rpms"
-            - name: "rhel-9-for-x86_64-appstream-rpms"
-            - name: "satellite-client-6-for-rhel-9-x86_64-rpms"
+      desc: "RHEL 9 content view"
+      repositories:
+        - name: "rhel-9-for-x86_64-baseos-rpms"
+        - name: "rhel-9-for-x86_64-appstream-rpms"
+        - name: "satellite-client-6-for-rhel-9-x86_64-rpms"
     - name: "RHEL_10_X86_64"
-        desc: "RHEL 10 content view"
-        repositories:
-            - name: "rhel-10-for-x86_64-baseos-rpms"
-            - name: "rhel-10-for-x86_64-appstream-rpms"
+      desc: "RHEL 10 content view"
+      repositories:
+        - name: "rhel-10-for-x86_64-baseos-rpms"
+        - name: "rhel-10-for-x86_64-appstream-rpms"
 
 activation_keys:
     - name: "DEV_RHEL_9_X86_64"
-        organization: "{{ satellite_organization }}"
-        lifecycle_environment: "DEV_RHEL_9_X86_64"
-        content_view: "RHEL_9_X86_64"
-        unlimited_hosts: true
+      organization: "{{ satellite_organization }}"
+      lifecycle_environment: "DEV_RHEL_9_X86_64"
+      content_view: "RHEL_9_X86_64"
+      unlimited_hosts: true
     - name: "TEST_RHEL_9_X86_64"
-        organization: "{{ satellite_organization }}"
-        lifecycle_environment: "TEST_RHEL_9_X86_64"
-        content_view: "RHEL_9_X86_64"
-        unlimited_hosts: true
+      organization: "{{ satellite_organization }}"
+      lifecycle_environment: "TEST_RHEL_9_X86_64"
+      content_view: "RHEL_9_X86_64"
+      unlimited_hosts: true
     - name: "PROD_RHEL_9_X86_64"
-        organization: "{{ satellite_organization }}"
-        lifecycle_environment: "PROD_RHEL_9_X86_64"
-        content_view: "RHEL_9_X86_64"
-        unlimited_hosts: true
+      organization: "{{ satellite_organization }}"
+      lifecycle_environment: "PROD_RHEL_9_X86_64"
+      content_view: "RHEL_9_X86_64"
+      unlimited_hosts: true
     - name: "DEV_RHEL_10_X86_64"
-        organization: "{{ satellite_organization }}"
-        lifecycle_environment: "DEV_RHEL_10_X86_64"
-        content_view: "RHEL_10_X86_64"
-        unlimited_hosts: true
+      organization: "{{ satellite_organization }}"
+      lifecycle_environment: "DEV_RHEL_10_X86_64"
+      content_view: "RHEL_10_X86_64"
+      unlimited_hosts: true
     - name: "TEST_RHEL_10_X86_64"
-        organization: "{{ satellite_organization }}"
-        lifecycle_environment: "TEST_RHEL_10_X86_64"
-        content_view: "RHEL_10_X86_64"
-        unlimited_hosts: true
+      organization: "{{ satellite_organization }}"
+      lifecycle_environment: "TEST_RHEL_10_X86_64"
+      content_view: "RHEL_10_X86_64"
+      unlimited_hosts: true
     - name: "PROD_RHEL_10_X86_64"
-        organization: "{{ satellite_organization }}"
-        lifecycle_environment: "PROD_RHEL_10_X86_64"
-        content_view: "RHEL_10_X86_64"
-        unlimited_hosts: true
+      organization: "{{ satellite_organization }}"
+      lifecycle_environment: "PROD_RHEL_10_X86_64"
+      content_view: "RHEL_10_X86_64"
+      unlimited_hosts: true
 
 # Additional automation hints consumed by Satellite builder role and helper scripts
 installation_media:
     - name: "RHEL 10"
-        url: "https://satellite.prod.spg/media"
+      url: "https://satellite.prod.spg/media"
     - name: "RHEL 9"
-        url: "https://satellite.prod.spg/media"
+      url: "https://satellite.prod.spg/media"
 
 operating_systems_additional:
     - major: 10
-        name: "RHEL 10"
+      name: "RHEL 10"
     - major: 9
-        name: "RHEL 9"
+      name: "RHEL 9"
 
 flatpak_remotes:
     - name: "flathub"
-        url: "https://dl.flathub.org/repo/flathub.flatpakrepo"
+      url: "https://dl.flathub.org/repo/flathub.flatpakrepo"
 
 manifest_import:
     source_dir: "~/Downloads"
@@ -6876,9 +7115,9 @@ preflight_config_as_code_targets() {
             if [ "$detail" -eq 1 ] && [ -n "$warn_msg" ]; then
                 # Warn lines go on a new line so they are preserved in logs
                 printf '\r\033[K'
-                echo -e "${YELLOW}[WARNING]${NC} ${warn_msg}"
+                echo -e "${RED}[WARNING]${NC} ${warn_msg}"
             fi
-            printf '\r\033[K'"${BLUE}[SSH-WAIT]${NC} [%s] %3d%%  %ds/%ds (~%ds remaining)" \
+            printf '\r\033[K'"[SSH-WAIT] [%s] %3d%%  %ds/%ds (~%ds remaining)" \
                 "${bar}" "${pct}" "${elapsed}" "${timeout}" "${remaining}"
         }
 
@@ -7268,10 +7507,10 @@ RH_PASS="${RH_PASSWORD:-}"
 
 # Local admin user and password for every managed VM
 ADMIN_USER="admin"
-ADMIN_PASS="${ADMIN_PASSWORD:-}"
+ADMIN_PASS="${AAP_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-${AAP_ADMIN_PASS:-}}}"
 
 # Root password for kickstart-provisioned VMs
-ROOT_PASS="${ROOT_PASSWORD:-}"
+ROOT_PASS="${ROOT_PASSWORD:-${ADMIN_PASS}}"
 
 # =============================================================================
 # IdM CONFIGURATION  (required for menu choices 3, 4, 5, 7)
@@ -7290,7 +7529,7 @@ SAT_HOSTNAME="satellite.example.com"
 SAT_ALIAS="satellite"
 SAT_ORG="Default_Organization"      # Satellite organization name
 SAT_LOC="Default_Location"          # Satellite location name
-SAT_ADMIN_PASS="${ADMIN_PASSWORD:-}"
+SAT_ADMIN_PASS="${AAP_ADMIN_PASSWORD:-${ADMIN_PASS}}"
 
 # =============================================================================
 # AAP (Ansible Automation Platform) CONFIGURATION  (required for 3, 4, 5, 7)
@@ -7298,7 +7537,7 @@ SAT_ADMIN_PASS="${ADMIN_PASSWORD:-}"
 AAP_IP="10.168.128.2"
 AAP_HOSTNAME="aap.example.com"
 AAP_ALIAS="aap"
-AAP_ADMIN_PASS="${ADMIN_PASSWORD:-}"
+AAP_ADMIN_PASS="${AAP_ADMIN_PASSWORD:-${ADMIN_PASS}}"
 
 # Red Hat Automation Hub offline token
 HUB_TOKEN="${AAP_HUB_TOKEN:-}"
@@ -7466,7 +7705,7 @@ generate_minirhis_inventory() {
     fi
     normalize_shared_env_vars
 
-    mkdir -p "${MINIRHIS_INVENTORY_DIR}" "${SCRIPT_DIR}/container/roles/inventory" || return 1
+    mkdir -p "${MINIRHIS_INVENTORY_DIR}" "${SCRIPT_DIR}/local/roles/inventory" || return 1
 
     local controller_host
     local inventory_basename
@@ -7494,7 +7733,7 @@ generate_minirhis_inventory() {
     template_file="${MINIRHIS_INVENTORY_FILE}.SAMPLE"
     [ -f "${template_file}" ] || template_file="${MINIRHIS_INVENTORY_FILE}"
     [ -f "${template_file}" ] || template_file="${MINIRHIS_INVENTORY_DIR}/hosts.SAMPLE"
-    [ -f "${template_file}" ] || template_file="${SCRIPT_DIR}/container/vars/external_inventory/hosts.yml"
+    [ -f "${template_file}" ] || template_file="${SCRIPT_DIR}/local/vars/external_inventory/hosts.yml"
     [ -f "${template_file}" ] || template_file="${SCRIPT_DIR}/inventory/hosts.SAMPLE"
     tmp_hosts="$(mktemp "${ANSIBLE_ENV_DIR}/.hosts.XXXXXX")" || return 1
     controller_host_e="$(sed_escape_replacement "${controller_host}")"
@@ -7594,7 +7833,7 @@ INVENTORY_EOF
     }
 
     sync_inventory_target "${MINIRHIS_INVENTORY_FILE}" || { rm -f "${tmp_hosts}"; return 1; }
-    sync_inventory_target "${SCRIPT_DIR}/container/roles/inventory/${inventory_basename}" || { rm -f "${tmp_hosts}"; return 1; }
+    sync_inventory_target "${SCRIPT_DIR}/local/roles/inventory/${inventory_basename}" || { rm -f "${tmp_hosts}"; return 1; }
     rm -f "${tmp_hosts}"
 }
 
@@ -7608,8 +7847,8 @@ generate_minirhis_host_vars() {
     fi
     normalize_shared_env_vars
 
-    local ext_inv_hv_dir="${SCRIPT_DIR}/container/vars/external_inventory/host_vars"
-    mkdir -p "${MINIRHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/container/roles/host_vars" "${ext_inv_hv_dir}" || return 1
+    local ext_inv_hv_dir="${SCRIPT_DIR}/local/vars/external_inventory/host_vars"
+    mkdir -p "${MINIRHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/local/roles/host_vars" "${ext_inv_hv_dir}" || return 1
     local sat_pre_use_idm_value="${SATELLITE_PRE_USE_IDM:-false}"
     local sat_use_non_idm_certs_value="${SAT_USE_NON_IDM_CERTS:-}"
     case "${sat_pre_use_idm_value}" in
@@ -7629,7 +7868,7 @@ generate_minirhis_host_vars() {
     esac
     local sat_internal_url="https://{{ sat_ip | default('10.168.128.1') }}"
     local primary_dir="${MINIRHIS_HOST_VARS_DIR}"
-    local container_dir="${SCRIPT_DIR}/container/roles/host_vars"
+    local container_dir="${SCRIPT_DIR}/local/roles/host_vars"
 
     write_hostvars_pair() {
         local file_name="$1"
@@ -7671,17 +7910,17 @@ EOF
     cat > "${primary_dir}/satellite.yml" <<EOF
 # satellite.yml — generated by run_minirhis_install_sequence.sh
 ansible_user: "{{ admin_user | default('${ADMIN_USER:-admin}') }}"
-ansible_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
+ansible_password: "{{ sat_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
 ansible_become: true
-ansible_become_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
+ansible_become_password: "{{ sat_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
 ansible_connection: ssh
 ansible_ssh_private_key_file: "{{ minirhis_installer_ssh_private_key_file | default('~/.ssh/id_rsa') }}"
 satellite_username: "{{ sat_admin_user | default(admin_user | default('${ADMIN_USER:-admin}')) }}"
-satellite_password: "{{ sat_admin_pass | default(global_admin_password) | default('') }}"
+satellite_password: "{{ sat_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
 satellite_organization: "{{ sat_org | default('${SAT_ORG:-REDHAT}') }}"
 satellite_location: "{{ sat_loc | default('${SAT_LOC:-CORE}') }}"
 satellite_url: "${sat_internal_url}"
-sat_firewalld_interface: "{{ sat_firewalld_interface | default('eth1') }}"
+sat_firewalld_interface: "{{ sat_firewalld_interface | default('eth0') }}"
 satellite_pre_use_idm: "{{ satellite_pre_use_idm | default(${sat_pre_use_idm_value}) | bool }}"
 use_non_idm_certs: "{{ use_non_idm_certs | default(${sat_use_non_idm_certs_value}) | bool }}"
 sat_ssl_certs_dir: "{{ sat_ssl_certs_dir | default('${SAT_SSL_CERTS_DIR:-/root/.sat_ssl/}') }}"
@@ -7695,7 +7934,7 @@ EOF
 # aap.yml — generated by run_minirhis_install_sequence.sh
 ansible_user: "{{ admin_user | default('${ADMIN_USER:-admin}') }}"
 ansible_become: true
-ansible_become_pass: "{{ global_admin_password | default('') }}"
+ansible_become_pass: "{{ aap_admin_pass | default(global_admin_password) | default('') }}"
 ansible_ssh_private_key_file: "{{ minirhis_installer_ssh_private_key_file | default('~/.ssh/id_rsa') }}"
 aap_admin_user: "{{ ansible_user }}"
 aap_admin_password: "{{ aap_admin_pass | default(global_admin_password) | default('') }}"
@@ -7717,9 +7956,9 @@ EOF
     cat > "${primary_dir}/idm.yml" <<EOF
 # idm.yml — generated by run_minirhis_install_sequence.sh
 ansible_user: "{{ admin_user | default('${ADMIN_USER:-admin}') }}"
-ansible_password: "{{ idm_admin_pass | default(global_admin_password) | default('') }}"
+ansible_password: "{{ idm_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
 ansible_become: true
-ansible_become_password: "{{ idm_admin_pass | default(global_admin_password) | default('') }}"
+ansible_become_password: "{{ idm_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
 idm_realm: "{{ idm_realm | default('${IDM_REALM:-$(echo "${DOMAIN:-}" | tr '[:lower:]' '[:upper:]')}') }}"
 idm_domain: "{{ idm_domain | default('${IDM_DOMAIN:-${DOMAIN:-}}') }}"
 idm_user_groups:
@@ -7764,7 +8003,7 @@ idm_users:
       displayname: "MINIRHIS Operator User"
       email:
           - "minirhis-operator@{{ idm_domain | default(domain | default('localdomain')) }}"
-      password: "{{ global_admin_password | default(idm_admin_pass | default('')) }}"
+      password: "{{ aap_admin_pass | default(global_admin_password | default(idm_admin_pass | default(''))) }}"
       state: present
 idm_password_policies:
     - group_name: global_policy
@@ -7779,16 +8018,16 @@ EOF
 
     chmod 0644 "${primary_dir}"/*.yml 2>/dev/null || true
     chmod 0644 "${container_dir}"/*.yml 2>/dev/null || true
-    print_success "Generated host_vars in ${primary_dir}/ and synced container/roles/host_vars/"
+    print_success "Generated host_vars in ${primary_dir}/ and synced local/roles/host_vars/"
 }
 
 # Keep Satellite UI + provided services pinned to the internal network.
 # - Registration/CDN/Insights can still use eth0 from inside the guest.
 # - Service endpoints managed by this automation should remain on eth1/SAT_IP.
 enforce_satellite_internal_service_network() {
-    if [ "${SAT_FIREWALLD_INTERFACE:-eth1}" != "eth1" ]; then
-        print_warning "SAT_FIREWALLD_INTERFACE was '${SAT_FIREWALLD_INTERFACE}'; forcing to 'eth1' for internal Satellite services."
-        SAT_FIREWALLD_INTERFACE="eth1"
+    if [ "${SAT_FIREWALLD_INTERFACE:-eth0}" != "eth0" ]; then
+        print_warning "SAT_FIREWALLD_INTERFACE was '${SAT_FIREWALLD_INTERFACE}'; forcing to 'eth0' for external firewall ingress control."
+        SAT_FIREWALLD_INTERFACE="eth0"
     fi
 
     if [[ "${MINIRHIS_ENFORCE_SAT_INTERNAL_NETWORK:-1}" == "1" ]]; then
@@ -7799,17 +8038,17 @@ enforce_satellite_internal_service_network() {
     fi
 
     SATELLITE_URL_INTERNAL="https://${SAT_IP:-10.168.128.1}"
-    print_step "Satellite service network policy: UI/services => ${SATELLITE_URL_INTERNAL} (interface: ${SAT_FIREWALLD_INTERFACE})."
+    print_step "Satellite network policy: UI/services => ${SATELLITE_URL_INTERNAL} on eth1; firewall ingress interface => ${SAT_FIREWALLD_INTERFACE}."
     return 0
 }
 
 # ─── Local Ansible role runner ────────────────────────────────────────────────
-# Invoke a role from container/roles/ directly on the installer host (no container).
+# Invoke a role from local/roles/ directly on the installer host (no container).
 # Returns 0 on success, 1 if ansible-playbook is unavailable or the playbook is
 # missing (callers should then fall back to their native bash implementation).
 #
 # Usage: run_local_role <role_name> [target_limit] [extra ansible-playbook args...]
-#   role_name    — must match a sub-dir under container/roles/ that has run.yml
+#   role_name    — must match a sub-dir under local/roles/ that has run.yml
 #   target_limit — inventory limit (default: installer); use colon-separated groups
 #                  e.g. "scenario_satellite:aap:idm"
 #   extra args   — passed verbatim to ansible-playbook (e.g. --extra-vars "...")
@@ -7824,9 +8063,9 @@ run_local_role() {
     shift 2 || true
     local extra_args=("$@")
 
-    local playbook="${SCRIPT_DIR}/container/roles/${role}/run.yml"
-    local ansible_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
-    local inventory="${MINIRHIS_INVENTORY_FILE:-${SCRIPT_DIR}/container/roles/inventory/hosts.yml}"
+    local playbook="${SCRIPT_DIR}/local/roles/${role}/run.yml"
+    local ansible_cfg="${SCRIPT_DIR}/local/roles/ansible.cfg"
+    local inventory="${MINIRHIS_INVENTORY_FILE:-${SCRIPT_DIR}/local/roles/inventory/hosts.yml}"
 
     if [ ! -f "${playbook}" ]; then
         print_warning "run_local_role: playbook not found: ${playbook} — falling back to bash"
@@ -8387,7 +8626,7 @@ true"
 
         if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "local" ]; then
             local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
-            local local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
+            local local_cfg="${SCRIPT_DIR}/local/roles/ansible.cfg"
             local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
             local local_vault_arg=""
             [ -f "${local_cfg}" ] || local_cfg="${MINIRHIS_ANSIBLE_CFG_HOST}"
@@ -8447,6 +8686,7 @@ true"
     # ---- Container hotfix / compatibility helpers ---------------------------
     ensure_satellite_chrony_template() {
         local _tpl_path="/minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2"
+        local _local_tpl_path="${SCRIPT_DIR}/local/roles/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2"
         local _mk_cmd='mkdir -p /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates && cat > /minirhis/minirhis-builder-satellite/roles/satellite_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
 # MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
 driftfile /var/lib/chrony/drift
@@ -8456,11 +8696,31 @@ logdir /var/log/chrony
 pool 2.rhel.pool.ntp.org iburst
 EOF'
 
+        # In local mode the container is not running; check local repo path first.
+        if [ -f "${_local_tpl_path}" ]; then
+            return 0
+        fi
+
         if podman exec "${MINIRHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
             return 0
         fi
 
         print_warning "chrony.j2 is missing in minirhis-builder-satellite; applying fallback template workaround."
+
+        # Try creating in local path first (local mode)
+        if mkdir -p "$(dirname "${_local_tpl_path}")" 2>/dev/null && \
+           cat > "${_local_tpl_path}" <<'CHRONY_TPL'
+# MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+pool 2.rhel.pool.ntp.org iburst
+CHRONY_TPL
+        then
+            print_success "Fallback chrony.j2 created locally in minirhis-builder-satellite templates."
+            return 0
+        fi
 
         if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
            podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
@@ -8474,6 +8734,7 @@ EOF'
 
     ensure_idm_chrony_template() {
         local _tpl_path="/minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2"
+        local _local_tpl_path="${SCRIPT_DIR}/local/roles/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2"
         local _mk_cmd='mkdir -p /minirhis/minirhis-builder-idm/roles/idm_pre/templates && cat > /minirhis/minirhis-builder-idm/roles/idm_pre/templates/chrony.j2 <<'"'"'EOF'"'"'
 # MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
 driftfile /var/lib/chrony/drift
@@ -8483,11 +8744,31 @@ logdir /var/log/chrony
 pool 2.rhel.pool.ntp.org iburst
 EOF'
 
+        # In local mode the container is not running; check local repo path first.
+        if [ -f "${_local_tpl_path}" ]; then
+            return 0
+        fi
+
         if podman exec "${MINIRHIS_CONTAINER_NAME}" test -f "${_tpl_path}" 2>/dev/null; then
             return 0
         fi
 
         print_warning "chrony.j2 is missing in minirhis-builder-idm; applying fallback template workaround."
+
+        # Try creating in local path first (local mode)
+        if mkdir -p "$(dirname "${_local_tpl_path}")" 2>/dev/null && \
+           cat > "${_local_tpl_path}" <<'CHRONY_TPL'
+# MINIRHIS fallback chrony template (auto-generated when upstream template is missing)
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony
+pool 2.rhel.pool.ntp.org iburst
+CHRONY_TPL
+        then
+            print_success "Fallback chrony.j2 created locally in minirhis-builder-idm templates."
+            return 0
+        fi
 
         if podman exec "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1 || \
            podman exec --user 0 "${MINIRHIS_CONTAINER_NAME}" bash -lc "${_mk_cmd}" >/dev/null 2>&1; then
@@ -8659,8 +8940,8 @@ print(f"UPDATED={updated}")'
         local repo_root
         repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         if command -v ansible-playbook >/dev/null 2>&1; then
-            ANSIBLE_ROLES_PATH="${repo_root}/container/roles" \
-                ansible-playbook -i localhost, "${repo_root}/container/roles/minirhis_installer/run.yml" --connection=local || true
+            ANSIBLE_ROLES_PATH="${repo_root}/local/roles" \
+                ansible-playbook -i localhost, "${repo_root}/local/roles/minirhis_installer/run.yml" --connection=local || true
         else
             print_warning "ansible-playbook not found; skipping repo hotfixes"
         fi
@@ -8876,8 +9157,21 @@ else:
 
     resolve_local_component_playbook() {
         local component_dir="$1"
-        local direct_path="${SCRIPT_DIR}/container/roles/${component_dir}/main.yml"
-        local nested_path="${SCRIPT_DIR}/container/roles/${component_dir}/${component_dir}/main.yml"
+        local direct_path="${SCRIPT_DIR}/local/roles/${component_dir}/main.yml"
+        local nested_path="${SCRIPT_DIR}/local/roles/${component_dir}/${component_dir}/main.yml"
+        local fallback_path=""
+
+        case "${component_dir}" in
+            minirhis-builder-idm)
+                fallback_path="${SCRIPT_DIR}/playbooks/idm-install.yml"
+                ;;
+            minirhis-builder-satellite)
+                fallback_path="${SCRIPT_DIR}/playbooks/satellite-install.yml"
+                ;;
+            minirhis-builder-aap)
+                fallback_path="${SCRIPT_DIR}/playbooks/aap-install.yml"
+                ;;
+        esac
 
         if [ -f "${direct_path}" ]; then
             echo "${direct_path}"
@@ -8885,6 +9179,12 @@ else:
         fi
         if [ -f "${nested_path}" ]; then
             echo "${nested_path}"
+            return 0
+        fi
+
+        if [ -n "${fallback_path}" ] && [ -f "${fallback_path}" ]; then
+            print_warning "Component playbook missing for ${component_dir}; falling back to ${fallback_path}." >&2
+            echo "${fallback_path}"
             return 0
         fi
 
@@ -8922,27 +9222,37 @@ else:
                 print_manual_rerun_template "idm"
                 print_manual_rerun_template "satellite"
                 print_manual_rerun_template "aap"
-                print_warning "Execution mode note: local ${USER} repo is the default recommendation for now (uses ${SCRIPT_DIR}/container/roles and ${MINIRHIS_INVENTORY_FILE})."
+                print_warning "Execution mode note: local ${USER} repo is the default recommendation for now (uses ${SCRIPT_DIR}/local/roles and ${MINIRHIS_INVENTORY_FILE})."
                 print_warning "minirhis_provisioner mode is still available if needed."
                 return 0
                 ;;
         esac
 
+        # If a local ansible_ssh_common_args value is present, provide a
+        # JSON-encoded --extra-vars form so users can copy/paste safely
+        # (passing bare -e ansible_ssh_common_args=... can break CLI parsing).
+        local ssh_json_extra=""
+        if [ -n "${ansible_ssh_common_args:-}" ]; then
+            local ssh_escaped
+            ssh_escaped=$(printf '%s' "${ansible_ssh_common_args}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+            ssh_json_extra="--extra-vars '{\"ansible_ssh_common_args\":\"${ssh_escaped}\"}'"
+        fi
+
         if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ]; then
             print_warning "${component^^} rerun (container):"
-            print_warning "  podman exec -it ${manual_podman_env} ${MINIRHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
+            print_warning "  podman exec -it ${manual_podman_env} ${MINIRHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${ssh_json_extra} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
             print_warning "${component^^} rerun (local, optional):"
-            print_warning "  ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${MINIRHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
+            print_warning "  ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${MINIRHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${ssh_json_extra} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
         else
             print_warning "${component^^} rerun (local):"
-            print_warning "  ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${MINIRHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
+            print_warning "  ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_HOST} ansible-playbook --inventory ${MINIRHIS_INVENTORY_FILE} ${local_manual_vault_arg} ${local_manual_evars} ${ssh_json_extra} ${rerun_extras} --limit ${target_limit} ${local_playbook}"
             print_warning "${component^^} rerun (container, optional):"
-            print_warning "  podman exec -it ${manual_podman_env} ${MINIRHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
+            print_warning "  podman exec -it ${manual_podman_env} ${MINIRHIS_CONTAINER_NAME} ansible-playbook ${inv} ${manual_vault_arg} ${manual_evars} ${ssh_json_extra} ${rerun_extras} --limit ${target_limit} ${container_playbook}"
         fi
     }
 
     sync_container_assets_to_local_roles() {
-        local workdir="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
+        local workdir="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/local/roles}"
         local inv_dir="${workdir}/inventory"
         local vault_dir="${workdir}/vault"
         local hv_dir="${workdir}/host_vars"
@@ -8993,7 +9303,7 @@ EOF
     }
 
     run_local_satellite_playbook_fallback() {
-        local workdir="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/container/roles}"
+        local workdir="${MINIRHIS_LOCAL_ROLE_WORKDIR:-$SCRIPT_DIR/local/roles}"
         local local_playbook="${workdir}/minirhis-builder-satellite/main.yml"
         local local_inv="${workdir}/inventory/$(basename "${MINIRHIS_INVENTORY_FILE}")"
         local local_vault_env="${workdir}/vault/env.yml"
@@ -9060,7 +9370,7 @@ EOF
         local -a phase_args=()
         local local_playbook=""
         local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
-        local local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
+        local local_cfg="${SCRIPT_DIR}/local/roles/ansible.cfg"
         local local_vault_arg=""
         local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
 
@@ -9357,9 +9667,9 @@ EOF
             sshpass -p "${root_auth_pass}" ssh ${ssh_opts} "root@${sat_target_ip}" "${reboot_cmd}" >/dev/null 2>&1 || true
         fi
 
-        # Wait for reboot (60 seconds)
+        # Wait for reboot (60 seconds) with spinner/progress
         print_step "  Waiting for Satellite to reboot (60 seconds)..."
-        sleep 60
+        sleep_with_spinner 60 "  Satellite rebooting"
 
         # Phase 2: Wait for SSH to be ready and validate satellite service
         print_step "  Phase 2/3: Waiting for SSH and validating satellite-installer scenario"
@@ -9372,7 +9682,7 @@ EOF
         local sat_validation_dns="${SAT_PROVISIONING_DNS_PRIMARY:-${sat_target_ip}}"
         local sat_validation_reverse="${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}"
         while [ $retry_count -lt $max_retries ]; do
-            if timeout 5 ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" "foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" --foreman-initial-location \"${SAT_LOC:-CORE}\" --foreman-initial-admin-username \"${ADMIN_USER:-admin}\" --foreman-initial-admin-password ${admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface eth1 --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse \"${sat_validation_reverse}\" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface eth1 --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-network \"${sat_validation_network}\" --foreman-proxy-dhcp-netmask \"${sat_validation_netmask}\" --foreman-proxy-dhcp-gateway \"${sat_validation_gateway}\" --foreman-proxy-dhcp-range \"${sat_validation_range}\" --foreman-proxy-dhcp-nameservers \"${sat_validation_dns}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --register-with-insights" >/dev/null 2>&1; then
+            if timeout 5 ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" "foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" --foreman-initial-location \"${SAT_LOC:-CORE}\" --foreman-initial-admin-username \"${ADMIN_USER:-admin}\" --foreman-initial-admin-password ${admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface eth1 --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse \"${sat_validation_reverse}\" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface eth1 --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-network \"${sat_validation_network}\" --foreman-proxy-dhcp-netmask \"${sat_validation_netmask}\" --foreman-proxy-dhcp-gateway \"${sat_validation_gateway}\" --foreman-proxy-dhcp-range \"${sat_validation_range}\" --foreman-proxy-dhcp-nameservers \"${sat_validation_dns}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible ${REGISTER_WITH_INSIGHTS_FLAG}" >/dev/null 2>&1; then
                     # Ensure we end the progress-line before printing success
                     printf '\n'
                     print_success "  Satellite installed and running (iteration $((retry_count+1))/${max_retries})"
@@ -9380,8 +9690,8 @@ EOF
             fi
             retry_count=$((retry_count+1))
             if [ $retry_count -lt $max_retries ]; then
-                    print_progress_bar "$retry_count" "${max_retries}" "  Satellite not yet ready, retrying..."
-                    sleep 10
+                        print_progress_bar "$retry_count" "${max_retries}" "  Satellite not yet ready, retrying..."
+                        sleep_with_spinner 10 "  Satellite validation retry"
             fi
         done
 
@@ -9458,15 +9768,54 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         printf -v sat_dhcp_range_q '%q' "${sat_dhcp_range}"
         printf -v sat_target_ip_q '%q' "${SAT_IP:-10.168.128.1}"
 
-        if [ "${SAT_FIREWALLD_INTERFACE:-eth1}" != "eth1" ]; then
-            print_warning "SAT_FIREWALLD_INTERFACE=${SAT_FIREWALLD_INTERFACE} overridden for Satellite service interfaces; enforcing eth1 for DNS/DHCP/TFTP/PXE."
+        if [ "${SAT_FIREWALLD_INTERFACE:-eth0}" != "eth0" ]; then
+            print_warning "SAT_FIREWALLD_INTERFACE=${SAT_FIREWALLD_INTERFACE} overridden; enforcing eth0 for external firewall ingress control."
+            SAT_FIREWALLD_INTERFACE="eth0"
         fi
 
 
-        installer_cmd="export TERM=\"\${TERM:-dumb}\"; foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization ${sat_org_q} --foreman-initial-location ${sat_loc_q} --foreman-initial-admin-username ${sat_admin_user_q} --foreman-initial-admin-password ${sat_admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface ${sat_service_iface} --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse ${sat_dns_reverse_q} --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface ${sat_service_iface} --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-gateway ${sat_dhcp_gw_q} --foreman-proxy-dhcp-nameservers ${sat_dhcp_nameservers_q} --foreman-proxy-dhcp-range ${sat_dhcp_range_q} --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername ${sat_target_ip_q} --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --register-with-insights"
+        installer_cmd="export TERM=\"\${TERM:-dumb}\"; foreman-maintain packages unlock >/dev/null 2>&1 || true; satellite-installer --scenario satellite --foreman-initial-organization ${sat_org_q} --foreman-initial-location ${sat_loc_q} --foreman-initial-admin-username ${sat_admin_user_q} --foreman-initial-admin-password ${sat_admin_pass_q} --foreman-proxy-dns true --foreman-proxy-dns-interface ${sat_service_iface} --foreman-proxy-dns-managed true --foreman-proxy-dns-reverse ${sat_dns_reverse_q} --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface ${sat_service_iface} --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-gateway ${sat_dhcp_gw_q} --foreman-proxy-dhcp-nameservers ${sat_dhcp_nameservers_q} --foreman-proxy-dhcp-range ${sat_dhcp_range_q} --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername ${sat_target_ip_q} --enable-foreman-compute-libvirt --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible ${REGISTER_WITH_INSIGHTS_FLAG}"
         libvirt_prereq_cmd="dnf -y install --nogpgcheck libvirt-client >/dev/null 2>&1 || satellite-maintain packages install libvirt-client >/dev/null 2>&1 || true; su foreman -s /bin/bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -b 4096 -N \"\" -f ~/.ssh/id_rsa'; su foreman -s /bin/bash -c 'virsh -c ${sat_libvirt_url} list' || { echo \"WARN: foreman->libvirt connectivity test failed for ${sat_libvirt_url}\"; echo \"Foreman public key (copy to libvirt host authorized_keys):\"; su foreman -s /bin/bash -c 'cat ~/.ssh/id_rsa.pub' || true; true; }"
 
         print_step "Satellite post-CaC pass: running satellite-installer --scenario satellite with MINIRHIS options"
+
+        # In local mode the provisioner container is not running; use direct SSH instead.
+        if [ "${use_local_exec:-0}" -eq 1 ]; then
+            local _sat_ip="${SAT_IP:-10.168.128.1}"
+            local _ssh_key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}"
+            local _ssh_opts="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -o ConnectTimeout=30 -o BatchMode=yes"
+            [ -r "${_ssh_key}" ] || _ssh_key="${HOME}/.ssh/id_rsa"
+            if ssh -i "${_ssh_key}" ${_ssh_opts} "root@${_sat_ip}" "${installer_cmd}" && installer_ok=1 || \
+               { [ -n "${root_auth_pass}" ] && command -v sshpass >/dev/null 2>&1 && \
+                 sshpass -p "${root_auth_pass}" ssh ${_ssh_opts} "root@${_sat_ip}" "${installer_cmd}" && installer_ok=1; }; then
+                :
+            fi
+            if [ "${installer_ok}" -ne 1 ]; then
+                print_warning "Satellite installer scenario pass failed (local SSH mode)."
+                return 1
+            fi
+            print_success "Satellite post-CaC installer pass complete (local SSH mode)."
+            # Import subscription manifest
+            local _manifest_file=""
+            if [ -n "${SAT_MANIFEST_PATH:-}" ] && [ -f "${SAT_MANIFEST_PATH}" ]; then
+                _manifest_file="${SAT_MANIFEST_PATH}"
+            else
+                _manifest_file="$(ls -t /var/lib/libvirt/images/files/manifest*.zip 2>/dev/null | head -1 || true)"
+            fi
+            if [ -n "${_manifest_file}" ]; then
+                print_step "Satellite post-CaC: importing subscription manifest ${_manifest_file}"
+                if bash "${MINIRHIS_SCRIPT_DIR:-$(dirname "$0")}/tools/import_manifest.sh" --file "${_manifest_file}" 2>&1 | while IFS= read -r _ml; do print_step "  manifest: ${_ml}"; done; then
+                    print_success "Satellite manifest imported successfully."
+                else
+                    print_warning "Satellite manifest import failed; subscriptions must be imported manually."
+                fi
+            else
+                print_warning "No manifest ZIP found; skipping manifest import. Set SAT_MANIFEST_PATH or place a manifest*.zip in /var/lib/libvirt/images/files/."
+            fi
+            # Run libvirt prereqs via direct SSH too
+            ssh -i "${_ssh_key}" ${_ssh_opts} "root@${_sat_ip}" "${libvirt_prereq_cmd}" >/dev/null 2>&1 || true
+            return 0
+        fi
 
         if [ "$use_interactive_vault_prompt" = "1" ]; then
             podman exec -it -e "ANSIBLE_CONFIG=${MINIRHIS_ANSIBLE_CFG_CONTAINER}" -e "ANSIBLE_LOG_PATH=${ansible_log_file}" "${podman_user_args[@]}" "${MINIRHIS_CONTAINER_NAME}" \
@@ -9506,6 +9855,24 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         if [ "${installer_ok}" -ne 1 ]; then
             print_warning "Satellite installer scenario pass failed."
             return 1
+        fi
+
+        # Import subscription manifest (container path)
+        local _manifest_file_c=""
+        if [ -n "${SAT_MANIFEST_PATH:-}" ] && [ -f "${SAT_MANIFEST_PATH}" ]; then
+            _manifest_file_c="${SAT_MANIFEST_PATH}"
+        else
+            _manifest_file_c="$(ls -t /var/lib/libvirt/images/files/manifest*.zip 2>/dev/null | head -1 || true)"
+        fi
+        if [ -n "${_manifest_file_c}" ]; then
+            print_step "Satellite post-CaC: importing subscription manifest ${_manifest_file_c}"
+            if bash "${MINIRHIS_SCRIPT_DIR:-$(dirname "$0")}/tools/import_manifest.sh" --file "${_manifest_file_c}" 2>&1 | while IFS= read -r _ml; do print_step "  manifest: ${_ml}"; done; then
+                print_success "Satellite manifest imported successfully."
+            else
+                print_warning "Satellite manifest import failed; subscriptions must be imported manually."
+            fi
+        else
+            print_warning "No manifest ZIP found; skipping manifest import. Set SAT_MANIFEST_PATH or place a manifest*.zip in /var/lib/libvirt/images/files/."
         fi
 
         print_step "Satellite post-CaC pass: applying libvirt/KVM prerequisites for Satellite compute integration"
@@ -9892,9 +10259,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
 
     prepare_idm_runtime_network() {
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
-        local prep_shell='set -euo pipefail; '\n+            'for dev in $(ls /sys/class/net | grep -v lo 2>/dev/null || true); do ip link set dev "$dev" up >/dev/null 2>&1 || true; done; '\n+            'if command -v nmcli >/dev/null 2>&1; then nmcli -t -f DEVICE,STATE d | awk -F: '\''$2!="connected" {print $1}'\'' | while read -r d; do nmcli dev connect "$d" >/dev/null 2>&1 || true; done; fi; '
-            'if ! getent hosts redhat.com >/dev/null 2>&1; then printf "nameserver 10.168.0.1\nnameserver 1.1.1.1\nnameserver 8.8.8.8\noptions rotate\n" > /etc/resolv.conf || true; fi; '
-            'ip route show >/dev/null 2>&1; getent hosts redhat.com >/dev/null 2>&1'
+        local prep_shell='set -euo pipefail; for dev in $(ls /sys/class/net | grep -v lo 2>/dev/null || true); do ip link set dev "$dev" up >/dev/null 2>&1 || true; done; if command -v nmcli >/dev/null 2>&1; then nmcli -t -f DEVICE,STATE d | awk -F: '\''$2!="connected" {print $1}'\'' | while read -r d; do nmcli dev connect "$d" >/dev/null 2>&1 || true; done; fi; if ! getent hosts redhat.com >/dev/null 2>&1; then printf "nameserver 10.168.0.1\nnameserver 1.1.1.1\nnameserver 8.8.8.8\noptions rotate\n" > /etc/resolv.conf || true; fi; ip route show >/dev/null 2>&1; getent hosts redhat.com >/dev/null 2>&1'
 
         if [ -z "$root_auth_pass" ]; then
             print_warning "Skipping IdM runtime network prep: ROOT_PASS/ADMIN_PASS is unset."
@@ -10158,7 +10523,8 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
 
         run_ansible_shell_in_container "${reboot_target}" "${reboot_shell}" "${root_auth_pass}" >/dev/null 2>&1 || true
 
-        sleep 15
+        # Brief wait for systems to initiate reboot; show spinner to indicate progress
+        sleep_with_spinner 15 "  Post-upgrade reboot wait"
         print_step "Post-upgrade: waiting for IdM and Satellite to return after reboot"
         preflight_config_as_code_targets "idm:${IDM_IP}" "satellite:${SAT_IP}" || return 1
         print_success "Post-upgrade reboot complete; IdM and Satellite are reachable again."
@@ -10330,10 +10696,10 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
     # Runs rhis_aap_config.yml directly; skips the full platform_post tear-down.
     if [ "${component_scope}" = "rhis-aap" ]; then
         local rhis_aap_playbook
-        rhis_aap_playbook="${SCRIPT_DIR}/container/roles/minirhis-builder-aap/minirhis-builder-aap/rhis_aap_config.yml"
+        rhis_aap_playbook="${SCRIPT_DIR}/local/roles/minirhis-builder-aap/minirhis-builder-aap/rhis_aap_config.yml"
         print_step "RHIS AAP Config: running rhis_aap_config.yml against platform_installer"
         if [ "${use_local_exec}" -eq 1 ]; then
-            local local_cfg_rhis="${SCRIPT_DIR}/container/roles/ansible.cfg"
+            local local_cfg_rhis="${SCRIPT_DIR}/local/roles/ansible.cfg"
             [ -f "${local_cfg_rhis}" ] || local_cfg_rhis="${MINIRHIS_ANSIBLE_CFG_HOST}"
             local local_evars_rhis="--extra-vars @${ANSIBLE_ENV_FILE}"
             local local_vault_rhis=""
@@ -10367,7 +10733,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 }
             else
                 print_warning "rhis_aap_config.yml not found in container; falling back to local execution."
-                local local_cfg_fb="${SCRIPT_DIR}/container/roles/ansible.cfg"
+                local local_cfg_fb="${SCRIPT_DIR}/local/roles/ansible.cfg"
                 [ -f "${local_cfg_fb}" ] || local_cfg_fb="${MINIRHIS_ANSIBLE_CFG_HOST}"
                 ANSIBLE_CONFIG="${local_cfg_fb}" \
                     ansible-playbook \
@@ -10436,7 +10802,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             local _shell="$2"
             local _extra_args="${3:-}"
             local local_inv="--inventory ${MINIRHIS_INVENTORY_FILE}"
-            local local_cfg="${SCRIPT_DIR}/container/roles/ansible.cfg"
+            local local_cfg="${SCRIPT_DIR}/local/roles/ansible.cfg"
             local local_evars="--extra-vars @${ANSIBLE_ENV_FILE} --extra-vars {\"satellite_disconnected\":${SATELLITE_DISCONNECTED:-false},\"register_to_satellite\":${REGISTER_TO_SATELLITE:-false},\"satellite_pre_use_idm\":${sat_pre_use_idm},\"use_non_idm_certs\":${sat_use_non_idm_certs},\"sat_ssl_certs_dir\":\"${sat_ssl_certs_dir}\",\"async_timeout\":${idm_async_timeout},\"async_delay\":${idm_async_delay},\"satellite_url\":\"https://${SAT_HOSTNAME}\"}"
             local local_vault_arg=""
 
@@ -10667,7 +11033,7 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
         fi
 
         if [ "${run_aap}" -eq 1 ] && [ "${aap_health_ok}" -eq 1 ]; then
-            if ! probe_ui_endpoint_from_installer "AAP UI via IP" "https://${AAP_IP}/"; then
+            if ! probe_ui_endpoint_from_installer "AAP UI via IP" "https://${AAP_IP}:${AAP_GATEWAY_HTTPS_PORT:-443}/"; then
                 local_failures=$((local_failures + 1))
             fi
         fi
@@ -10869,10 +11235,22 @@ ensure_ansible_vault() {
     return 1
 }
 
-# Ensure vault password file exists at ~/.ansible/conf/.vaultpass.txt (chmod 600).
+# Ensure vault password file exists at ~/.ansible/conf/.vaultpass.text (or legacy .vaultpass.txt) with chmod 600.
 ensure_vault_password_file() {
+    local legacy_txt_file="${ANSIBLE_ENV_DIR}/.vaultpass.txt"
+    local preferred_text_file="${ANSIBLE_ENV_DIR}/.vaultpass.text"
+
     mkdir -p "$ANSIBLE_ENV_DIR" || return 1
     chmod 700 "$ANSIBLE_ENV_DIR" 2>/dev/null || true
+
+    # Auto-adopt existing companion file if current target is missing.
+    if [ ! -s "$ANSIBLE_VAULT_PASS_FILE" ]; then
+        if [ "$ANSIBLE_VAULT_PASS_FILE" = "$preferred_text_file" ] && [ -s "$legacy_txt_file" ]; then
+            cp -f "$legacy_txt_file" "$preferred_text_file" >/dev/null 2>&1 || true
+        elif [ "$ANSIBLE_VAULT_PASS_FILE" = "$legacy_txt_file" ] && [ -s "$preferred_text_file" ]; then
+            cp -f "$preferred_text_file" "$legacy_txt_file" >/dev/null 2>&1 || true
+        fi
+    fi
 
     if [ -s "$ANSIBLE_VAULT_PASS_FILE" ]; then
         chmod 600 "$ANSIBLE_VAULT_PASS_FILE" 2>/dev/null || true
@@ -10977,10 +11355,27 @@ recreate_ansible_env_via_prompts_if_decryptable() {
 # Read one YAML key from env.yml into a bash variable; no-op if already set.
 _load_env_key() {
     local var_name="$1" yml_key="$2" val
+    should_override_with_vault_value() {
+        local _var_name="$1" _current="$2"
+        case "${_var_name}" in
+            INTERNAL_NETWORK)
+                case "${_current}" in 10.168.*) return 1 ;; *) return 0 ;; esac
+                ;;
+            INTERNAL_GW|HOST_INT_IP|CMDB_ENDPOINT_IP|SAT_IP|AAP_IP|IDM_IP|SAT_GW|AAP_GW|IDM_GW)
+                case "${_current}" in 10.168.*) return 1 ;; *) return 0 ;; esac
+                ;;
+            *)
+                return 1
+                ;;
+        esac
+    }
+
     # Skip loading if the variable already holds a real (non-placeholder) value.
     # Placeholder script defaults like "example.com"/"EXAMPLE.COM" must NOT block
     # the vault from providing the real value the user saved on a previous run.
-    [ -n "${!var_name:-}" ] && ! is_unresolved_template_value "${!var_name:-}" && return 0
+    if [ -n "${!var_name:-}" ] && ! is_unresolved_template_value "${!var_name:-}"; then
+        should_override_with_vault_value "${var_name}" "${!var_name:-}" || return 0
+    fi
     val="$(printf '%s\n' "$ANSIBLE_ENV_CONTENT" | grep -E "^${yml_key}:" 2>/dev/null \
         | sed -E "s|^${yml_key}:[[:space:]]*\"?||;s|\"?[[:space:]]*$||")"
     [ -n "$val" ] && printf -v "$var_name" '%s' "$val"
@@ -11167,6 +11562,39 @@ load_ansible_env_file() {
     _load_env_key BMC_SYSTEM_ID bmc_system_id
     _load_env_key BAREMETAL_ISO_URL baremetal_iso_url
     _load_env_key PXE_SERVER_URL pxe_server_url
+    _load_env_key SAT_COMPUTE_PLATFORM sat_compute_platform
+    _load_env_key SAT_COMPUTE_RESOURCE_NAME sat_compute_resource_name
+    _load_env_key SAT_COMPUTE_PROFILE_NAME sat_compute_profile_name
+    _load_env_key SAT_COMPUTE_URL sat_compute_url
+    _load_env_key SAT_COMPUTE_USERNAME sat_compute_username
+    _load_env_key SAT_COMPUTE_PASSWORD sat_compute_password
+    _load_env_key SAT_COMPUTE_REGION sat_compute_region
+    _load_env_key SAT_COMPUTE_PROJECT sat_compute_project
+    _load_env_key SAT_COMPUTE_ZONE sat_compute_zone
+    _load_env_key SAT_COMPUTE_TENANT sat_compute_tenant
+    _load_env_key SAT_COMPUTE_SUBSCRIPTION sat_compute_subscription
+    _load_env_key SAT_COMPUTE_DATACENTER sat_compute_datacenter
+    _load_env_key SAT_COMPUTE_CLUSTER sat_compute_cluster
+    _load_env_key SAT_COMPUTE_NAMESPACE sat_compute_namespace
+    _load_env_key SAT_COMPUTE_NETWORK sat_compute_network
+    _load_env_key SAT_COMPUTE_POOL sat_compute_pool
+    _load_env_key SAT_COMPUTE_CPUS sat_compute_cpus
+    _load_env_key SAT_COMPUTE_MEMORY_MB sat_compute_memory_mb
+    _load_env_key SAT_COMPUTE_VOLUME_GB sat_compute_volume_gb
+    _load_env_key SAT_IMAGE_NAME sat_image_name
+    _load_env_key SAT_IMAGE_UUID sat_image_uuid
+    _load_env_key SAT_IMAGE_USERNAME sat_image_username
+    _load_env_key SAT_IMAGE_PASSWORD sat_image_password
+
+    # Canonical shared password source is aap_admin_pass. Keep aliases aligned.
+    if [ -n "${AAP_ADMIN_PASS:-}" ]; then
+        ADMIN_PASS="${ADMIN_PASS:-${AAP_ADMIN_PASS}}"
+        SAT_ADMIN_PASS="${SAT_ADMIN_PASS:-${AAP_ADMIN_PASS}}"
+        SAT_INITIAL_ADMIN_PASS="${SAT_INITIAL_ADMIN_PASS:-${SAT_ADMIN_PASS}}"
+        IDM_ADMIN_PASS="${IDM_ADMIN_PASS:-${AAP_ADMIN_PASS}}"
+        IPADM_PASSWORD="${IPADM_PASSWORD:-${IDM_ADMIN_PASS}}"
+        IPAADMIN_PASSWORD="${IPAADMIN_PASSWORD:-${IDM_ADMIN_PASS}}"
+    fi
     normalize_shared_env_vars
 
     # Keep legacy HUB_TOKEN and dedicated vault_console_redhat_token aligned.
@@ -11192,7 +11620,7 @@ write_ansible_env_file() {
 # Permissions: 600 — do NOT commit this file to version control.
 ---
 admin_user: "${ADMIN_USER:-}"
-admin_pass: "${ADMIN_PASS:-}"
+admin_pass: "${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}"
 domain: "${DOMAIN:-}"
 realm: "${REALM:-}"
 internal_network: "${INTERNAL_NETWORK:-}"
@@ -11206,9 +11634,9 @@ hub_token: "${HUB_TOKEN:-}"
 vault_console_redhat_token: "${VAULT_CONSOLE_REDHAT_TOKEN:-${HUB_TOKEN:-}}"
 aap_ip: "${AAP_IP:-}"
 idm_ip: "${IDM_IP:-}"
-aap_admin_pass: "${AAP_ADMIN_PASS:-}"
-sat_admin_pass: "${SAT_ADMIN_PASS:-}"
-sat_initial_admin_pass: "${SAT_INITIAL_ADMIN_PASS:-}"
+aap_admin_pass: "${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}"
+sat_admin_pass: "${SAT_ADMIN_PASS:-${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}}"
+sat_initial_admin_pass: "${SAT_INITIAL_ADMIN_PASS:-${SAT_ADMIN_PASS:-${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}}}"
 aap_deployment_type: "${AAP_DEPLOYMENT_TYPE:-container}"
 satellite_validate_certs: ${SATELLITE_VALIDATE_CERTS:-false}
 satellite_disconnected: ${SATELLITE_DISCONNECTED:-false}
@@ -11226,7 +11654,7 @@ rhc_activation_key: "${RHC_ACTIVATION_KEY:-${CDN_SAT_ACTIVATION_KEY:-}}"
 cdn_organization_vault: "${CDN_ORGANIZATION_ID:-}"
 cdn_activation_key_vault: "${CDN_SAT_ACTIVATION_KEY:-}"
 sat_firewalld_zone: "${SAT_FIREWALLD_ZONE:-public}"
-sat_firewalld_interface: "${SAT_FIREWALLD_INTERFACE:-eth1}"
+sat_firewalld_interface: "${SAT_FIREWALLD_INTERFACE:-eth0}"
 sat_firewalld_services_json: '${SAT_FIREWALLD_SERVICES_JSON:-["ssh","http","https"]}'
 sat_provisioning_subnet: "${SAT_PROVISIONING_SUBNET:-${INTERNAL_NETWORK:-10.168.0.0}}"
 sat_provisioning_netmask: "${SAT_PROVISIONING_NETMASK:-${NETMASK:-255.255.0.0}}"
@@ -11243,7 +11671,7 @@ sat_rhel9_baseos_repo: "${SAT_RHEL9_BASEOS_REPO:-rhel-9-for-x86_64-baseos-rpms}"
 sat_rhel9_appstream_repo: "${SAT_RHEL9_APPSTREAM_REPO:-rhel-9-for-x86_64-appstream-rpms}"
 sat_rhel10_gpg_key_name: "${SAT_RHEL10_GPG_KEY_NAME:-RPM-GPG-KEY-redhat-release}"
 # Alias used by minirhis-builder host_vars templates ({{ global_admin_password }})
-global_admin_password: "${ADMIN_PASS:-}"
+global_admin_password: "${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}"
 # Installer/controller username consumed by installer host_vars
 installer_user: "${INSTALLER_USER:-${ADMIN_USER:-admin}}"
 aap_inventory_template: "${AAP_INVENTORY_TEMPLATE:-}"
@@ -11267,7 +11695,7 @@ idm_hostname: "${IDM_HOSTNAME:-}"
 idm_alias: "${IDM_ALIAS:-}"
 idm_domain: "${IDM_DOMAIN:-}"
 idm_realm: "${IDM_REALM:-}"
-idm_admin_pass: "${IDM_ADMIN_PASS:-}"
+idm_admin_pass: "${IDM_ADMIN_PASS:-${AAP_ADMIN_PASS:-${ADMIN_PASS:-}}}"
 idm_ds_pass: "${IDM_DS_PASS:-}"
 idm_admins_group: "${IDM_ADMINS_GROUP:-minirhis-admins}"
 idm_content_managers_group: "${IDM_CONTENT_MANAGERS_GROUP:-content-managers}"
@@ -11306,32 +11734,32 @@ minirhis_target_platform: "${MINIRHIS_TARGET_PLATFORM:-libvirt}"
 sat_target_platform: "${SAT_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
 aap_target_platform: "${AAP_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
 idm_target_platform: "${IDM_TARGET_PLATFORM:-${MINIRHIS_TARGET_PLATFORM:-libvirt}}"
-    # Satellite compute / image provisioning settings
-    sat_compute_platform: "${SAT_COMPUTE_PLATFORM:-libvirt}"
-    sat_compute_resource_name: "${SAT_COMPUTE_RESOURCE_NAME:-MINIRHIS_Compute}"
-    sat_compute_profile_name: "${SAT_COMPUTE_PROFILE_NAME:-MINIRHIS_Standard}"
-    sat_compute_url: "${SAT_COMPUTE_URL:-}"
-    sat_compute_username: "${SAT_COMPUTE_USERNAME:-}"
-    sat_compute_password: "${SAT_COMPUTE_PASSWORD:-}"
-    sat_compute_region: "${SAT_COMPUTE_REGION:-}"
-    sat_compute_project: "${SAT_COMPUTE_PROJECT:-}"
-    sat_compute_zone: "${SAT_COMPUTE_ZONE:-}"
-    sat_compute_tenant: "${SAT_COMPUTE_TENANT:-}"
-    sat_compute_subscription: "${SAT_COMPUTE_SUBSCRIPTION:-}"
-    sat_compute_datacenter: "${SAT_COMPUTE_DATACENTER:-}"
-    sat_compute_cluster: "${SAT_COMPUTE_CLUSTER:-}"
-    sat_compute_namespace: "${SAT_COMPUTE_NAMESPACE:-}"
-    sat_compute_network: "${SAT_COMPUTE_NETWORK:-default}"
-    sat_compute_pool: "${SAT_COMPUTE_POOL:-default}"
-    sat_compute_cpus: "${SAT_COMPUTE_CPUS:-2}"
-    sat_compute_memory_mb: "${SAT_COMPUTE_MEMORY_MB:-4096}"
-    sat_compute_volume_gb: "${SAT_COMPUTE_VOLUME_GB:-20}"
+# Satellite compute / image provisioning settings
+sat_compute_platform: "${SAT_COMPUTE_PLATFORM:-libvirt}"
+sat_compute_resource_name: "${SAT_COMPUTE_RESOURCE_NAME:-MINIRHIS_Compute}"
+sat_compute_profile_name: "${SAT_COMPUTE_PROFILE_NAME:-MINIRHIS_Standard}"
+sat_compute_url: "${SAT_COMPUTE_URL:-}"
+sat_compute_username: "${SAT_COMPUTE_USERNAME:-}"
+sat_compute_password: "${SAT_COMPUTE_PASSWORD:-}"
+sat_compute_region: "${SAT_COMPUTE_REGION:-}"
+sat_compute_project: "${SAT_COMPUTE_PROJECT:-}"
+sat_compute_zone: "${SAT_COMPUTE_ZONE:-}"
+sat_compute_tenant: "${SAT_COMPUTE_TENANT:-}"
+sat_compute_subscription: "${SAT_COMPUTE_SUBSCRIPTION:-}"
+sat_compute_datacenter: "${SAT_COMPUTE_DATACENTER:-}"
+sat_compute_cluster: "${SAT_COMPUTE_CLUSTER:-}"
+sat_compute_namespace: "${SAT_COMPUTE_NAMESPACE:-}"
+sat_compute_network: "${SAT_COMPUTE_NETWORK:-default}"
+sat_compute_pool: "${SAT_COMPUTE_POOL:-default}"
+sat_compute_cpus: "${SAT_COMPUTE_CPUS:-2}"
+sat_compute_memory_mb: "${SAT_COMPUTE_MEMORY_MB:-4096}"
+sat_compute_volume_gb: "${SAT_COMPUTE_VOLUME_GB:-20}"
 
-    # Image settings for Satellite image-based provisioning
-    sat_image_name: "${SAT_IMAGE_NAME:-rhel-9-base.qcow2}"
-    sat_image_uuid: "${SAT_IMAGE_UUID:-}"
-    sat_image_username: "${SAT_IMAGE_USERNAME:-root}"
-    sat_image_password: "${SAT_IMAGE_PASSWORD:-}"
+# Image settings for Satellite image-based provisioning
+sat_image_name: "${SAT_IMAGE_NAME:-rhel-9-base.qcow2}"
+sat_image_uuid: "${SAT_IMAGE_UUID:-}"
+sat_image_username: "${SAT_IMAGE_USERNAME:-root}"
+sat_image_password: "${SAT_IMAGE_PASSWORD:-}"
 libvirt_uri: "${LIBVIRT_URI:-qemu:///system}"
 libvirt_storage_pool: "${LIBVIRT_STORAGE_POOL:-default}"
 libvirt_network: "${LIBVIRT_NETWORK:-default}"
@@ -11411,6 +11839,24 @@ prompt_all_env_options_once() {
     if [ "$has_env_file" -eq 1 ] && [ "${FORCE_PROMPT_ALL:-0}" != "1" ]; then
         load_ansible_env_file || return 1
         normalize_shared_env_vars
+
+        # Noninteractive runs must never fall through to prompting when required
+        # values are already in the vault. Treat only required keys as blockers.
+        if is_noninteractive; then
+            local ni_required_missing=0
+            ni_required_missing="$(count_missing_vars \
+                ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
+                RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL RH9_ISO_URL HOST_INT_IP CMDB_ENDPOINT_IP \
+                SAT_IP SAT_NETMASK SAT_GW SAT_HOSTNAME SAT_ALIAS SAT_DOMAIN SAT_ORG SAT_LOC \
+                AAP_IP AAP_NETMASK AAP_GW AAP_HOSTNAME AAP_ALIAS AAP_INVENTORY_TEMPLATE AAP_INVENTORY_GROWTH_TEMPLATE \
+                IDM_IP IDM_NETMASK IDM_GW IDM_HOSTNAME IDM_ALIAS IDM_DS_PASS)"
+            if [ "${ni_required_missing}" -eq 0 ]; then
+                return 0
+            fi
+            print_warning "NONINTERACTIVE mode: ${ni_required_missing} required value(s) are still missing after loading ${ANSIBLE_ENV_FILE}."
+            return 1
+        fi
+
         bootstrap_missing="$(count_missing_vars \
             ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
             RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL RH9_ISO_URL HOST_INT_IP \
@@ -11470,15 +11916,18 @@ prompt_all_env_options_once() {
     print_step "Collecting environment values and storing them in ansible-vault"
     echo "(Press Enter to accept the shown default where applicable.)"
 
-    global_missing="$(count_missing_vars ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL RH9_ISO_URL HOST_INT_IP CMDB_ENDPOINT_IP)"
+    global_missing="$(count_missing_vars ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN VAULT_CONSOLE_REDHAT_TOKEN RH_ISO_URL RH9_ISO_URL HOST_INT_IP CMDB_ENDPOINT_IP)"
     echo ""
-    echo "=== Global (remaining missing: ${global_missing}/16) ==="
+    echo "=== Global (remaining missing: ${global_missing}/17) ==="
     prompt_with_default ADMIN_USER "Shared Admin Username" "${ADMIN_USER:-admin}" 0 1 || return 1
     prompt_with_default ADMIN_PASS "Shared Admin Password" "${ADMIN_PASS:-}" 1 1 || return 1
     prompt_with_default DOMAIN "Shared Domain" "${DOMAIN:-}" 0 1 || return 1
     realm_default="$(to_upper "${DOMAIN}")"
     prompt_domain_suffix="${DOMAIN:+.${DOMAIN}}"
-    prompt_with_default REALM "Shared Kerberos Realm" "${REALM:-$realm_default}" 0 1 || return 1
+    # Use realm_default when REALM still holds the placeholder.
+    local _realm_eff="${REALM:-}"
+    is_unresolved_template_value "${_realm_eff}" && _realm_eff=""
+    prompt_with_default REALM "Shared Kerberos Realm" "${_realm_eff:-${realm_default}}" 0 1 || return 1
     prompt_with_default INTERNAL_NETWORK "Shared Internal Network" "${INTERNAL_NETWORK:-10.168.0.0}" 0 1 || return 1
     prompt_with_default NETMASK "Shared Internal Netmask" "${NETMASK:-255.255.0.0}" 0 1 || return 1
     prompt_with_default INTERNAL_GW "Shared Internal Gateway" "${INTERNAL_GW:-$(derive_gateway_from_network "${INTERNAL_NETWORK}")}" 0 1 || return 1
@@ -11488,6 +11937,7 @@ prompt_all_env_options_once() {
     prompt_with_default RH_OFFLINE_TOKEN "Red Hat Offline Token" "${RH_OFFLINE_TOKEN:-}" 1 1 || return 1
     prompt_with_default RH_ACCESS_TOKEN "Red Hat Access Token" "${RH_ACCESS_TOKEN:-}" 1 1 || return 1
     prompt_with_default HUB_TOKEN "Automation Hub token" "${HUB_TOKEN:-}" 1 1 || return 1
+    prompt_with_default VAULT_CONSOLE_REDHAT_TOKEN "Red Hat Vault/Console token (optional, blank = use Hub token)" "${VAULT_CONSOLE_REDHAT_TOKEN:-}" 1 0 || return 1
     prompt_with_default RH_ISO_URL "RHEL 10 ISO URL (AAP/IdM)" "${RH_ISO_URL:-}" 0 1 || return 1
     prompt_with_default RH9_ISO_URL "RHEL 9 ISO URL (Satellite)" "${RH9_ISO_URL:-}" 0 1 || return 1
     prompt_with_default RHC_ORGANIZATION_ID "Red Hat Connector Organization ID (optional override)" "${RHC_ORGANIZATION_ID:-${CDN_ORGANIZATION_ID:-}}" 0 0 || return 1
@@ -11503,40 +11953,61 @@ prompt_all_env_options_once() {
     prompt_with_default SAT_GW "Satellite Internal Gateway" "${SAT_GW:-$INTERNAL_GW}" 0 1 || return 1
     prompt_with_default SAT_HOSTNAME "Satellite Hostname (FQDN)" "${SAT_HOSTNAME:-satellite${prompt_domain_suffix}}" 0 1 || return 1
     prompt_with_default SAT_ALIAS "Satellite Alias" "${SAT_ALIAS:-satellite}" 0 1 || return 1
-    prompt_with_default SAT_DOMAIN "Satellite Domain" "${SAT_DOMAIN:-$DOMAIN}" 0 1 || return 1
     prompt_with_default SAT_ORG "Satellite Organization" "${SAT_ORG:-REDHAT}" 0 1 || return 1
     prompt_with_default SAT_LOC "Satellite Location" "${SAT_LOC:-CORE}" 0 1 || return 1
-    prompt_with_default SAT_FIREWALLD_INTERFACE "Satellite Internal Service Interface" "${SAT_FIREWALLD_INTERFACE:-eth1}" 0 1 || return 1
+    prompt_with_default SAT_FIREWALLD_INTERFACE "Satellite Firewall Interface (external)" "${SAT_FIREWALLD_INTERFACE:-eth0}" 0 1 || return 1
     prompt_with_default SAT_FIREWALLD_ZONE "Satellite Firewalld Zone" "${SAT_FIREWALLD_ZONE:-public}" 0 1 || return 1
     prompt_with_default SAT_FIREWALLD_SERVICES_JSON "Satellite Firewalld Services JSON" "${SAT_FIREWALLD_SERVICES_JSON:-[\"ssh\",\"http\",\"https\"]}" 0 1 || return 1
     prompt_with_default CDN_ORGANIZATION_ID "Satellite RHSM Organization ID (optional, activation-key mode)" "${CDN_ORGANIZATION_ID:-}" 0 0 || return 1
     prompt_with_default CDN_SAT_ACTIVATION_KEY "Satellite Activation Key name (optional)" "${CDN_SAT_ACTIVATION_KEY:-}" 0 0 || return 1
     prompt_with_default SAT_MANIFEST_PATH "Satellite manifest ZIP path (optional override)" "${SAT_MANIFEST_PATH:-}" 0 0 || return 1
-    SAT_ADMIN_PASS="${ADMIN_PASS}"
 
-    aap_missing="$(count_missing_vars AAP_IP AAP_NETMASK AAP_GW AAP_HOSTNAME AAP_ALIAS AAP_INVENTORY_TEMPLATE AAP_INVENTORY_GROWTH_TEMPLATE)"
+    if should_prompt_component_overrides; then
+        prompt_with_default SAT_DOMAIN "Satellite Domain (optional override, blank = Shared Domain)" "${SAT_DOMAIN:-}" 0 0 || return 1
+        prompt_with_default SAT_ADMIN_PASS "Satellite admin password override (blank = Shared Admin Password)" "${SAT_ADMIN_PASS:-}" 1 0 || return 1
+    fi
+    set_if_unset SAT_DOMAIN "${DOMAIN}"
+    set_if_unset SAT_ADMIN_PASS "${ADMIN_PASS}"
+
+    aap_missing="$(count_missing_vars AAP_IP AAP_NETMASK AAP_GW AAP_HOSTNAME AAP_ALIAS AAP_DOMAIN AAP_DEPLOYMENT_TYPE AAP_INVENTORY_TEMPLATE AAP_INVENTORY_GROWTH_TEMPLATE)"
     echo ""
-    echo "=== AAP (remaining missing: ${aap_missing}/7) ==="
+    echo "=== AAP (remaining missing: ${aap_missing}/9) ==="
     prompt_with_default AAP_IP "AAP Internal IP (eth1)" "${AAP_IP:-10.168.128.2}" 0 1 || return 1
     prompt_with_default AAP_NETMASK "AAP Internal Netmask" "${AAP_NETMASK:-$NETMASK}" 0 1 || return 1
     prompt_with_default AAP_GW "AAP Internal Gateway" "${AAP_GW:-$INTERNAL_GW}" 0 1 || return 1
     prompt_with_default AAP_HOSTNAME "AAP Hostname (FQDN)" "${AAP_HOSTNAME:-aap${prompt_domain_suffix}}" 0 1 || return 1
     prompt_with_default AAP_ALIAS "AAP Alias" "${AAP_ALIAS:-aap}" 0 1 || return 1
+    prompt_with_default AAP_DEPLOYMENT_TYPE "AAP deployment type (local/rpm)" "${AAP_DEPLOYMENT_TYPE:-container}" 0 1 || return 1
     prompt_with_default AAP_BUNDLE_URL "AAP bundle URL (optional if pre-staged locally)" "${AAP_BUNDLE_URL:-}" 0 0 || return 1
-    AAP_ADMIN_PASS="${ADMIN_PASS}"
+
+    if should_prompt_component_overrides; then
+        prompt_with_default AAP_DOMAIN "AAP Domain (optional override, blank = Shared Domain)" "${AAP_DOMAIN:-}" 0 0 || return 1
+        prompt_with_default AAP_ADMIN_PASS "AAP admin password override (blank = Shared Admin Password)" "${AAP_ADMIN_PASS:-}" 1 0 || return 1
+    fi
+    set_if_unset AAP_DOMAIN "${DOMAIN}"
+    set_if_unset AAP_ADMIN_PASS "${ADMIN_PASS}"
     select_aap_inventory_templates || return 1
     ensure_aap_pg_database_if_needed || return 1
 
-    idm_missing="$(count_missing_vars IDM_IP IDM_NETMASK IDM_GW IDM_HOSTNAME IDM_ALIAS IDM_DS_PASS)"
+    idm_missing="$(count_missing_vars IDM_IP IDM_NETMASK IDM_GW IDM_HOSTNAME IDM_ALIAS IDM_DOMAIN IDM_REALM IDM_DS_PASS)"
     echo ""
-    echo "=== IdM (remaining missing: ${idm_missing}/6) ==="
+    echo "=== IdM (remaining missing: ${idm_missing}/8) ==="
     prompt_with_default IDM_IP "IdM Internal IP (eth1)" "${IDM_IP:-10.168.128.3}" 0 1 || return 1
     prompt_with_default IDM_NETMASK "IdM Internal Netmask" "${IDM_NETMASK:-$NETMASK}" 0 1 || return 1
     prompt_with_default IDM_GW "IdM Internal Gateway" "${IDM_GW:-$INTERNAL_GW}" 0 1 || return 1
     prompt_with_default IDM_HOSTNAME "IdM Hostname (FQDN)" "${IDM_HOSTNAME:-idm${prompt_domain_suffix}}" 0 1 || return 1
     prompt_with_default IDM_ALIAS "IdM Alias" "${IDM_ALIAS:-idm}" 0 1 || return 1
-    IDM_ADMIN_PASS="${ADMIN_PASS}"
-    prompt_with_default IDM_DS_PASS "IdM Directory Service Password" "${IDM_DS_PASS:-}" 1 1 || return 1
+
+    if should_prompt_component_overrides; then
+        prompt_with_default IDM_DOMAIN "IdM Domain (optional override, blank = Shared Domain)" "${IDM_DOMAIN:-}" 0 0 || return 1
+        prompt_with_default IDM_REALM "IdM Kerberos Realm (optional override, blank = Shared Realm)" "${IDM_REALM:-}" 0 0 || return 1
+        prompt_with_default IDM_ADMIN_PASS "IdM admin password override (blank = Shared Admin Password)" "${IDM_ADMIN_PASS:-}" 1 0 || return 1
+        prompt_with_default IDM_DS_PASS "IdM Directory Service Password (optional override, blank = IdM admin password)" "${IDM_DS_PASS:-}" 1 0 || return 1
+    fi
+    set_if_unset IDM_DOMAIN "${DOMAIN}"
+    set_if_unset IDM_REALM "${REALM}"
+    set_if_unset IDM_ADMIN_PASS "${ADMIN_PASS}"
+    set_if_unset IDM_DS_PASS "${IDM_ADMIN_PASS}"
 
     # --- Satellite Provisioning & Lifecycle Configuration ---
     echo ""
@@ -11598,6 +12069,25 @@ prompt_all_env_options_once() {
     prompt_with_default IDM_SYSTEM_SERVICES_GROUP "IdM System Services group name" "${IDM_SYSTEM_SERVICES_GROUP:-system-services}" 0 1 || return 1
     prompt_with_default IDM_ENABLE_HBAC_RULES "IdM Enable Host-Based Access Control (HBAC) rules? (1=yes, 0=no)" "${IDM_ENABLE_HBAC_RULES:-1}" 0 1 || return 1
     prompt_with_default IDM_ENABLE_SUDO_RULES "IdM Enable SUDO delegation rules? (1=yes, 0=no)" "${IDM_ENABLE_SUDO_RULES:-1}" 0 1 || return 1
+
+    # --- Satellite Compute Resource & Image Provisioning Configuration ---
+    echo ""
+    echo "=== Satellite Compute Resource Configuration ==="
+    prompt_with_default SAT_COMPUTE_PLATFORM "Satellite compute platform (libvirt/vmware/aws/azure/gcp/openstack)" "${SAT_COMPUTE_PLATFORM:-libvirt}" 0 1 || return 1
+    prompt_with_default SAT_COMPUTE_RESOURCE_NAME "Satellite compute resource name" "${SAT_COMPUTE_RESOURCE_NAME:-MINIRHIS_Compute}" 0 1 || return 1
+    prompt_with_default SAT_COMPUTE_PROFILE_NAME "Satellite compute profile name" "${SAT_COMPUTE_PROFILE_NAME:-MINIRHIS_Standard}" 0 1 || return 1
+    prompt_with_default SAT_COMPUTE_URL "Satellite compute endpoint URL (optional)" "${SAT_COMPUTE_URL:-}" 0 0 || return 1
+    prompt_with_default SAT_COMPUTE_USERNAME "Satellite compute username (optional)" "${SAT_COMPUTE_USERNAME:-}" 0 0 || return 1
+    prompt_with_default SAT_COMPUTE_PASSWORD "Satellite compute password (optional)" "${SAT_COMPUTE_PASSWORD:-}" 1 0 || return 1
+    prompt_with_default SAT_COMPUTE_CPUS "Default CPUs for provisioned VMs" "${SAT_COMPUTE_CPUS:-2}" 0 1 || return 1
+    prompt_with_default SAT_COMPUTE_MEMORY_MB "Default RAM (MB) for provisioned VMs" "${SAT_COMPUTE_MEMORY_MB:-4096}" 0 1 || return 1
+    prompt_with_default SAT_COMPUTE_VOLUME_GB "Default disk size (GB) for provisioned VMs" "${SAT_COMPUTE_VOLUME_GB:-20}" 0 1 || return 1
+    echo ""
+    echo "=== Satellite Image Provisioning Configuration ==="
+    prompt_with_default SAT_IMAGE_NAME "Satellite image name for image-based provisioning" "${SAT_IMAGE_NAME:-rhel-9-base.qcow2}" 0 1 || return 1
+    prompt_with_default SAT_IMAGE_UUID "Satellite image UUID (optional, leave blank to auto-resolve)" "${SAT_IMAGE_UUID:-}" 0 0 || return 1
+    prompt_with_default SAT_IMAGE_USERNAME "Default username for provisioned image VMs" "${SAT_IMAGE_USERNAME:-root}" 0 1 || return 1
+    prompt_with_default SAT_IMAGE_PASSWORD "Default password for provisioned image VMs (optional)" "${SAT_IMAGE_PASSWORD:-}" 1 0 || return 1
 
     normalize_shared_env_vars
     write_ansible_env_file || return 1
@@ -12182,7 +12672,7 @@ wait_for_vm_ssh() {
             _aap_progress_flush
             print_warning "${vm_name} state is ${vm_state}; starting it to continue automated setup"
             sudo virsh start "${vm_name}" >/dev/null 2>&1 || true
-            sleep 5
+            sleep_with_spinner 5 "  ${vm_name} starting"
         fi
 
         if [ "$vm_state" = "running" ]; then
@@ -12451,6 +12941,7 @@ stage_existing_overrides() {
 
 extract_installer_bundle() {
     local detected_root
+    local bundle_source_dir
 
     stage_existing_overrides
     detected_root="$(tar -tzf "${BUNDLE_TARBALL}" 2>/dev/null | sed -n '1p' | cut -d/ -f1)"
@@ -12471,6 +12962,20 @@ extract_installer_bundle() {
     fi
     chown -h admin:admin "${INSTALLER_LINK}" || true
     chown -R admin:admin "${INSTALLER_ROOT}" || true
+    # Normalize /home/admin/bundle to always resolve to a directory that contains
+    # an 'images/' subdir, because the containerized installer asserts this.
+    bundle_source_dir=""
+    if [ -d "${INSTALLER_ROOT}/images" ]; then
+        bundle_source_dir="${INSTALLER_ROOT}"
+    elif [ -d "${INSTALLER_ROOT}/bundle/images" ]; then
+        bundle_source_dir="${INSTALLER_ROOT}/bundle"
+    elif [ -d "${INSTALLER_ROOT}/setup-bundle/images" ]; then
+        bundle_source_dir="${INSTALLER_ROOT}/setup-bundle"
+    fi
+    if [ -n "${bundle_source_dir}" ]; then
+        ln -sfn "${bundle_source_dir}" "${ADMIN_HOME}/bundle" 2>/dev/null || true
+        chown -h admin:admin "${ADMIN_HOME}/bundle" || true
+    fi
 }
 
 if [ ! -f "${INSTALLER_LINK}/ansible.containerized_installer.install.yml" ] && [ ! -f "${INSTALLER_LINK}/setup.sh" ]; then
@@ -12531,6 +13036,9 @@ if ! dnf -q list podman crun slirp4netns fuse-overlayfs >/dev/null 2>&1; then
 fi
 
 cat > "${INSTALLER_ROOT}/ansible.cfg" <<ANSIBLECFG
+[defaults]
+# Suppress deprecation warnings for demo runs; override in ansible.cfg if needed
+deprecation_warnings = False
 [ssh_connection]
 pipelining = True
 ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ~/.ssh/id_rsa
@@ -12638,7 +13146,9 @@ for path in files:
         updated += 1
 
 if gateway_migrate.exists():
+    import re
     text = gateway_migrate.read_text(encoding='utf-8', errors='ignore')
+    original_text = text
     marker = '- name: Ensure automation gateway proxy is ready\n'
     injected = '''- name: Normalize automation gateway nginx temp ownership for root callback run
   ansible.builtin.command: podman exec automation-gateway sh -lc "chown -R 999:999 /var/lib/nginx/tmp"
@@ -12647,14 +13157,46 @@ if gateway_migrate.exists():
 
 '''
     if injected not in text and marker in text:
-        gateway_migrate.write_text(text.replace(marker, injected + marker, 1), encoding='utf-8')
-        updated += 1
+        text = text.replace(marker, injected + marker, 1)
+
+    # Some runs fail here with a transient 404 on the controller service-index
+    # endpoint during gateway data migration. Add a readiness probe ahead of
+    # the merge and harden retries/delay for the merge task.
+    merge_marker = '- name: Merge organization\n'
+    merge_wait_injected = '''- name: MINIRHIS: wait for controller service-index endpoint before merge
+  ansible.builtin.uri:
+    url: "https://{{ ansible_fqdn | default(inventory_hostname) }}/api/controller/v2/service-index/role-types/?page_size=1"
+    method: GET
+    validate_certs: false
+    status_code: [200, 401, 403]
+  register: _minirhis_service_index_probe
+  changed_when: false
+  failed_when: false
+  retries: 36
+  delay: 10
+  until: _minirhis_service_index_probe.status is defined and _minirhis_service_index_probe.status in [200, 401, 403]
+
+'''
+    if merge_wait_injected not in text and merge_marker in text:
+        text = text.replace(merge_marker, merge_wait_injected + merge_marker, 1)
+
+    def _harden_merge_task(block):
+        block = re.sub(r'(?m)^(\s*retries:\s*)\d+\s*$', r'\g<1>30', block, count=1)
+        block = re.sub(r'(?m)^(\s*delay:\s*)\d+\s*$', r'\g<1>10', block, count=1)
+        return block
+
+    text = re.sub(
+        r'(?ms)^- name: Merge organization\n.*?(?=^\s*- name: |\Z)',
+        lambda m: _harden_merge_task(m.group(0)),
+        text,
+        count=1,
+    )
+
     # Patch any direct aap-gateway-manage invocations so they run inside the
     # automation-gateway container with PYTHONHTTPSVERIFY=0 to disable TLS
     # verification for demo / self-signed cert scenarios. Only apply if the
     # patch hasn't already been added.
     if 'PYTHONHTTPSVERIFY=0' not in text:
-        import re
         def _wrap_aap_manage(m):
             cmd = m.group(1).strip()
             # if it's already using podman exec, leave it alone
@@ -12673,10 +13215,10 @@ if gateway_migrate.exists():
             )
             return 'ansible.builtin.command: ' + new_cmd
 
-        new_text = re.sub(r'ansible\.builtin\.command:\s*(.+aap-gateway-manage[^\n]*)', _wrap_aap_manage, text)
-        if new_text != text:
-            gateway_migrate.write_text(new_text, encoding='utf-8')
-            updated += 1
+        text = re.sub(r'ansible\.builtin\.command:\s*(.+aap-gateway-manage[^\n]*)', _wrap_aap_manage, text)
+    if text != original_text:
+        gateway_migrate.write_text(text, encoding='utf-8')
+        updated += 1
 
 if hub_upload_images.exists():
     text = hub_upload_images.read_text(encoding='utf-8', errors='ignore')
@@ -12707,6 +13249,17 @@ PY
     esac
 fi
 
+if command -v podman >/dev/null 2>&1 && podman ps -a --format '{{.Names}}' | grep -qx postgresql; then
+    echo "[aap-install] ensuring postgresql-contrib is installed in postgresql container (hstore requirement)"
+    podman start postgresql >/dev/null 2>&1 || true
+    podman exec postgresql sh -lc 'dnf install -y postgresql-contrib >/dev/null 2>&1 || true' || true
+    if podman exec postgresql psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_available_extensions WHERE name='hstore'" | grep -q 1; then
+        echo "[aap-install] hstore extension available in postgresql container"
+    else
+        echo "[aap-install] WARNING: hstore extension still not visible in postgresql container"
+    fi
+fi
+
 if [ "${_installer_entrypoint}" = "setup.sh" ]; then
     chmod +x ./setup.sh
     ANSIBLE_CONFIG="${INSTALLER_ROOT}/ansible.cfg" ./setup.sh -i "${INSTALLER_INVENTORY}"
@@ -12714,7 +13267,7 @@ else
     ANSIBLE_COLLECTIONS_PATH="${INSTALLER_ROOT}/collections:/usr/share/ansible/collections" \
     ANSIBLE_COLLECTIONS_PATHS="${INSTALLER_ROOT}/collections:/usr/share/ansible/collections" \
     ANSIBLE_CONFIG="${INSTALLER_ROOT}/ansible.cfg" \
-    ansible-playbook -i "${INSTALLER_INVENTORY}" "${_installer_entrypoint}"
+    ansible-playbook -i "${INSTALLER_INVENTORY}" "${_installer_entrypoint}" -e bundle_dir=/home/admin/bundle -e validate_certs=false
 fi
 EOF_REMOTE
     ); then
@@ -13338,7 +13891,7 @@ fi
 # 5. Satellite Installer
 ks_log "Phase 5: Run satellite-installer"
 foreman-maintain packages unlock || true
-satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-username "${ADMIN_USER}" --foreman-initial-admin-password "${ADMIN_PASS}" --foreman-proxy-dns true --foreman-proxy-dns-interface "eth1" --foreman-proxy-dns-zone "${SAT_DNS_ZONE:-${DOMAIN}}" --foreman-proxy-dns-reverse "${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface "eth1" --foreman-proxy-dhcp-gateway "${SAT_PROVISIONING_GW:-10.168.0.1}" --foreman-proxy-dhcp-nameservers "${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP}}" --foreman-proxy-dhcp-range "${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername "${SAT_IP}" --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-puppet false --no-enable-foreman-plugin-puppet --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --register-with-insights
+satellite-installer --scenario satellite --foreman-initial-organization "${SAT_ORG}" --foreman-initial-location "${SAT_LOC}" --foreman-initial-admin-username "${ADMIN_USER}" --foreman-initial-admin-password "${ADMIN_PASS}" --foreman-proxy-dns true --foreman-proxy-dns-interface "eth1" --foreman-proxy-dns-zone "${SAT_DNS_ZONE:-${DOMAIN}}" --foreman-proxy-dns-reverse "${SAT_DNS_REVERSE_ZONE:-0.168.10.in-addr.arpa}" --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface "eth1" --foreman-proxy-dhcp-gateway "${SAT_PROVISIONING_GW:-10.168.0.1}" --foreman-proxy-dhcp-nameservers "${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP}}" --foreman-proxy-dhcp-range "${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername "${SAT_IP}" --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-puppet false --no-enable-foreman-plugin-puppet --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh --enable-foreman-compute-ec2 --enable-foreman-compute-gce --enable-foreman-compute-azure --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap ${REGISTER_WITH_INSIGHTS_FLAG}
 
 
 # 5.1# 5.1 Post-Satellite Installation: Lifecycle Management & Provisioning Configuration
@@ -13354,10 +13907,10 @@ for i in {1..60}; do
     if [ \$i -eq 60 ]; then
         echo "⚠ WARNING: Foreman API did not respond after 60 seconds (continuing anyway)"
     fi
-    sleep 1
+    spinner_tick 1
 done
 
-sleep 3
+sleep_with_spinner 3 "Finalizing Foreman API setup"
 
 # Configure Hammer CLI globally for root and all admin users
 # (centralized helper to reduce duplication)
@@ -13833,8 +14386,8 @@ python3 -m pip install --upgrade pip setuptools wheel || true
 python3 -m pip install ansible-cmdb || true
 
 # Install MINIRHIS Python and Ansible Galaxy requirements on the Satellite host
-_minirhis_req_txt="${MINIRHIS_DIR:-/minirhis}/container/requirements.txt"
-_minirhis_req_yml="${MINIRHIS_DIR:-/minirhis}/container/requirements.yml"
+_minirhis_req_txt="${MINIRHIS_DIR:-/minirhis}/local/requirements.txt"
+_minirhis_req_yml="${MINIRHIS_DIR:-/minirhis}/local/requirements.yml"
 
 if [ -f "${_minirhis_req_txt}" ]; then
     echo "Installing Python requirements from ${_minirhis_req_txt}..."
@@ -14391,7 +14944,7 @@ resolve_aap_inventory_template_path() {
 
     for candidate_dir in \
         "${AAP_INVENTORY_TEMPLATE_DIR}" \
-        "$SCRIPT_DIR/container/vars/external_inventory/aap" \
+        "$SCRIPT_DIR/local/vars/external_inventory/aap" \
         "$SCRIPT_DIR/inventory/aap"; do
         [ -n "$candidate_dir" ] || continue
         if [ -f "${candidate_dir}/${selected}" ]; then
@@ -14673,7 +15226,7 @@ select_aap_inventory_templates() {
 render_aap_inventory_template() {
     local template_selector="$1"
     local template_path
-    local domain_e admin_user_e admin_pass_e pg_database_e aap_host_e aap_ip_e sat_host_e sat_ip_e idm_host_e idm_ip_e rh_user_e rh_pass_e
+    local domain_e admin_user_e admin_pass_e pg_database_e aap_host_e aap_ip_e sat_host_e sat_ip_e idm_host_e idm_ip_e rh_user_e rh_pass_e aap_gateway_https_port_e
     local lightspeed_host_e lightspeed_admin_user_e lightspeed_admin_password_e lightspeed_admin_email_e
     local lightspeed_pg_host_e lightspeed_pg_password_e lightspeed_chatbot_model_url_e lightspeed_chatbot_model_api_key_e
     local lightspeed_chatbot_model_id_e lightspeed_chatbot_default_provider_e lightspeed_chatbot_model_extra_settings_e
@@ -14683,7 +15236,7 @@ render_aap_inventory_template() {
 
     template_path="$(resolve_aap_inventory_template_path "$template_selector")" || {
         print_warning "AAP inventory template not found: ${template_selector}"
-        print_warning "Looked in: ${AAP_INVENTORY_TEMPLATE_DIR}, ${SCRIPT_DIR}/container/vars/external_inventory/aap, ${SCRIPT_DIR}/inventory/aap, and absolute path input"
+        print_warning "Looked in: ${AAP_INVENTORY_TEMPLATE_DIR}, ${SCRIPT_DIR}/local/vars/external_inventory/aap, ${SCRIPT_DIR}/inventory/aap, and absolute path input"
         return 1
     }
 
@@ -14699,6 +15252,7 @@ render_aap_inventory_template() {
     idm_ip_e="$(sed_escape_replacement "${IDM_IP}")"
     rh_user_e="$(sed_escape_replacement "${RH_USER}")"
     rh_pass_e="$(sed_escape_replacement "${RH_PASS}")"
+    aap_gateway_https_port_e="$(sed_escape_replacement "${AAP_GATEWAY_HTTPS_PORT:-443}")"
     lightspeed_host_e="$(sed_escape_replacement "${AAP_LIGHTSPEED_HOST:-${AAP_HOSTNAME}}")"
     lightspeed_admin_user_e="$(sed_escape_replacement "${AAP_LIGHTSPEED_ADMIN_USER:-${ADMIN_USER}}")"
     lightspeed_admin_password_e="$(sed_escape_replacement "${AAP_LIGHTSPEED_ADMIN_PASSWORD:-${AAP_ADMIN_PASS:-$ADMIN_PASS}}")"
@@ -14733,6 +15287,7 @@ render_aap_inventory_template() {
         -e "s|{{IDM_IP}}|${idm_ip_e}|g" \
         -e "s|{{RH_USER}}|${rh_user_e}|g" \
         -e "s|{{RH_PASS}}|${rh_pass_e}|g" \
+        -e "s|{{AAP_GATEWAY_HTTPS_PORT}}|${aap_gateway_https_port_e}|g" \
         -e "s|{{AAP_LIGHTSPEED_HOST}}|${lightspeed_host_e}|g" \
         -e "s|{{AAP_LIGHTSPEED_ADMIN_USER}}|${lightspeed_admin_user_e}|g" \
         -e "s|{{AAP_LIGHTSPEED_ADMIN_PASSWORD}}|${lightspeed_admin_password_e}|g" \
@@ -15238,6 +15793,9 @@ echo "[aap-setup] Bundle ready at /home/admin/aap-setup on $(date)" >> /var/log/
 
 # 6. Bundle-local ansible.cfg and EDA defaults for collection seeding/installer runs.
 cat > /home/admin/aap-setup/ansible.cfg <<ANSIBLECFG
+[defaults]
+# Suppress deprecation warnings for demo runs; override in ansible.cfg if needed
+deprecation_warnings = False
 [ssh_connection]
 pipelining = True
 ssh_args = -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no -i ~/.ssh/id_rsa
@@ -15571,10 +16129,10 @@ for i in {1..60}; do
     if [ \$i -eq 60 ]; then
         echo "⚠ WARNING: IdM services did not fully start after 60 seconds (continuing anyway)"
     fi
-    sleep 1
+    spinner_tick 1
 done
 
-sleep 3
+sleep_with_spinner 3 "Finalizing IdM services setup"
 
 # Configure ipa CLI with admin credentials
 export KRB5_TRACE=/dev/null 2>/dev/null || true
@@ -16054,7 +16612,7 @@ demokill_cleanup() {
 
     print_step "DEMOKILL: restart virt-manager session"
     pkill -f "virt-manager" >/dev/null 2>&1 || true
-    sleep 1
+    spinner_tick 1
     if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
         if virsh -c qemu:///system list --all >/dev/null 2>&1; then
             nohup virt-manager >/dev/null 2>&1 &
@@ -16160,7 +16718,6 @@ create_minirhis_vms() {
         idm_disk="60G";  idm_ram=16384; idm_vcpu=4
     fi
 
-    print_warning "Pre-flight lock check: stale lock files can block provisioning."
     cleanup_minirhis_lock_files || true
     prune_local_ssh_trust_for_component "all" || true
 
@@ -16352,7 +16909,7 @@ reboot_all_minirhis_vms() {
     done
 
     # Allow guests to come back up and perform a light settle
-    sleep 15
+    sleep_with_spinner 15 "  Waiting for guests to settle"
     wait_for_post_vm_settle || print_warning "Post-reboot settle checks reported issues"
     print_success "Reboot command issued for MINIRHIS VMs"
     return 0
@@ -17193,23 +17750,23 @@ ensure_iso_tools() {
 ensure_workspace_runtime_layout() {
     # Defensive guard: if early variable init is changed, keep runtime layout paths sane.
     SCRIPT_DIR="${SCRIPT_DIR:-$(pwd)}"
-    MINIRHIS_INVENTORY_DIR="${MINIRHIS_INVENTORY_DIR:-${SCRIPT_DIR}/container/vars/external_inventory}"
+    MINIRHIS_INVENTORY_DIR="${MINIRHIS_INVENTORY_DIR:-${SCRIPT_DIR}/local/vars/external_inventory}"
     MINIRHIS_INVENTORY_FILE="${MINIRHIS_INVENTORY_FILE:-${MINIRHIS_INVENTORY_DIR}/hosts.yml}"
     MINIRHIS_CONTAINER_INVENTORY_FILE="${MINIRHIS_CONTAINER_INVENTORY_FILE:-/minirhis/vars/external_inventory/$(basename "${MINIRHIS_INVENTORY_FILE}")}"
     MINIRHIS_HOST_VARS_DIR="${MINIRHIS_HOST_VARS_DIR:-${SCRIPT_DIR}/host_vars}"
 
     print_step "Ensuring generated MINIRHIS runtime layout exists under ${SCRIPT_DIR}"
 
-    mkdir -p "${MINIRHIS_INVENTORY_DIR}" "${MINIRHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/container/roles" "${SCRIPT_DIR}/docs" || return 1
+    mkdir -p "${MINIRHIS_INVENTORY_DIR}" "${MINIRHIS_HOST_VARS_DIR}" "${SCRIPT_DIR}/local/roles" "${SCRIPT_DIR}/docs" || return 1
 
         # First-run bootstrap for required non-markdown artifacts. These are
         # created only when missing and never overwritten.
-        local container_requirements_yml="${SCRIPT_DIR}/container/requirements.yml"
-        local container_requirements_txt="${SCRIPT_DIR}/container/requirements.txt"
+        local container_requirements_yml="${SCRIPT_DIR}/local/requirements.yml"
+        local container_requirements_txt="${SCRIPT_DIR}/local/requirements.txt"
         local inventory_sample="${SCRIPT_DIR}/inventory/hosts.SAMPLE"
 
         if [ ! -f "${container_requirements_yml}" ]; then
-                print_step "Bootstrapping missing artifact: container/requirements.yml"
+                print_step "Bootstrapping missing artifact: local/requirements.yml"
                 cat > "${container_requirements_yml}" <<'EOF'
 ---
 collections:
@@ -17241,7 +17798,7 @@ EOF
         fi
 
         if [ ! -f "${container_requirements_txt}" ]; then
-                print_step "Bootstrapping missing artifact: container/requirements.txt"
+                print_step "Bootstrapping missing artifact: local/requirements.txt"
                 cat > "${container_requirements_txt}" <<'EOF'
 requests>=2.28.0
 jinja2>=3.0.0
@@ -17385,8 +17942,8 @@ ensure_installer_host_ansible_collections() {
     local collection_list_cache=""
     local timeout_sec=30
     local req_timeout_sec=120
-    local container_requirements_yml="${SCRIPT_DIR}/container/requirements.yml"
-    local container_requirements_txt="${SCRIPT_DIR}/container/requirements.txt"
+    local container_requirements_yml="${SCRIPT_DIR}/local/requirements.yml"
+    local container_requirements_txt="${SCRIPT_DIR}/local/requirements.txt"
 
     print_step "Ensuring installer-host requirements and Ansible collections are installed"
 
@@ -17403,7 +17960,7 @@ ensure_installer_host_ansible_collections() {
     if [ -f "${container_requirements_yml}" ]; then
         print_step "Installing Ansible collections from ${container_requirements_yml}"
         if timeout ${req_timeout_sec} bash -c "ANSIBLE_CONFIG='${cfg}' ansible-galaxy collection install -r '${container_requirements_yml}'" >/dev/null 2>&1; then
-            print_success "Applied collection requirements from container/requirements.yml"
+            print_success "Applied collection requirements from local/requirements.yml"
         else
             print_warning "Could not fully apply ${container_requirements_yml}; continuing with per-collection verification."
         fi
@@ -17444,7 +18001,7 @@ ensure_installer_host_ansible_collections() {
         done < "${container_requirements_txt}"
 
         if [ "${py_failed}" -eq 0 ]; then
-            print_success "Applied Python requirements from container/requirements.txt (ok=${py_ok})."
+            print_success "Applied Python requirements from local/requirements.txt (ok=${py_ok})."
             rm -f "${failed_file}" >/dev/null 2>&1 || true
         else
             print_warning "Python requirements completed with ${py_failed} unresolved package(s)."
@@ -17634,8 +18191,17 @@ main() {
         load_preseed_env
     fi
     # If env.yml can be decrypted, recreate it interactively (backup then re-prompt).
-    recreate_ansible_env_via_prompts_if_decryptable || true
-    load_ansible_env_file
+    # Only do this when --reconfigure is explicitly requested; otherwise leave env.yml intact.
+    if [ -n "${CLI_RECONFIGURE:-}" ]; then
+        recreate_ansible_env_via_prompts_if_decryptable || true
+    fi
+    load_ansible_env_file || {
+        print_warning "Could not load encrypted environment file: ${ANSIBLE_ENV_FILE}"
+        if is_noninteractive; then
+            print_warning "NONINTERACTIVE mode requires a decryptable vault env file."
+            exit 1
+        fi
+    }
     normalize_shared_env_vars
 
     # CLI-only fast path: run pre-flight validation and exit.
@@ -17688,17 +18254,26 @@ main() {
     if { [ -z "$CLI_IDM" ] && [ -z "$CLI_SATELLITE" ] && [ -z "$CLI_AAP" ] && [ -z "${CLI_CONFIG_SCOPE:-}" ]; } || \
        [ -n "$CLI_MINIRHIS" ] || [ "${CLI_CONFIG_SCOPE:-}" = "all" ]; then
         # Full stack or menu-driven mode: prompt for all values
-        prompt_all_env_options_once
+        prompt_all_env_options_once || {
+            print_warning "Configuration bootstrap failed; aborting run."
+            exit 1
+        }
     else
         # Component-specific mode: load env file and let component handle its own prompting
         if [ -f "$ANSIBLE_ENV_FILE" ]; then
             load_ansible_env_file || {
                 print_warning "Could not load encrypted env file; running full prompts instead"
-                prompt_all_env_options_once
+                prompt_all_env_options_once || {
+                    print_warning "Configuration bootstrap failed; aborting run."
+                    exit 1
+                }
             }
         else
             # No env file yet; run full prompts to bootstrap
-            prompt_all_env_options_once
+            prompt_all_env_options_once || {
+                print_warning "Configuration bootstrap failed; aborting run."
+                exit 1
+            }
         fi
     fi
     MINIRHIS_PROMPTS_COMPLETED=1
@@ -17826,6 +18401,9 @@ main() {
         reset_menu_view
 
         if is_noninteractive || [ "${RUN_ONCE:-0}" = "1" ]; then
+            # In one-shot/noninteractive runs, only report success after a
+            # completed menu action reaches this point without triggering an
+            # earlier explicit failure exit path.
             print_success "Run complete"
             exit 0
         fi

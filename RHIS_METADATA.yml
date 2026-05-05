@@ -18,10 +18,10 @@ paths:
   manifest_staging_dir: "/var/lib/libvirt/images/files"
   repo_root: "."
   orchestrator_script: "MiniRHIS.sh"
-  container_roles: "container/roles"
+  container_roles: "local/roles"
   repo_roles: "roles"
   playbooks_dir: "playbooks"
-  external_inventory: "container/vars/external_inventory/hosts.yml"
+  external_inventory: "local/vars/external_inventory/hosts.yml"
   kickstarts_dir: "kickstarts"
   artifacts_dir: "artifacts"
   installer_keys: "~/.ssh/minirhis-installer"
@@ -84,7 +84,7 @@ scripts:
       - show_menu
 
 roles_and_playbooks:
-  container_roles_path: "container/roles"
+  container_roles_path: "local/roles"
   repo_roles_path: "roles"
   fallback_playbooks:
     - "playbooks/idm-install.yml"
@@ -106,7 +106,7 @@ roles_and_playbooks:
           access)"
       example_run: |
         ANSIBLE_CONFIG=~/.ansible/conf/minirhis-ansible.runtime.cfg \
-        ansible-playbook -i container/vars/external_inventory/hosts.yml playbooks/idm-operational.yml \
+        ansible-playbook -i local/vars/external_inventory/hosts.yml playbooks/idm-operational.yml \
           --limit idm --extra-vars @~/.ansible/conf/env.yml \
           --vault-password-file ~/.ansible/conf/.vaultpass.txt -v
 

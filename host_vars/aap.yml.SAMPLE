@@ -4,9 +4,9 @@
 
 ansible_user: "{{ admin_user | default('admin') }}"
 ansible_become: true
-ansible_become_pass: "{{ global_admin_password }}"
+ansible_become_pass: "{{ aap_admin_pass | default(global_admin_password) }}"
 aap_admin_user: "admin"
-aap_admin_password: "{{ global_admin_password }}"
+aap_admin_password: "{{ aap_admin_pass | default(global_admin_password) }}"
 # Standalone AAP model: gateway is a local container on this same AAP host.
 aap_single_host_mode: true
 aap_gateway_mode: "local-container"

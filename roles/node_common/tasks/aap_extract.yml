@@ -1,11 +1,11 @@
 ---
 # Normalize and extract AAP bundle when available.
 - name: Normalize AAP bundle URL from env vars
-  set_fact:
+  ansible.builtin.set_fact:
     aap_bundle_url: "{{ aap_bundle_url | default(AAP_BUNDLE_URL | default('')) }}"
 
 - name: Set aap_bundle_path when URL provided
-  set_fact:
+  ansible.builtin.set_fact:
     aap_bundle_path: "/var/tmp/{{ aap_bundle_url | basename }}"
   when: aap_bundle_url is defined and (aap_bundle_url | length) > 0
 
@@ -19,7 +19,7 @@
   when: aap_bundle_path is not defined
 
 - name: Set aap_bundle_path from search results
-  set_fact:
+  ansible.builtin.set_fact:
     aap_bundle_path: "{{ (aap_bundle_search.files | sort(attribute='mtime') | last).path }}"
   when: aap_bundle_search is defined and (aap_bundle_search.files | length) > 0
     and (aap_bundle_path is not defined)
@@ -31,7 +31,7 @@
   when: aap_bundle_path is not defined
 
 - name: Determine effective extract dir
-  set_fact:
+  ansible.builtin.set_fact:
     _aap_extract_dir: "{{ aap_extract_dir | default('/home/' + (admin_user |
       default('admin')) + '/bundle') }}"
 
@@ -53,7 +53,7 @@
   become: true
 
 - name: Set archive top-level name fact
-  set_fact:
+  ansible.builtin.set_fact:
     aap_archive_top_name: "{{ (aap_archive_top.stdout | default('')) .split('/') | first }}"
   when: aap_archive_top is defined and (aap_archive_top.stdout | length) > 0
 
@@ -81,6 +81,6 @@
   become: true
 
 - name: Expose aap_bundle_path and aap_extract_dir facts for downstream roles
-  set_fact:
+  ansible.builtin.set_fact:
     aap_bundle_path: "{{ aap_bundle_path }}"
     aap_extract_dir: "{{ _aap_extract_dir }}"

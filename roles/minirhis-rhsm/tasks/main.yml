@@ -2,7 +2,7 @@
 # RHSM registration: idempotent, supports org/activation-key and username/password
 
 - name: Normalize RHSM variables from environment
-  set_fact:
+  ansible.builtin.set_fact:
     rh_user: "{{ rh_user | default(RH_USER | default('')) }}"
     rh_pass: "{{ rh_pass | default(RH_PASS | default('')) }}"
     cdn_organization_id: "{{ cdn_organization_id | default(CDN_ORGANIZATION_ID | default('')) }}"
@@ -14,33 +14,33 @@
       default(MINIRHIS_SKIP_RHSM_REGISTER | default(0)) }}"
 
 - name: Check current RHSM registration
-  command: subscription-manager identity
+  ansible.builtin.command: subscription-manager identity
   register: rhsm_identity
   ignore_errors: true
   changed_when: false
 
 - name: RHSM already registered - skip
-  debug:
+  ansible.builtin.debug:
     msg: "RHSM already registered on host, skipping registration tasks."
   when: rhsm_identity.rc == 0
 
 - name: Gather routing table for network readiness check
-  command: ip route show
+  ansible.builtin.command: ip route show
   register: ip_route
   changed_when: false
 
 - name: Set has_default_route fact
-  set_fact:
+  ansible.builtin.set_fact:
     has_default_route: "{{ 'default' in (ip_route.stdout | default('')) }}"
 
 - name: DNS lookup for subscription.rhsm.redhat.com
-  command: getent ahostsv4 subscription.rhsm.redhat.com
+  ansible.builtin.command: getent ahostsv4 subscription.rhsm.redhat.com
   register: rhsm_dns
   failed_when: false
   changed_when: false
 
 - name: HTTPS reachability test to subscription.rhsm.redhat.com
-  command: curl -s -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time
+  ansible.builtin.command: curl -s -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time
     20 https://subscription.rhsm.redhat.com/subscription/status
   register: rhsm_curl
   failed_when: false
@@ -49,13 +49,13 @@
 - name: Defer RHSM registration if network not ready and defer enabled
   block:
     - name: Ensure marker directory exists
-      file:
+      ansible.builtin.file:
         path: /var/lib/minirhis
         state: directory
         mode: "0755"
 
     - name: Write deferred marker
-      copy:
+      ansible.builtin.copy:
         dest: /var/lib/minirhis/rhsm-registration-deferred
         content: "deferred_at={{ lookup('pipe','date -u +%Y-%m-%dT%H:%M:%SZ') }}\n"
         mode: "0644"
@@ -67,7 +67,7 @@
       (rhsm_curl.stdout | length > 0) and (rhsm_curl.stdout | int == 200)))
 
 - name: Attempt RHSM registration via activation key (org)
-  command: subscription-manager register --org="{{ cdn_organization_id }}"
+  ansible.builtin.command: subscription-manager register --org="{{ cdn_organization_id }}"
     --activationkey="{{ cdn_sat_activation_key }}" --force
   register: rhsm_register_org
   retries: "{{ rhsm_register_retries | int }}"
@@ -85,7 +85,7 @@
       subscription-manager register {% if cdn_organization_id is defined and
       cdn_organization_id | length > 0 %} --org="{{ cdn_organization_id }}" {%
       endif %} --username="{{ rh_user }}" --password="{{ rh_pass }}" --force
-  command: "{{ reg_cmd }}"
+  ansible.builtin.command: "{{ reg_cmd }}"
   register: rhsm_register_creds
   retries: "{{ rhsm_register_retries | int }}"
   delay: "{{ rhsm_register_delay | int }}"
@@ -97,31 +97,31 @@
     - rh_pass | length > 0
 
 - name: Re-check RHSM registration status
-  command: subscription-manager identity
+  ansible.builtin.command: subscription-manager identity
   register: rhsm_identity_after
   ignore_errors: true
   changed_when: false
 
 - name: Set rhsm_registered fact
-  set_fact:
+  ansible.builtin.set_fact:
     rhsm_registered: "{{ (rhsm_identity.rc == 0) or (rhsm_identity_after.rc == 0) or
       (rhsm_register_org is defined and rhsm_register_org.rc == 0) or
       (rhsm_register_creds is defined and rhsm_register_creds.rc == 0) }}"
 
 - name: Attach subscription (auto) when registered
-  command: subscription-manager attach --auto
+  ansible.builtin.command: subscription-manager attach --auto
   register: rhsm_attach
   failed_when: false
   when: rhsm_registered | bool
 
 - name: Refresh subscription-manager when registered
-  command: subscription-manager refresh
+  ansible.builtin.command: subscription-manager refresh
   register: rhsm_refresh
   failed_when: false
   when: rhsm_registered | bool
 
 - name: Import RPM GPG keys if present
-  find:
+  ansible.builtin.find:
     paths: /etc/pki/rpm-gpg
     file_type: file
   register: rhsm_gpg_keys
@@ -130,7 +130,7 @@
   when: rhsm_registered | bool
 
 - name: Import each GPG key
-  command: rpm --import "{{ item.path }}"
+  ansible.builtin.command: rpm --import "{{ item.path }}"
   loop: "{{ rhsm_gpg_keys.files }}"
   when: rhsm_gpg_keys is defined and rhsm_gpg_keys.files | length > 0
   failed_when: false

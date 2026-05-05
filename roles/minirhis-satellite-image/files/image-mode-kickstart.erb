@@ -1,0 +1,110 @@
+<%#
+kind: provision
+name: Kickstart Default bootc - Trimmed
+model: ProvisioningTemplate
+oses:
+- AlmaLinux
+- CentOS
+- CentOS_Stream
+- Fedora
+- RedHat
+- Rocky
+-%>
+<%
+  # Variable setup for post scripts and container URL
+  ostreecontainer = host_param('ostreecontainer')
+-%>
+# This kickstart file was rendered from the Foreman provisioning template "<%= @template_name %>".
+
+lang <%= host_param('lang') || 'en_US.UTF-8' %>
+selinux --<%= host_param('selinux-mode') || 'enforcing' %>
+keyboard <%= host_param('keyboard') || 'us' %>
+
+<%
+# Network setup is essential for pulling the container and reporting to Foreman
+@host.interfaces.reject{ |iface| iface.bmc? }.sort_by { |iface| (iface.bond? || iface.bridge?) ? 0 : iface.provision? ? 20 : 10 }.each do |iface|
+-%>
+<%= snippet(
+      'kickstart_network_interface',
+      variables: {
+        iface: iface,
+        host: @host,
+        static: @static,
+        static6: @static6
+      }
+    ) -%>
+<%
+end
+-%>
+
+# --- Core Installation ---
+# 1. Set the container image as the installation source
+ostreecontainer --url <%= ostreecontainer %>
+
+# 2. Set the root password to make the system login-able
+rootpw --iscrypted <%= root_pass %>
+
+# 3. Allow SSH for remote login
+firewall --service=ssh
+
+# --- Time ---
+timezone --utc <%= host_param('time-zone') || 'UTC' %>
+<% if host_param('ntp-pools') -%>
+<% host_param('ntp-pools').each do |ntppool| -%>
+timesource --ntp-pool <%= ntppool %>
+<% end -%>
+<% elsif host_param('ntp-server') -%>
+timesource --ntp-server <%= host_param('ntp-server') %>
+<% end -%>
+
+# --- Bootloader and Partitioning ---
+# Best practice: verify host boot mode (BIOS vs UEFI) and avoid hardcoding BIOS-only options.
+# Prefer Foreman's default bootloader handling for UEFI-enabled hosts or provide an alternate UEFI variant.
+bootloader --location=mbr --append="<%= host_param('bootloader-append') || 'nofb quiet splash=quiet' %>" <%= grub_pass %>
+<%= @host.diskLayout %>
+
+# --- Finalize ---
+text
+skipx
+reboot
+
+# --- Post-Install Scripts ---
+
+<%#
+  This section injects SSH keys for Foreman, registers the system,
+  and signals the build is done.
+%>
+%post
+exec < /dev/tty3 > /dev/tty4
+chvt 3
+(
+# DNS should already be configured from %post --nochroot copy
+# But verify and recreate if missing
+if [ ! -f /etc/resolv.conf ] || [ ! -s /etc/resolv.conf ]; then
+  cat > /etc/resolv.conf << 'RESOLV_EOF'
+<% if @host.domain -%>
+search <%= @host.domain.name %>
+<% end -%>
+<% [@host.subnet.dns_primary, @host.subnet.dns_secondary].compact.each do |nameserver| -%>
+nameserver <%= nameserver %>
+<% end -%>
+RESOLV_EOF
+fi
+
+<%= snippet 'redhat_register' -%>
+<%= snippet('remote_execution_ssh_keys') %>
+touch /tmp/foreman_built
+chvt 1
+ ) 2>&1 | tee /root/install.post.log
+%end
+
+%post --erroronfail --log=/root/install-callhome.post.log
+if test -f /tmp/foreman_built; then
+  echo "calling home: build is done!"
+  <%= indent(2, skip1: true, skip_content: 'EOF') { snippet('built', :variables => { :endpoint => 'built', :method => 'POST', :body_body_file => '/root/install.post.log' }) } -%>
+else
+  echo "calling home: build failed!"
+  <%= indent(2, skip1: true, skip_content: 'EOF') { snippet('built', :variables => { :endpoint => 'failed', :method => 'POST', :body_body_file => '/root/install.post.log' }) } -%>
+fi
+sync
+%end

@@ -1,0 +1,31 @@
+---
+# Ansible collection requirements for the MiniRHIS provisioner container.
+# Install with: ansible-galaxy collection install -r local/requirements.yml
+# For the broader workstation/developer collection set, see requirements.yml
+# in the repository root.
+
+collections:
+  - name: "ansible.posix"
+    version: "*"
+  - name: "community.general"
+    version: "*"
+  - name: "freeipa.ansible_freeipa"
+    version: "*"
+  - name: "infra.aap_configuration"
+    version: "*"
+  - name: "infra.aap_utilities"
+    version: "*"
+  - name: "infra.ah_configuration"
+    version: "*"
+  - name: "infra.controller_configuration"
+    version: "*"
+  - name: "infra.eda_configuration"
+    version: "*"
+  - name: "infra.ee_utilities"
+    version: "*"
+  - name: "redhat.rhel_system_roles"
+    version: "*"
+  - name: "redhat.satellite"
+    version: "*"
+  - name: "redhat.satellite_operations"
+    version: "*"

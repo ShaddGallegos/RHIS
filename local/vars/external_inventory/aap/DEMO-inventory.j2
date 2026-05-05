@@ -1,0 +1,117 @@
+# This is the AAP installer inventory file intended for the Container growth deployment topology.
+# This inventory file expects to be run from the host where AAP will be installed.
+# Please consult the Ansible Automation Platform product documentation about this topology's tested hardware configuration.
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/tested_deployment_models/container-topologies
+#
+# Please consult the docs if you're unsure what to add
+# For all optional variables please consult the included README.md
+# or the Ansible Automation Platform documentation:
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation
+
+# This section is for your AAP Gateway host(s)
+# -----------------------------------------------------
+[automationgateway]
+{{AAP_HOSTNAME}}
+
+# This section is for your AAP Controller host(s)
+# -----------------------------------------------------
+[automationcontroller]
+{{AAP_HOSTNAME}}
+
+# This section is for your AAP Automation Hub host(s)
+# -----------------------------------------------------
+[automationhub]
+{{AAP_HOSTNAME}}
+
+# This section is for your AAP EDA Controller host(s)
+# -----------------------------------------------------
+[automationeda]
+{{AAP_HOSTNAME}}
+
+# This section is for your AAP Lightspeed host(s)
+# DISABLED for DEMO mode (resource-constrained): Lightspeed requires significant additional resources
+# -----------------------------------------------------
+# [ansiblelightspeed]
+# {{AAP_LIGHTSPEED_HOST}}
+
+# This section is for your Ansible MCP Server host(s)
+# -----------------------------------------------------
+# [ansiblemcp]
+# {{AAP_HOSTNAME}}
+
+# This section is for the AAP database
+# -----------------------------------------------------
+[database]
+{{AAP_HOSTNAME}}
+
+[all:vars]
+# Ansible
+ansible_connection=local
+
+# Common variables
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/appendix-inventory-files-vars#general-variables
+# -----------------------------------------------------
+postgresql_admin_username=postgres
+postgresql_admin_password={{ADMIN_PASS}}
+
+bundle_install=true
+# The bundle directory must include /bundle in the path. Place the downloaded
+# AAP tarball on the AAP host under `/home/{{ admin_user | default('admin') }}/` and
+# extract it into `/home/{{ admin_user | default('admin') }}/bundle` (recommended).
+# The installer will reference this path by default.
+bundle_dir='/home/{{ admin_user | default('admin') }}/bundle'
+
+
+redis_mode=standalone
+
+# AAP Gateway
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/appendix-inventory-files-vars#platform-gateway-variables
+# -----------------------------------------------------
+gateway_admin_password={{ADMIN_PASS}}
+gateway_nginx_https_port={{AAP_GATEWAY_HTTPS_PORT}}
+gateway_pg_host={{AAP_HOSTNAME}}
+gateway_pg_password={{ADMIN_PASS}}
+
+# AAP Controller
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/appendix-inventory-files-vars#controller-variables
+# -----------------------------------------------------
+controller_admin_password={{ADMIN_PASS}}
+controller_pg_host={{AAP_HOSTNAME}}
+controller_pg_password={{ADMIN_PASS}}
+controller_percent_memory_capacity=0.5
+
+# AAP Automation Hub
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/appendix-inventory-files-vars#hub-variables
+# -----------------------------------------------------
+hub_admin_password={{ADMIN_PASS}}
+hub_pg_host={{AAP_HOSTNAME}}
+hub_pg_password={{ADMIN_PASS}}
+hub_seed_collections=true
+
+# AAP EDA Controller
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/appendix-inventory-files-vars#event-driven-ansible-variables
+# -----------------------------------------------------
+eda_admin_password={{ADMIN_PASS}}
+eda_pg_host={{AAP_HOSTNAME}}
+eda_pg_password={{ADMIN_PASS}}
+
+# AAP Lightspeed
+# https://docs.redhat.com/en/documentation/red_hat_ansible_automation_platform/2.6/html/containerized_installation/appendix-inventory-files-vars#lightspeed-variables
+# -----------------------------------------------------
+lightspeed_admin_user={{AAP_LIGHTSPEED_ADMIN_USER}}
+lightspeed_admin_password={{AAP_LIGHTSPEED_ADMIN_PASSWORD}}
+lightspeed_admin_email={{AAP_LIGHTSPEED_ADMIN_EMAIL}}
+lightspeed_pg_host={{AAP_LIGHTSPEED_PG_HOST}}
+lightspeed_pg_password={{AAP_LIGHTSPEED_PG_PASSWORD}}
+lightspeed_chatbot_model_url={{AAP_LIGHTSPEED_CHATBOT_MODEL_URL}}
+lightspeed_chatbot_model_api_key={{AAP_LIGHTSPEED_CHATBOT_MODEL_API_KEY}}
+lightspeed_chatbot_model_id={{AAP_LIGHTSPEED_CHATBOT_MODEL_ID}}
+lightspeed_chatbot_default_provider='{{AAP_LIGHTSPEED_CHATBOT_DEFAULT_PROVIDER}}'
+lightspeed_chatbot_model_extra_settings={{AAP_LIGHTSPEED_CHATBOT_MODEL_EXTRA_SETTINGS}}
+lightspeed_mcp_controller_enabled={{AAP_LIGHTSPEED_MCP_CONTROLLER_ENABLED}}
+lightspeed_mcp_lightspeed_enabled={{AAP_LIGHTSPEED_MCP_LIGHTSPEED_ENABLED}}
+lightspeed_wca_model_type='{{AAP_LIGHTSPEED_WCA_MODEL_TYPE}}'
+lightspeed_wca_model_url='{{AAP_LIGHTSPEED_WCA_MODEL_URL}}'
+lightspeed_wca_model_verify_ssl={{AAP_LIGHTSPEED_WCA_MODEL_VERIFY_SSL}}
+lightspeed_wca_model_enable_anonymization={{AAP_LIGHTSPEED_WCA_MODEL_ENABLE_ANONYMIZATION}}
+lightspeed_wca_health_check={{AAP_LIGHTSPEED_WCA_HEALTH_CHECK}}

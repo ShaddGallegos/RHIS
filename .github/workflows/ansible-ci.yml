@@ -27,6 +27,10 @@ jobs:
         run: |
           yamllint -c .yamllint.yml . || true
 
+      - name: Check FQCN usage
+        run: |
+          python3 tools/ansible_fqcn_check.py
+
       - name: Run ansible-lint
         run: |
           ansible-lint || true
@@ -65,17 +69,18 @@ jobs:
       - name: Ansible syntax-check (configure_minirhis_builder)
         run: |
           ansible-playbook --syntax-check \
-            container/configure_minirhis_builder.yml \
+            local/configure_minirhis_builder.yml \
             -i localhost,
 
       - name: YAML lint (tracked YAML files)
         run: |
           yamllint -d relaxed \
-            container/configure_minirhis_builder.yml \
-            container/requirements.yml \
-            container/vars/external_inventory/hosts.yml \
+            local/configure_minirhis_builder.yml \
+            local/requirements.yml \
+            local/vars/external_inventory/hosts.yml \
             host_vars/*.SAMPLE
 
       - name: Run ansible-lint (configure_minirhis_builder)
         run: |
-          ansible-lint container/configure_minirhis_builder.yml || true
+          python3 tools/ansible_fqcn_check.py
+          ansible-lint local/configure_minirhis_builder.yml || true

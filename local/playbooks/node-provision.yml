@@ -1,0 +1,17 @@
+---
+# Shared node provisioning entry point.
+# Pass `node_type` and target the correct host group.
+# Replaces the per-component aap/idm/installer/satellite provision skeletons.
+#
+# Usage (direct):
+#   ansible-playbook local/playbooks/node-provision.yml -e node_type=aap -l aap
+#   ansible-playbook local/playbooks/node-provision.yml -e node_type=satellite -l satellite
+#
+# The individual per-component stubs in local/{aap,idm,installer,satellite}/playbooks/
+# delegate here and are kept for backward compatibility.
+
+- name: "Node provisioning"
+  hosts: "{{ target_hosts | default(node_type | default('all')) }}"
+  become: true
+  roles:
+    - role: node_common

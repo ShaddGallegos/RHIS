@@ -3,6 +3,12 @@
   hosts: idm:satellite:aap
   become: true
   gather_facts: true
+  pre_tasks:
+    - name: Wait for SSH connectivity to hosts
+      ansible.builtin.wait_for_connection:
+        timeout: 900
+      # Allow play to fail gracefully if connection is not established in CI or special flows
+      # Caller scripts (MiniRHIS.sh) perform additional preflight/VM checks before invoking playbooks.
 
   roles:
     - role: minirhis-rhsm

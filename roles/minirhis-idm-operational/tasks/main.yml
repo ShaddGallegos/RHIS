@@ -5,7 +5,7 @@
     path: "{{ ipa_backup_dir }}"
     state: directory
     owner: root
-    group: root
+    ansible.builtin.group: root
     mode: "0750"
 
 - name: Deploy ipa-backup script
@@ -14,7 +14,7 @@
     dest: "{{ ipa_backup_script_path }}"
     mode: "0755"
     owner: root
-    group: root
+    ansible.builtin.group: root
 
 - name: Ensure daily cron job for IPA backup
   ansible.builtin.cron:
@@ -29,7 +29,7 @@
     dest: "{{ ipa_healthcheck_script_path }}"
     mode: "0755"
     owner: root
-    group: root
+    ansible.builtin.group: root
 
 - name: Ensure weekly healthcheck cron job
   ansible.builtin.cron:
@@ -65,12 +65,12 @@
           create 0640 root root
       }
     owner: root
-    group: root
+    ansible.builtin.group: root
     mode: "0644"
 
 - name: Install installer public key for root (if provided)
   ansible.builtin.authorized_key:
-    user: root
+    ansible.builtin.user: root
     key: "{{ minirhis_installer_pubkey }}"
     state: present
   when: minirhis_installer_pubkey is defined and minirhis_installer_pubkey != ""

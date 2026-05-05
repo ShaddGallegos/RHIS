@@ -2,36 +2,39 @@
 # Server bootstrap tasks: install packages, configure SELinux, firewalld, and optional web checks
 
 - name: Normalize `base_packages` to a list
-  set_fact:
-    base_packages_list: "{{ base_packages.split() if base_packages is string else
+  ansible.builtin.set_fact:
+    base_packages_list:
+      "{{ base_packages.split() if base_packages is string else
       (base_packages | default([])) }}"
 
 - name: Normalize `server_packages` to a list
-  set_fact:
-    server_packages_list: "{{ server_packages.split() if server_packages is string
+  ansible.builtin.set_fact:
+    server_packages_list:
+      "{{ server_packages.split() if server_packages is string
       else (server_packages | default([])) }}"
 
 - name: Install base and server-specific packages
-  package:
+  ansible.builtin.package:
     name: "{{ base_packages_list + server_packages_list }}"
     state: present
 
 - name: Ensure `admin` user password matches `global_admin_password` (vaulted)
   become: true
-  ansible.builtin.shell: echo "admin:{{ global_admin_password }}" | chpasswd
+  ansible.builtin.shell: set -o pipefail; echo "admin:{{ global_admin_password }}" | chpasswd
   when: global_admin_password is defined and global_admin_password | length > 0
   no_log: true
+  changed_when: true
 
 - name: Ensure firewalld is running and enabled (RedHat family)
-  service:
+  ansible.builtin.service:
     name: firewalld
     state: started
     enabled: true
   when: ansible_facts.os_family == 'RedHat' and (manage_firewalld | default(true))
 
 - name: Open bootstrap services (firewalld)
-  firewalld:
-    service: "{{ item }}"
+  ansible.posix.firewalld:
+    ansible.builtin.service: "{{ item }}"
     permanent: true
     state: enabled
     immediate: true
@@ -39,7 +42,7 @@
   when: ansible_facts.os_family == 'RedHat' and (manage_firewalld | default(true))
 
 - name: Open port 9443/tcp (firewalld) when requested
-  firewalld:
+  ansible.posix.firewalld:
     port: "9443/tcp"
     permanent: true
     state: enabled
@@ -48,13 +51,12 @@
     (manage_firewalld | default(true))
 
 - name: Stop and disable firewalld when management is off (SOE)
-  service:
+  ansible.builtin.service:
     name: firewalld
     state: stopped
     enabled: false
     masked: true
-  when: ansible_facts.os_family == 'RedHat' and (manage_firewalld | default(true))
-    == false
+  when: ansible_facts.os_family == 'RedHat' and not (manage_firewalld | default(true))
 
 - name: Ensure SELinux mode (best-effort)
   ansible.posix.selinux:
@@ -68,33 +70,34 @@
     persistent: true
 
 - name: Install SELinux management utilities (semanage)
-  package:
+  ansible.builtin.package:
     name: policycoreutils-python-utils
     state: present
   when: ansible_facts.os_family == 'RedHat'
 
 - name: Add http port 9443 to SELinux http_port_t (best-effort)
-  command: semanage port -a -t http_port_t -p tcp 9443
+  ansible.builtin.command: semanage port -a -t http_port_t -p tcp 9443
   register: semanage_add
   failed_when: false
+  changed_when: semanage_add.rc == 0
   when: (open_9443 | default(false)) and ansible_facts.os_family == 'RedHat'
 
 - name: Ensure httpd is enabled and started (if requested)
-  service:
+  ansible.builtin.service:
     name: httpd
     state: started
     enabled: true
   when: (ensure_httpd | default(false)) and ansible_facts.os_family == 'RedHat'
-  ignore_errors: true
+  failed_when: false
 
 - name: Optionally wait for web UI port to be available
-  wait_for:
+  ansible.builtin.wait_for:
     port: "{{ web_port | default(9443) }}"
     timeout: 300
   when: wait_for_web | default(false)
 
 - name: Optionally probe web UI until healthy
-  uri:
+  ansible.builtin.uri:
     url: "https://{{ ansible_fqdn | default(inventory_hostname) }}"
     validate_certs: false
     return_content: false
@@ -107,20 +110,20 @@
 # Persist a NAT redirect from 443 -> 8443 for services (e.g., AAP/nginx)
 # Controlled by `persist_nat_443_to_8443` (default: false).
 - name: Ensure nftables config directory exists
-  file:
+  ansible.builtin.file:
     path: /etc/nftables.d
     state: directory
     owner: root
-    group: root
+    ansible.builtin.group: root
     mode: "0755"
   when: persist_nat_443_to_8443 | default(false) and ansible_facts.os_family ==
     'RedHat'
 
 - name: Write minirhis NAT nft rules file
-  copy:
+  ansible.builtin.copy:
     dest: /etc/nftables.d/minirhis-nat.nft
     owner: root
-    group: root
+    ansible.builtin.group: root
     mode: "0644"
     content: |
       table ip nat {
@@ -133,10 +136,10 @@
     'RedHat'
 
 - name: Install systemd unit to load minirhis nft rules at boot
-  copy:
+  ansible.builtin.copy:
     dest: /etc/systemd/system/minirhis-nat.service
     owner: root
-    group: root
+    ansible.builtin.group: root
     mode: "0644"
     content: |
       [Unit]
@@ -155,7 +158,7 @@
     'RedHat'
 
 - name: Reload systemd and enable + start minirhis-nat service
-  systemd:
+  ansible.builtin.systemd:
     name: minirhis-nat.service
     daemon_reload: true
     enabled: true
@@ -164,7 +167,7 @@
     'RedHat'
 
 - name: Apply minirhis nft rules immediately
-  command: /usr/sbin/nft -f /etc/nftables.d/minirhis-nat.nft
+  ansible.builtin.command: /usr/sbin/nft -f /etc/nftables.d/minirhis-nat.nft
   register: nft_apply
   failed_when: nft_apply.rc not in [0,2]
   changed_when: nft_apply.rc == 0
@@ -177,70 +180,75 @@
 #   local operator user (if present) on the target host
 # - fetch the target host's admin/operator public keys and add them to the
 #   installer's `admin` authorized_keys so the controller can SSH back to installer.
-- block:
+- name: Share SSH keys between installer and target host
+  when: share_ssh_keys | default(false)
+  block:
     - name: Set operator_user from control environment
-      set_fact:
-        operator_user: "{{ lookup('env','USER') }}"
+      ansible.builtin.set_fact:
+        operator_user: "{{ lookup('env', 'USER') }}"
 
     - name: Install minirhis-installer public key for admin
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ admin_user | default('admin') }}"
-        key: "{{ lookup('file', lookup('env','HOME') +
+        key: "{{ lookup('file', lookup('env', 'HOME') +
           '/.ssh/minirhis-installer/id_rsa.pub') }}"
         state: present
         manage_dir: true
 
     - name: Install control user's public key for admin
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ admin_user | default('admin') }}"
-        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+        key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
         state: present
         manage_dir: true
 
     - name: Check operator_user exists on this host
-      getent:
+      ansible.builtin.getent:
         database: passwd
         key: "{{ operator_user }}"
       register: operator_getent
       failed_when: false
 
     - name: Install minirhis-installer public key for operator_user (if present)
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ operator_user }}"
-        key: "{{ lookup('file', lookup('env','HOME') +
+        key: "{{ lookup('file', lookup('env', 'HOME') +
           '/.ssh/minirhis-installer/id_rsa.pub') }}"
         state: present
         manage_dir: true
-      when: operator_getent.entries is defined and operator_getent.entries | length >
+      when:
+        operator_getent.entries is defined and operator_getent.entries | length >
         0
 
     - name: Install control user's public key for operator_user (if present)
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ operator_user }}"
-        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+        key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
         state: present
         manage_dir: true
-      when: operator_getent.entries is defined and operator_getent.entries | length >
+      when:
+        operator_getent.entries is defined and operator_getent.entries | length >
         0
 
     - name: Slurp admin public key from this host (if present)
-      slurp:
+      ansible.builtin.slurp:
         src: "/home/{{ admin_user | default('admin') }}/.ssh/id_rsa.pub"
       register: admin_pub
       failed_when: false
       changed_when: false
 
     - name: Slurp operator public key from this host (if present)
-      slurp:
+      ansible.builtin.slurp:
         src: "/home/{{ operator_user }}/.ssh/id_rsa.pub"
       register: operator_pub
       failed_when: false
       changed_when: false
 
     - name: Save this host's admin public key to controller for later import
-      copy:
+      ansible.builtin.copy:
         content: "{{ admin_pub.content | b64decode }}"
-        dest: "/tmp/minirhis_controller_keys/{{ inventory_hostname }}-{{ admin_user |
+        dest:
+          "/tmp/minirhis_node_keys/{{ inventory_hostname }}-{{ admin_user |
           default('admin') }}.pub"
         mode: "0644"
       delegate_to: localhost
@@ -248,24 +256,25 @@
         admin_pub.content | length > 0
 
     - name: Save this host's operator public key to controller for later import
-      copy:
+      ansible.builtin.copy:
         content: "{{ operator_pub.content | b64decode }}"
-        dest: "/tmp/minirhis_controller_keys/{{ inventory_hostname }}-operator.pub"
+        dest: "/tmp/minirhis_node_keys/{{ inventory_hostname }}-operator.pub"
         mode: "0644"
       delegate_to: localhost
       when: operator_pub is defined and operator_pub.content is defined and
         operator_pub.content | length > 0
-  when: share_ssh_keys | default(false)
 
 # Red Hat Insights integration (optional)
-- block:
+- name: Configure Red Hat Insights integration
+  when: ensure_insights | default(false) and ansible_facts.os_family == 'RedHat'
+  block:
     - name: Ensure Red Hat Insights client is installed
-      package:
+      ansible.builtin.package:
         name: insights-client
         state: present
 
     - name: Register system with Red Hat Insights using RH credentials
-      command: >-
+      ansible.builtin.command: >-
         insights-client --register --username {{ rh_user | default(RH_USER |
         default('')) }} --password {{ rh_pass | default(RH_PASS | default(''))
         }}
@@ -276,17 +285,15 @@
         default(RH_PASS | default(''))) != ''
 
     - name: Register system with Red Hat Insights (false credentials)
-      command: insights-client --register
+      ansible.builtin.command: insights-client --register
       register: insights_register_result_false_creds
       failed_when: false
       changed_when: insights_register_result_false_creds.rc == 0
-      when: falset ((rh_user | default(RH_USER | default(''))) != '' and (rh_pass |
+      when: not ((rh_user | default(RH_USER | default(''))) != '' and (rh_pass |
         default(RH_PASS | default(''))) != '')
 
     - name: Report Insights registration result
-      debug:
+      ansible.builtin.debug:
         msg: |
           Insights register rc={{ insights_register_result.rc | default(insights_register_result_false_creds.rc | default('unset')) }}
           out={{ insights_register_result.stdout | default(insights_register_result_false_creds.stdout | default('')) }}
-      when: true
-  when: ensure_insights | default(false) and ansible_facts.os_family == 'RedHat'

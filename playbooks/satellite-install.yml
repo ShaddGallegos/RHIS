@@ -3,36 +3,31 @@
   hosts: sat_primary:scenario_satellite
   become: true
   gather_facts: true
+  pre_tasks:
+    - name: Wait for SSH connectivity to Satellite hosts
+      ansible.builtin.wait_for_connection:
+        timeout: 900
 
   roles:
     - role: server_bootstrap
       # Satellite is heavy; base packages may be provided by satellite builders.
       server_packages: []
-      open_9443: true
+      open_9443: false
       ensure_httpd: false
-      wait_for_web: false
+      wait_for_web: true
+      web_port: 443
 
   tasks:
-    - name: Wait for Satellite HTTPS port to be available
-      wait_for:
-        port: 443
-        timeout: 600
-
-    - name: Probe Satellite web UI (https)
-      uri:
-        url: "https://{{ ansible_fqdn }}"
-        validate_certs: no
-        return_content: no
-      register: sat_ui_check
-      retries: 30
-      delay: 10
-      until: sat_ui_check.status is defined and sat_ui_check.status in [200,302]
-      failed_when: sat_ui_check.status not in [200,302]
-
     - name: Check for Satellite services (best-effort)
-      shell: |
+      ansible.builtin.shell: |
         for svc in foreman tomcat httpd pulpcore-worker pulpcore-api; do
           systemctl status $svc --no-pager || true
         done
       register: sat_services
       changed_when: false
+
+    - name: Deploy image-mode provisioning template (copy only)
+      ansible.builtin.include_role:
+        name: minirhis-satellite-image
+      vars:
+        create_with_hammer: false

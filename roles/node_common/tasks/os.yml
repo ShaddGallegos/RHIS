@@ -1,7 +1,7 @@
 ---
 # OS-level basics: install minimal packages used by subsequent tasks (idempotent)
 - name: Set default package list
-  set_fact:
+  ansible.builtin.set_fact:
     node_common_packages: "{{ node_common_packages | default(['chrony','curl','bind-utils']) }}"
 
 - name: Install essential packages
