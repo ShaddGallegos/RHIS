@@ -2594,6 +2594,20 @@ apply_cli_overrides() {
         AAP_TOPOLOGY="standalone"
     fi
 
+    # When the user explicitly requests a demo full-stack run, prefer a
+    # non-interactive fast-path (skip the entry/menu prompts) so callers like
+    # `bash MiniRHIS.sh --DEMO --rhis` do not unexpectedly drop into the menu.
+    # Only set these defaults when the caller did not explicitly pass
+    # --non-interactive or --menu-choice.
+    if [ -n "${CLI_DEMO:-}" ] && [ -n "${CLI_MINIRHIS:-}" ]; then
+        if [ -z "${CLI_NONINTERACTIVE:-}" ]; then
+            NONINTERACTIVE=1
+        fi
+        if [ -z "${CLI_MENU_CHOICE:-}" ]; then
+            MENU_CHOICE="1"
+        fi
+    fi
+
     if [ -n "$CLI_DEMOKILL" ]; then
         :
     fi
@@ -4406,7 +4420,16 @@ generate_oemdrv_kickstarts_only_menutest() {
     echo "     - Satellite + AAP + IdM"
     echo "  0) Back"
     echo ""
-    read -r -p "Select component [0-4]: " oemdrv_choice
+    if is_noninteractive; then
+        # In non-interactive or test runs, default to generating all OEMDRV
+        # kickstarts to avoid interactive prompts. Use MENU_CHOICE if caller
+        # provided an explicit override (rare for this submenu), otherwise
+        # choose the full set (4).
+        oemdrv_choice="${MENU_CHOICE:-4}"
+        print_step "Non-interactive mode: auto-selecting OEMDRV option ${oemdrv_choice}"
+    else
+        read -r -p "Select component [0-4]: " oemdrv_choice
+    fi
 
     case "${oemdrv_choice}" in
         1) print_step "MENUTEST: simulated AAP OEMDRV generation (no changes made)." ;;
