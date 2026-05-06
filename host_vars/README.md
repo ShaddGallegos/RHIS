@@ -35,3 +35,7 @@ vault references.
 **Rules & Policies**
 
 - Refer to `RULES.md` and `docs/assistant-adherence-rules.md` before making host-level or image edits. Generated `host_vars` are not the place to persist changes — update via `./MiniRHIS.sh --reconfigure`.
+
+## Headless Test & Vault
+
+See the top-level README 'Headless Noninteractive Test (developer)' for the noninteractive test command and vault guidance.

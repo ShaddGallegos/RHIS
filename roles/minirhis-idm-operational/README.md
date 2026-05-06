@@ -13,3 +13,7 @@ Variables (defaults in `defaults/main.yml`):
 - `ipa_backup_script_path` - path to the backup script on the node
 - `ipa_healthcheck_script_path` - path to the healthcheck script on the node
 - `enable_cockpit` - enable `cockpit.socket` on the node
+
+## Headless Test & Vault
+
+See the top-level README 'Headless Noninteractive Test (developer)' for the noninteractive test command and vault guidance.

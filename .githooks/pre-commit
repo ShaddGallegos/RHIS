@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Simple pre-commit hook to prevent committing obvious plaintext secrets
+# Uses the repository-local script scripts/check_no_committed_secrets.sh
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+HOOK_SCRIPT="$REPO_ROOT/scripts/check_no_committed_secrets.sh"
+
+if [ -x "$HOOK_SCRIPT" ]; then
+  echo "Running secret-scan hook..."
+  "$HOOK_SCRIPT" || { echo "Secret scan failed. Aborting commit." >&2; exit 1; }
+else
+  echo "Warning: secret-scan script not found or not executable: $HOOK_SCRIPT" >&2
+fi
+
+# Run ansible-lint on staged YAML files if ansible-lint is available
+STAGED_YAMLS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ya?ml)$' || true)
+if [ -n "$STAGED_YAMLS" ]; then
+  if command -v ansible-lint >/dev/null 2>&1; then
+    echo "Running ansible-lint on staged YAML files..."
+    echo "$STAGED_YAMLS" | xargs -r ansible-lint || { echo "ansible-lint failed. Aborting commit." >&2; exit 1; }
+  fi
+fi
+
+exit 0

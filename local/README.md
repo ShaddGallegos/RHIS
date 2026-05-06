@@ -22,3 +22,7 @@ The MiniRHIS Team.
 
 - Container builds and the `minirhis-provisioner` container are part of this repo for convenience. Follow the project RULES: do not run containerized workflows unless you explicitly request them using a container flag (for example `--container`, `--container-config-only`). See `RULES.md` and `docs/assistant-adherence-rules.md` for details.
 
+
+## Headless Test & Vault
+
+See the top-level README 'Headless Noninteractive Test (developer)' for the noninteractive test command and vault guidance.

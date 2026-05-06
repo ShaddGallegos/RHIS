@@ -195,3 +195,7 @@ podman start minirhis-provisioner >/dev/null 2>&1 || true
 **Rules & Policies**
 
 - This inventory is used by containerized provisioner runs; follow `RULES.md` and `docs/assistant-adherence-rules.md` before modifying or running container workflows.
+
+## Headless Test & Vault
+
+See the top-level README 'Headless Noninteractive Test (developer)' for the noninteractive test command and vault guidance.

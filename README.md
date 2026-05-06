@@ -4,11 +4,10 @@
 
 MINIRHIS stands for **Red Hat Infrastructure Standard**.
 
-**Rules & Policies**
+## Rules & Policies
 
 - This project follows a strict configuration-as-code model. See `RULES.md` and `docs/assistant-adherence-rules.md` for full rules and guidance.
 - Quick policy: do NOT use containerized workflows unless you explicitly pass a container flag (for example `--container`, `--container-config-only`, or `--use-container`). The default behavior is host-based operations.
-
 
 This repository is built around `MiniRHIS.sh` (MiniRHIS), an orchestration script for building and bootstrapping a Red Hat management lab on libvirt/KVM.
 
@@ -333,6 +332,27 @@ nano /etc/minirhis/headless.env
 source /etc/minirhis/headless.env
 ./MiniRHIS.sh --non-interactive --menu-choice 5
 ```
+
+### Headless Noninteractive Test (developer)
+
+Run the fast-path DEMO non-interactive test (captures logs):
+
+```bash
+cd /home/sgallego/GIT/RHIS && \
+NONINTERACTIVE=1 MENU_CHOICE=1 bash MiniRHIS.sh --DEMO --rhis 2>&1 | tee /tmp/minirhis-demo-run.final.log
+```
+
+Check these artifacts after the run:
+
+- Kickstarts: ${KS_DIR}/*.ks
+- OEMDRV ISO: ${OEMDRV_ISO}
+- Headless runner log: /tmp/minirhis-demo-run.final.log
+- Install logs: /var/log/MINIRHIS/install_*.log
+
+Notes:
+
+- Ensure `~/.ansible/conf/env.yml` is present and vaulted (contains `idm_ds_pass`, `idm_admin_pass`, `IDM_REALM`, IPs, tokens). Never commit this file.
+- If the script prompts for missing values, run `./MiniRHIS.sh --env-file /path/to/env.yml` or populate the vaulted env file first.
 
 ### Environment Variables Cheat Sheet
 
@@ -1117,19 +1137,19 @@ Runtime debugging artifacts created during recent troubleshooting runs are writt
 
 Quick TLS verification using the extracted CA (no install). Note: AAP gateway listens on port 443 by default (configurable via `AAP_GATEWAY_HTTPS_PORT`):
 
-```
+```bash
 openssl s_client -connect 10.168.128.2:443 -servername aap.prod.spg -CAfile artifacts_user/aap-root-ca.pem
 ```
 
 If using a custom port (e.g., `AAP_GATEWAY_HTTPS_PORT=8446`):
 
-```
+```bash
 openssl s_client -connect 10.168.128.2:8446 -servername aap.prod.spg -CAfile artifacts_user/aap-root-ca.pem
 ```
 
 To install the extracted root CA system-wide on a RHEL installer host (requires sudo):
 
-```
+```bash
 sudo cp artifacts_user/aap-root-ca.pem /etc/pki/ca-trust/source/anchors/
 sudo update-ca-trust extract
 ```

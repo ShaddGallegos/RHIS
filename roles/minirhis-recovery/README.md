@@ -26,3 +26,7 @@ Notes & warnings:
 - This role follows the repository RULES: see `RULES.md` and `docs/assistant-adherence-rules.md` for the full policy.
 - Always create a backup before writing to the original image and record the backup filename and timestamp in your run metadata.
 - Prefer using `qemu-guest-agent`-driven in-guest operations when available; use this role only when offline image edits are required and documented.
+
+## Headless Test & Vault
+
+See the top-level README 'Headless Noninteractive Test (developer)' for the noninteractive test command and vault guidance.

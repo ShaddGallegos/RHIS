@@ -196,3 +196,7 @@ podman start minirhis-provisioner >/dev/null 2>&1 || true
 ```bash
 --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}'
 ```
+
+## Headless Test & Vault
+
+See the top-level README 'Headless Noninteractive Test (developer)' for the noninteractive test command and vault guidance.

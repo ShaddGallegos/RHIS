@@ -13,3 +13,7 @@ ansible-playbook -i inventory/hosts playbooks/run-aap-container-setup.yml -e "aa
 Notes
 - Replace `aap_controller_image` with the official registry image path for AAP 2.6 during final conversion.
 - This role is a scaffold and should be extended to map RPM-based AAP tasks (DB initialization, migrations, data directories) to containerized equivalents.
+
+## Headless Test & Vault
+
+See the top-level README 'Headless Noninteractive Test (developer)' for the noninteractive test command and vault guidance.
