@@ -3000,6 +3000,19 @@ normalize_shared_env_vars() {
     done
     unset _aliases _pair _u _l
 
+    # Sensible fallbacks for demo/headless runs: reuse shared admin creds
+    # for CDN/RH accesses when explicit RH_* vars are not provided in the vault.
+    if [ -z "${RH_USER:-}" ] && [ -n "${ADMIN_USER:-}" ]; then
+        RH_USER="${ADMIN_USER}"
+    fi
+    if [ -z "${RH_PASS:-}" ] && [ -n "${ADMIN_PASS:-}" ]; then
+        RH_PASS="${ADMIN_PASS}"
+    fi
+
+    # If ISO URLs are not provided in the vault, prefer configured ISO paths.
+    RH_ISO_URL="${RH_ISO_URL:-${ISO_PATH:-}}"
+    RH9_ISO_URL="${RH9_ISO_URL:-${SAT_ISO_PATH:-}}"
+
     # Guard against unresolved templating artifacts such as '{{ DOMAIN }}'.
     if is_unresolved_template_value "${DOMAIN:-}"; then
         DOMAIN=""
@@ -11920,12 +11933,24 @@ prompt_all_env_options_once() {
         # values are already in the vault. Treat only required keys as blockers.
         if is_noninteractive; then
             local ni_required_missing=0
-            ni_required_missing="$(count_missing_vars \
-                ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
-                RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL RH9_ISO_URL HOST_INT_IP CMDB_ENDPOINT_IP \
-                SAT_IP SAT_NETMASK SAT_GW SAT_HOSTNAME SAT_ALIAS SAT_DOMAIN SAT_ORG SAT_LOC \
-                AAP_IP AAP_NETMASK AAP_GW AAP_HOSTNAME AAP_ALIAS AAP_INVENTORY_TEMPLATE AAP_INVENTORY_GROWTH_TEMPLATE \
-                IDM_IP IDM_NETMASK IDM_GW IDM_HOSTNAME IDM_ALIAS IDM_DS_PASS)"
+            # When running the DEMO fast-path (MENU_CHOICE=1 with --DEMO), relax
+            # certain production-only requirements (tokens/ISO overrides) so a
+            # headless demo can proceed with reasonable defaults from the vault.
+            if [ "${DEMO_MODE:-0}" = "1" ] && [ "${MENU_CHOICE:-}" = "1" ]; then
+                local demo_required_vars=( \
+                    ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
+                    SAT_IP AAP_IP IDM_IP SAT_NETMASK AAP_NETMASK IDM_NETMASK SAT_GW AAP_GW IDM_GW \
+                    IDM_DS_PASS )
+                ni_required_missing="$(count_missing_vars "${demo_required_vars[@]}")"
+            else
+                ni_required_missing="$(count_missing_vars \
+                    ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
+                    RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL RH9_ISO_URL HOST_INT_IP CMDB_ENDPOINT_IP \
+                    SAT_IP SAT_NETMASK SAT_GW SAT_HOSTNAME SAT_ALIAS SAT_DOMAIN SAT_ORG SAT_LOC \
+                    AAP_IP AAP_NETMASK AAP_GW AAP_HOSTNAME AAP_ALIAS AAP_INVENTORY_TEMPLATE AAP_INVENTORY_GROWTH_TEMPLATE \
+                    IDM_IP IDM_NETMASK IDM_GW IDM_HOSTNAME IDM_ALIAS IDM_DS_PASS)"
+            fi
+
             if [ "${ni_required_missing}" -eq 0 ]; then
                 return 0
             fi
