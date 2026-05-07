@@ -2948,6 +2948,58 @@ strip_wrapping_quotes() {
 }
 
 normalize_shared_env_vars() {
+    # Map common lowercase vault/env aliases to canonical UPPERCASE names.
+    # This helps compatibility with older vaults or environment files that
+    # used lowercase keys (e.g. "aap_admin_pass") while the script expects
+    # uppercase variables (e.g. `AAP_ADMIN_PASS`). Do NOT override values
+    # already set in uppercase.
+    local _aliases=(
+        "RH_USER:rh_user"
+        "RH_PASS:rh_pass"
+        "ADMIN_PASS:admin_pass"
+        "ADMIN_USER:admin_user"
+        "DOMAIN:domain"
+        "REALM:realm"
+        "IDM_DOMAIN:idm_domain"
+        "SAT_DOMAIN:sat_domain"
+        "AAP_DOMAIN:aap_domain"
+        "IDM_REALM:idm_realm"
+        "SAT_REALM:sat_realm"
+        "AAP_ADMIN_PASS:aap_admin_pass"
+        "SAT_ADMIN_PASS:sat_admin_pass"
+        "IDM_ADMIN_PASS:idm_admin_pass"
+        "IPADM_PASSWORD:ipadm_password"
+        "IPAADMIN_PASSWORD:ipaadmin_password"
+        "ROOT_PASS:root_pass"
+        "IDM_DS_PASS:idm_ds_pass"
+        "HUB_TOKEN:hub_token"
+        "AAP_BUNDLE_URL:aap_bundle_url"
+        "RH_OFFLINE_TOKEN:rh_offline_token"
+        "SAT_IP:sat_ip"
+        "AAP_IP:aap_ip"
+        "IDM_IP:idm_ip"
+        "SAT_HOSTNAME:sat_hostname"
+        "AAP_HOSTNAME:aap_hostname"
+        "IDM_HOSTNAME:idm_hostname"
+        "SAT_ORG:sat_org"
+        "SAT_LOC:sat_loc"
+        "SAT_NETMASK:sat_netmask"
+        "AAP_NETMASK:aap_netmask"
+        "IDM_NETMASK:idm_netmask"
+        "SAT_GW:sat_gw"
+        "AAP_GW:aap_gw"
+        "IDM_GW:idm_gw"
+    )
+    local _pair _u _l
+    for _pair in "${_aliases[@]}"; do
+        _u=${_pair%%:*}
+        _l=${_pair##*:}
+        if [ -z "${!_u:-}" ] && [ -n "${!_l:-}" ]; then
+            printf -v "${_u}" '%s' "${!_l}"
+        fi
+    done
+    unset _aliases _pair _u _l
+
     # Guard against unresolved templating artifacts such as '{{ DOMAIN }}'.
     if is_unresolved_template_value "${DOMAIN:-}"; then
         DOMAIN=""
