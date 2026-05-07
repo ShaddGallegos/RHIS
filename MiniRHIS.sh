@@ -4103,9 +4103,24 @@ validate_resolved_kickstart_inputs() {
 
     for var_name in "${required_vars[@]}"; do
         value="${!var_name:-}"
-        if [ -z "$value" ] || is_unresolved_template_value "$value"; then
-            print_warning "Missing or unresolved required value: $var_name"
-            failed=1
+        if [ "${DEMO_MODE:-0}" = "1" ]; then
+            # Demo fast-path: treat placeholder values (example.com / EXAMPLE.COM)
+            # as acceptable and skip bundle/token requirements which are not
+            # necessary for local demo runs.
+            case "${var_name}" in
+                AAP_BUNDLE_URL|RH_OFFLINE_TOKEN|HUB_TOKEN)
+                    continue
+                    ;;
+            esac
+            if [ -z "$value" ]; then
+                print_warning "Missing required value for demo: $var_name"
+                failed=1
+            fi
+        else
+            if [ -z "$value" ] || is_unresolved_template_value "$value"; then
+                print_warning "Missing or unresolved required value: $var_name"
+                failed=1
+            fi
         fi
     done
 
@@ -4177,10 +4192,54 @@ ensure_kickstart_prereqs_ready() {
     esac
 
     missing="$(count_missing_vars "${required_vars[@]}")"
-    if [ "${missing}" -ne 0 ]; then
-        print_warning "Saved kickstart configuration is incomplete for '${scope}' (${missing} required value(s) missing)."
-        print_warning "Please select option 4 before creating kickstarts."
-        return 1
+    # For demo fast-paths, relax heavy external requirements (bundle/tokens/CDN)
+    # and accept placeholder DOMAIN/REALM values (example.com / EXAMPLE.COM).
+    if [ "${DEMO_MODE:-0}" = "1" ]; then
+        local -a _effective_required=()
+        local _v _val
+        for _v in "${required_vars[@]}"; do
+            case "${_v}" in
+                AAP_BUNDLE_URL|HUB_TOKEN|RH_OFFLINE_TOKEN|CDN_ORGANIZATION_ID|CDN_SAT_ACTIVATION_KEY)
+                    # Skip external dependencies for demo runs
+                    continue
+                    ;;
+                DOMAIN|REALM)
+                    # Only require DOMAIN/REALM when truly empty; placeholder
+                    # values like "example.com" are acceptable in demo mode.
+                    _val="${!_v:-}"
+                    if [ -z "${_val}" ]; then
+                        _effective_required+=("${_v}")
+                    fi
+                    ;;
+                *)
+                    _effective_required+=("${_v}")
+                    ;;
+            esac
+        done
+
+        missing=0
+        local -a _missing_vars=()
+        for _v in "${_effective_required[@]}"; do
+            _val="${!_v:-}"
+            if [ -z "${_val}" ] || is_unresolved_template_value "${_val}"; then
+                missing=$((missing + 1))
+                _missing_vars+=("${_v}")
+            fi
+        done
+
+        if [ "${missing}" -ne 0 ]; then
+            print_warning "Saved kickstart configuration is incomplete for '${scope}' (${missing} required value(s) missing)."
+            print_warning "Missing vars: ${_missing_vars[*]}"
+            print_warning "Please select option 4 before creating kickstarts."
+            return 1
+        fi
+    else
+        missing="$(count_missing_vars "${required_vars[@]}")"
+        if [ "${missing}" -ne 0 ]; then
+            print_warning "Saved kickstart configuration is incomplete for '${scope}' (${missing} required value(s) missing)."
+            print_warning "Please select option 4 before creating kickstarts."
+            return 1
+        fi
     fi
 
     return 0
@@ -11941,7 +12000,15 @@ prompt_all_env_options_once() {
                     ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
                     SAT_IP AAP_IP IDM_IP SAT_NETMASK AAP_NETMASK IDM_NETMASK SAT_GW AAP_GW IDM_GW \
                     IDM_DS_PASS )
-                ni_required_missing="$(count_missing_vars "${demo_required_vars[@]}")"
+                # For the DEMO fast-path accept placeholder domain/realm values
+                # (e.g. example.com / EXAMPLE.COM) as valid so demo runs remain
+                # fully headless. Only treat truly empty variables as missing.
+                ni_required_missing=0
+                for _v in "${demo_required_vars[@]}"; do
+                    if [ -z "${!_v:-}" ]; then
+                        ni_required_missing=$((ni_required_missing + 1))
+                    fi
+                done
             else
                 ni_required_missing="$(count_missing_vars \
                     ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
@@ -11954,7 +12021,32 @@ prompt_all_env_options_once() {
             if [ "${ni_required_missing}" -eq 0 ]; then
                 return 0
             fi
+
+            # Build a human-friendly list of which required vars are missing
+            local -a _missing_vars=()
+            local _var
+            if [ "${DEMO_MODE:-0}" = "1" ] && [ "${MENU_CHOICE:-}" = "1" ]; then
+                for _var in "${demo_required_vars[@]}"; do
+                    if [ -z "${!_var:-}" ] || is_unresolved_template_value "${!_var:-}"; then
+                        _missing_vars+=("${_var}")
+                    fi
+                done
+            else
+                local _full_required=( \
+                    ADMIN_USER ADMIN_PASS DOMAIN REALM INTERNAL_NETWORK NETMASK INTERNAL_GW \
+                    RH_USER RH_PASS RH_OFFLINE_TOKEN RH_ACCESS_TOKEN HUB_TOKEN RH_ISO_URL RH9_ISO_URL HOST_INT_IP CMDB_ENDPOINT_IP \
+                    SAT_IP SAT_NETMASK SAT_GW SAT_HOSTNAME SAT_ALIAS SAT_DOMAIN SAT_ORG SAT_LOC \
+                    AAP_IP AAP_NETMASK AAP_GW AAP_HOSTNAME AAP_ALIAS AAP_INVENTORY_TEMPLATE AAP_INVENTORY_GROWTH_TEMPLATE \
+                    IDM_IP IDM_NETMASK IDM_GW IDM_HOSTNAME IDM_ALIAS IDM_DS_PASS )
+                for _var in "${_full_required[@]}"; do
+                    if [ -z "${!_var:-}" ] || is_unresolved_template_value "${!_var:-}"; then
+                        _missing_vars+=("${_var}")
+                    fi
+                done
+            fi
+
             print_warning "NONINTERACTIVE mode: ${ni_required_missing} required value(s) are still missing after loading ${ANSIBLE_ENV_FILE}."
+            print_warning "Missing vars: ${_missing_vars[*]}"
             return 1
         fi
 
