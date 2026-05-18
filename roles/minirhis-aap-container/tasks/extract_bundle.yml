@@ -98,7 +98,6 @@
     ansible.builtin.group: root
     mode: "0755"
 
-- name: Install ---
 - name: Ensure qemu-img is present for verification
   ansible.builtin.stat:
     path: /usr/bin/qemu-img
