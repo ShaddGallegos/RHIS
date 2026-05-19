@@ -7,7 +7,7 @@ This role is intentionally small and safe: it ensures `podman` and `crun` are av
 Usage
 
 ```
-ansible-playbook -i inventory/hosts playbooks/run-aap-container-setup.yml -e "aap_controller_image=registry.example.com/aap:2.6"
+ansible-playbook -i inventory/hosts playbooks/run-aap-container-setup.yml -e "aap_controller_image=registry.<domain>/aap:2.6"
 ```
 
 Notes

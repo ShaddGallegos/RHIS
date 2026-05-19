@@ -1,0 +1,3 @@
+---
+# Default variables for minirhis-ssh-keys
+rhis_ssh_installer: {}

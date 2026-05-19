@@ -1,0 +1,5 @@
+---
+# Placeholder for automationgateway tasks/migrate.yml
+- name: "automationgateway migrate placeholder"
+  ansible.builtin.debug:
+    msg: "automationgateway migrate placeholder - no-op"

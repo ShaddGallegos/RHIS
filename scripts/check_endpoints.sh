@@ -12,8 +12,12 @@ SSH_USERS=(${SSH_USERS:-admin root installer $USER})
 SSH_USER=${SSH_USER:-root}
 SSH_KEY=${SSH_KEY:-$HOME/.ssh/minirhis-aap}
 SSH_CERT=${SSH_CERT:-}
-SSH_PASS=${SSH_PASS:-redhat}
-LOG_DIR=${LOG_DIR:-./logs/endpoints}
+# Prefer SSH password from environment or vaulted env (admin_pass / aap_admin_pass).
+SSH_PASS=${SSH_PASS:-${ADMIN_PASS:-${AAP_ADMIN_PASS:-}}}
+if [ -z "${SSH_PASS:-}" ]; then
+        echo "Warning: SSH_PASS not set; ensure ~/.ansible/conf/env.yml defines admin_pass/aap_admin_pass or export SSH_PASS." >&2
+fi
+LOG_DIR=${LOG_DIR:-/var/log/minirhis/endpoints}
 mkdir -p "$LOG_DIR"
 
 # Table Header
@@ -27,7 +31,8 @@ check_url() {
 }
 
 can_ssh() {
-        timeout 3 bash -c "</dev/tcp/$1/22" >/dev/null 2>&1
+        # Use centralized helper for a short port/auth check; return success if reachable or auth denied
+        bash "$(dirname "$0")/wait_for_ssh.sh" -t 3 -i 1 -q "$1" >/dev/null 2>&1
 }
 
 ssh_remote_exec() {

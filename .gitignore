@@ -180,3 +180,14 @@ env.yml
 # User-collected artifacts and logs (do not commit runtime artifacts)
 artifacts_user/
 artifacts_user/**
+log/
+logs/
+server_facts/
+server_diagnostics/
+host_vars/
+*.log
+*.pid
+id_rsa*
+*.crt
+*.csr
+*.secret

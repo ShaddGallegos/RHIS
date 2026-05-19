@@ -8,8 +8,8 @@ ansible_password: "{{ idm_admin_pass | default(aap_admin_pass | default(global_a
 
 # IdM realm and domain are derived from the global DOMAIN / REALM values set
 # during provisioning.  Override here if they differ per host.
-# idm_realm:   "EXAMPLE.COM"
-# idm_domain:  "example.com"
+# idm_realm:   "{{ realm | default('EXAMPLE.COM') }}"
+# idm_domain:  "{{ domain | default('example.com') }}"
 
 # Optional role-driven defaults for MINIRHIS bootstrap identities and policy.
 # The generated host_vars/idm.yml will include concrete values using these names.

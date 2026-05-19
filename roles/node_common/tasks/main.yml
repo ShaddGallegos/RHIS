@@ -3,6 +3,10 @@
 
 - name: Ensure facts are gathered
   ansible.builtin.setup:
+- name: Include RHSM/Insights preflight role (best-effort)
+  include_role:
+    name: minirhis-rhsm
+  when: not (minirhis_skip_rhsm_register | default(0) | bool)
 
 - name: Include OS tasks
   include_tasks: os.yml

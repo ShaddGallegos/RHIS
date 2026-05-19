@@ -1,0 +1,53 @@
+---
+- name: Fix 90-minirhis-nopasswd sudoers snippet on guests
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    minirhis_sudo_user: admin
+
+  tasks:
+    - name: Backup existing sudoers snippet (if present)
+      copy:
+        src: /etc/sudoers.d/90-minirhis-nopasswd
+        dest: "/root/90-minirhis-nopasswd.bak.{{ lookup('pipe','date -u +%Y%m%dT%H%M%SZ') }}"
+        remote_src: yes
+      ignore_errors: true
+
+    - name: Write safe sudoers snippet for minirhis
+      copy:
+        dest: /etc/sudoers.d/90-minirhis-nopasswd
+        content: "{{ minirhis_sudo_user }} ALL=(ALL) NOPASSWD: ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+
+    - name: Validate snippet with visudo
+      block:
+        - name: visudo check for snippet
+          command: visudo -c -f /etc/sudoers.d/90-minirhis-nopasswd
+          register: visudo_check
+          failed_when: visudo_check.rc != 0
+
+        - name: Validate overall sudoers sanity
+          command: visudo -c
+          register: visudo_all
+          failed_when: visudo_all.rc != 0
+
+      rescue:
+        - name: Restore backup if validation failed (best-effort)
+          shell: |
+            latest="/root/90-minirhis-nopasswd.bak."*
+            if ls $latest >/dev/null 2>&1; then
+              cp -f $(ls -1t /root/90-minirhis-nopasswd.bak.* | head -n1) /etc/sudoers.d/90-minirhis-nopasswd || true
+            fi
+          args:
+            warn: false
+
+        - name: Fail because visudo validation failed
+          fail:
+            msg: "visudo validation failed after updating /etc/sudoers.d/90-minirhis-nopasswd; original file restored if backup existed."
+
+    - name: Confirm snippet applied
+      debug:
+        msg: "90-minirhis-nopasswd updated to grant passwordless sudo to {{ minirhis_sudo_user }}"

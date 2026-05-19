@@ -74,3 +74,58 @@
       [Install]
       WantedBy=multi-user.target
   notify: daemon-reload
+
+- name: Ensure /etc/subuid contains admin mapping (idempotent)
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    regexp: "^admin:"
+    line: "admin:100000:65536"
+    create: yes
+    backup: yes
+  become: true
+
+- name: Ensure /etc/subgid contains admin mapping (idempotent)
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    regexp: "^admin:"
+    line: "admin:100000:65536"
+    create: yes
+    backup: yes
+  become: true
+
+- name: Set setuid on newuidmap/newgidmap where present (best-effort)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "04755"
+    owner: root
+    group: root
+  loop:
+    - /usr/libexec/newuidmap
+    - /usr/libexec/newgidmap
+    - /usr/bin/newuidmap
+    - /usr/bin/newgidmap
+    - /sbin/newuidmap
+    - /sbin/newgidmap
+  ignore_errors: true
+  become: true
+
+- name: Enable user lingering for admin (so user services start at boot)
+  ansible.builtin.command: loginctl enable-linger admin
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Ensure automation-gateway user unit enabled for admin (best-effort)
+  ansible.builtin.shell: |
+    su - admin -c "systemctl --user daemon-reload || true; systemctl --user enable automation-gateway.service 2>/dev/null || true"
+  args:
+    warn: false
+  become: true
+
+- name: Enable aap-bundle-fetch system service if present (do not fail if missing)
+  ansible.builtin.systemd:
+    name: aap-bundle-fetch.service
+    enabled: true
+    state: started
+  failed_when: false
+  become: true

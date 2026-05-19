@@ -5,8 +5,8 @@ if [ "$#" -lt 1 ]; then
   echo "Usage: $0 REALM [VAULT_PASSWORD_FILE]"
   echo
   echo "Examples:" 
-  echo "  $0 EXAMPLE.COM --ask-vault-pass"
-  echo "  $0 EXAMPLE.COM /path/to/.vaultpass"
+  echo "  $0 REALM --ask-vault-pass"
+  echo "  $0 REALM /path/to/.vaultpass"
   exit 2
 fi
 

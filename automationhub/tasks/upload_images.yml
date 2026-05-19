@@ -1,0 +1,5 @@
+---
+# Placeholder for automationhub tasks/upload_images.yml
+- name: "automationhub upload images placeholder"
+  ansible.builtin.debug:
+    msg: "automationhub upload_images placeholder - no-op"

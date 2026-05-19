@@ -40,6 +40,15 @@ KS_DIR="${KS_DIR:-/var/lib/libvirt/images/kickstarts}"
 FILES_DIR="${FILES_DIR:-/var/lib/libvirt/images/files}"
 OEMDRV_ISO="${OEMDRV_ISO:-$ISO_DIR/OEMDRV.iso}"
 
+# Logging defaults - centralize logs under /var/log/MiniRHIS by default.
+# Individual scripts may override these by exporting MINIRHIS_RUN_LOG_DIR.
+MINIRHIS_RUN_LOG_DIR="${MINIRHIS_RUN_LOG_DIR:-/var/log/MiniRHIS}"
+MINIRHIS_LOG="${MINIRHIS_LOG:-${MINIRHIS_RUN_LOG_DIR}/minirhis.log}"
+MINIRHIS_TEST_WARNING_FILE="${MINIRHIS_TEST_WARNING_FILE:-${MINIRHIS_RUN_LOG_DIR}/test-warnings.log}"
+# Try to create the directory if the invoking user can; ignore failures.
+mkdir -p "${MINIRHIS_RUN_LOG_DIR}" >/dev/null 2>&1 || true
+
+
 # Control whether Satellite installer attempts Insights registration. Default: 0 (disabled for demo).
 MINIRHIS_REGISTER_WITH_INSIGHTS=${MINIRHIS_REGISTER_WITH_INSIGHTS:-0}
 if [ "${MINIRHIS_REGISTER_WITH_INSIGHTS}" -ne 0 ]; then
@@ -83,6 +92,10 @@ MINIRHIS_CONTAINER_INVENTORY_FILE="${MINIRHIS_CONTAINER_INVENTORY_FILE:-/minirhi
 MINIRHIS_HOST_VARS_DIR="${MINIRHIS_HOST_VARS_DIR:-$SCRIPT_DIR/host_vars}"
 MINIRHIS_EXECUTION_MODE="${MINIRHIS_EXECUTION_MODE:-local}"
 
+# Default flags to pass to shell `dnf` calls (can be overridden externally).
+# Includes skip-broken/allowerasing/best and nogpgcheck per user request.
+DNF_FLAGS="${DNF_FLAGS:---skip-broken --allowerasing --best --nogpgcheck}"
+
 PRESEED_ENV_FILE="${PRESEED_ENV_FILE:-$SCRIPT_DIR/.env}"
 RH_TOKEN_URL="${RH_TOKEN_URL:-https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token}"
 RH_ISO_URL="${RH_ISO_URL:-}"
@@ -101,110 +114,168 @@ CLI_DEMO=""
 CLI_DEMOKILL=""
 CLI_RECONFIGURE=""
 CLI_AAP_INVENTORY_TEMPLATE=""
-CLI_AAP_INVENTORY_GROWTH_TEMPLATE=""
-CLI_ENTERPRISE=""
-CLI_STANDALONE=""
-CLI_CONTAINER_CONFIG_ONLY=""
-CLI_CONFIG_SCOPE=""
-CLI_ATTACH_CONSOLES=""
-CLI_STATUS=""
-CLI_STATUS_LIVE=""
-CLI_TEST=""
-CLI_TEST_PROFILE="full"
-CLI_VALIDATE=""
-CLI_GENERATE_ENV=""
-CLI_MENUTEST=""
-CLI_SATELLITE=""
-CLI_IDM=""
-CLI_AAP=""
-CLI_MINIRHIS=""
-CLI_LIBVIRT=""
-CLI_BAREMETAL=""
-CLI_AWS=""
-CLI_AZURE=""
-CLI_GCP=""
-CLI_NUTANIX=""
-CLI_OPENSHIFT=""
-CLI_OPENSHIFT_VIRT=""
-CLI_VMWARE=""
-CLI_LOCAL=""
-CLI_CONTAINER=""
-MENU_CHOICE_CONSUMED=0
-MINIRHIS_TEST_MODE="${MINIRHIS_TEST_MODE:-0}"
-MINIRHIS_MENU_TEST_MODE="${MINIRHIS_MENU_TEST_MODE:-0}"
-MINIRHIS_DASHBOARD_SINGLE_SHOT="${MINIRHIS_DASHBOARD_SINGLE_SHOT:-0}"
-MINIRHIS_HEADLESS_MONITOR_HINT_SHOWN="${MINIRHIS_HEADLESS_MONITOR_HINT_SHOWN:-0}"
-MINIRHIS_TEST_WARNING_COUNT=0
-MINIRHIS_TEST_FAILURE_COUNT=0
-MINIRHIS_TEST_WARNING_FILE="${MINIRHIS_TEST_WARNING_FILE:-/tmp/minirhis-test-warnings-$$.log}"
-declare -a MINIRHIS_TEST_RESULTS=()
-_MINIRHIS_TEST_STEP=0
-_MINIRHIS_TEST_TOTAL=0
-# Auto-run config-as-code sequence after container-only deployment (menu option 2).
-# Set to 0/false/no/off to disable.
-MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY="${MINIRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY:-1}"
-# Retry only failed config-as-code phases once (IdM/Satellite/AAP).
-# Set to 0/false/no/off to disable.
-MINIRHIS_RETRY_FAILED_PHASES_ONCE="${MINIRHIS_RETRY_FAILED_PHASES_ONCE:-1}"
-# Apply/verify runtime playbook hotfixes inside provisioner container before phase runs.
-MINIRHIS_ENABLE_CONTAINER_HOTFIXES="${MINIRHIS_ENABLE_CONTAINER_HOTFIXES:-1}"
-# Fail fast if hotfix verification cannot be confirmed.
-# Default OFF to avoid aborting full-stack convergence on non-critical patch drift.
-MINIRHIS_ENFORCE_CONTAINER_HOTFIXES="${MINIRHIS_ENFORCE_CONTAINER_HOTFIXES:-0}"
-# Internal SSH readiness wait for config-as-code preflight
-MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT="${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT:-1800}"
-MINIRHIS_INTERNAL_SSH_WAIT_INTERVAL="${MINIRHIS_INTERNAL_SSH_WAIT_INTERVAL:-10}"
-MINIRHIS_POST_VM_SETTLE_GRACE="${MINIRHIS_POST_VM_SETTLE_GRACE:-650}"
-MINIRHIS_INTERNAL_SSH_WARN_GRACE="${MINIRHIS_INTERNAL_SSH_WARN_GRACE:-600}"
-MINIRHIS_INTERNAL_SSH_LOG_EVERY="${MINIRHIS_INTERNAL_SSH_LOG_EVERY:-60}"
-# Global transport policy for managed nodes.
-# MINIRHIS enforces internal SSH reachability over 10.168.0.0/16 for all stack modes
-# (standalone node workflows and full minirhis stack).
-MINIRHIS_MANAGED_SSH_OVER_ETH0="0"
-# IdM web UI readiness check after IdM configuration phase.
-MINIRHIS_IDM_WEB_UI_TIMEOUT="${MINIRHIS_IDM_WEB_UI_TIMEOUT:-900}"
-MINIRHIS_IDM_WEB_UI_INTERVAL="${MINIRHIS_IDM_WEB_UI_INTERVAL:-15}"
-# Keep MINIRHIS service hostnames pinned to internal 10.168.x.x addresses.
-# External/NAT host mappings can be enabled explicitly for diagnostics.
-MINIRHIS_SYNC_EXTERNAL_HOSTS="${MINIRHIS_SYNC_EXTERNAL_HOSTS:-0}"
-# Post-install healthcheck/repair controls.
-MINIRHIS_ENABLE_POST_HEALTHCHECK="${MINIRHIS_ENABLE_POST_HEALTHCHECK:-1}"
-MINIRHIS_HEALTHCHECK_AUTOFIX="${MINIRHIS_HEALTHCHECK_AUTOFIX:-1}"
-MINIRHIS_HEALTHCHECK_RERUN_COMPONENT="${MINIRHIS_HEALTHCHECK_RERUN_COMPONENT:-1}"
-# Satellite app-level sanity retry controls (hammer/API checks).
-MINIRHIS_SAT_HEALTHCHECK_RETRIES="${MINIRHIS_SAT_HEALTHCHECK_RETRIES:-5}"
-MINIRHIS_SAT_HEALTHCHECK_INTERVAL="${MINIRHIS_SAT_HEALTHCHECK_INTERVAL:-15}"
-RHC_AUTO_CONNECT="${RHC_AUTO_CONNECT:-1}"
-COCKPIT_PORT="${COCKPIT_PORT:-9443}"
-# If enabled, fail the run when root-to-root SSH mesh cannot be fully established.
-# Default keeps root mesh best-effort while admin mesh remains mandatory.
-MINIRHIS_REQUIRE_ROOT_SSH_MESH="${MINIRHIS_REQUIRE_ROOT_SSH_MESH:-0}"
-# Optional pre-flight ad-hoc probes/upgrades before phase playbooks.
-# Default OFF to avoid noisy lockout-prone retries on fresh installs.
-MINIRHIS_ENABLE_PRECHECK_ADHOC="${MINIRHIS_ENABLE_PRECHECK_ADHOC:-0}"
-# Guard to ensure the full prompt wizard runs at most once per process.
-MINIRHIS_PROMPTS_COMPLETED="${MINIRHIS_PROMPTS_COMPLETED:-0}"
-# Keep per-component override prompts optional to reduce setup complexity.
-# Set to 1 to prompt for component-specific overrides (password/domain/realm).
-MINIRHIS_PROMPT_COMPONENT_OVERRIDES="${MINIRHIS_PROMPT_COMPONENT_OVERRIDES:-0}"
-# Defer heavy component installation/configuration out of kickstart %post and
-# execute it post-boot through run_minirhis_config_as_code.
-# Keeps role-specific kickstart provisioning (CPU/RAM/disk/network/hostname)
-# while avoiding fragile install-time network constraints.
-MINIRHIS_DEFER_COMPONENT_INSTALL="${MINIRHIS_DEFER_COMPONENT_INSTALL:-1}"
-# After base Satellite CaC run succeeds, execute an explicit post-configuration
-# pass (lifecycle/content views/activation keys/provisioning/network domains).
-MINIRHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC="${MINIRHIS_RUN_SATELLITE_POST_CONFIG_AFTER_CAC:-1}"
-# Run a dedicated Satellite provisioning pass after scenario install to ensure
-# KVM/libvirt compute resources/profiles/media/templates/network/hostgroups are
-# configured for both image-based and kickstart-based provisioning workflows.
-MINIRHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO="${MINIRHIS_RUN_SATELLITE_KVM_PROVISIONING_AFTER_SCENARIO:-1}"
+if [ "${_bundle_ok}" = "0" ]; then
+    echo "Installing minirhis-firstboot@aap-bundle-fetch instance (first-boot fallback)." >> "${MINIRHIS_RUN_LOG_DIR}/aap-setup-ready.log"
+    mkdir -p /etc/systemd/system /usr/local/lib/minirhis/firstboot.d /usr/local/lib/minirhis
 
-# Automation Hub + AAP bundle pre-flight HTTP-serve variables
-HUB_TOKEN="${HUB_TOKEN:-}"
-# Automation Hub API token used for [galaxy_server.*] in minirhis-ansible.cfg.
-# If unset, HUB_TOKEN is used as fallback.
-VAULT_CONSOLE_REDHAT_TOKEN="${VAULT_CONSOLE_REDHAT_TOKEN:-}"
+    # Install the generic templated first-boot service (only once)
+    cat > /etc/systemd/system/minirhis-firstboot@.service <<'SVCEOF'
+[Unit]
+Description=MiniRHIS first-boot task %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/minirhis/firstboot-runner.sh %i
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+    # Runner script that executes component workers with retries and idempotency
+    cat > /usr/local/lib/minirhis/firstboot-runner.sh <<'RUNEOF'
+#!/bin/bash
+set -euo pipefail
+component="$1"
+logdir="/var/log/MiniRHIS/firstboot"
+mkdir -p "${logdir}"
+log="${logdir}/${component}.log"
+marker="/var/lib/minirhis/firstboot-complete.${component}"
+
+# Default DNF flags (user requested: --skip-broken --allowerasing --best --nogpgcheck)
+DNF_FLAGS="${DNF_FLAGS:---skip-broken --allowerasing --best --nogpgcheck}"
+
+if [ -f "${marker}" ]; then
+    echo "[$(date)] ${component}: already completed (marker present); exiting." >> "${log}"
+    exit 0
+fi
+
+retries=5
+backoff=15
+for attempt in $(seq 1 ${retries}); do
+    echo "[$(date)] ${component}: attempt ${attempt} starting" >> "${log}"
+    if bash -x "/usr/local/lib/minirhis/firstboot.d/${component}.sh" >> "${log}" 2>&1; then
+        mkdir -p "$(dirname "${marker}")" || true
+        touch "${marker}"
+        echo "[$(date)] ${component}: succeeded" >> "${log}"
+        exit 0
+    else
+        echo "[$(date)] ${component}: attempt ${attempt} failed" >> "${log}"
+        sleep ${backoff}
+        backoff=$((backoff * 2))
+    fi
+done
+
+echo "[$(date)] ${component}: failed after ${retries} attempts" >> "${log}"
+exit 1
+RUNEOF
+    chmod 755 /usr/local/lib/minirhis/firstboot-runner.sh || true
+
+    # Component script for aap-bundle-fetch (adapted from previous inlined script)
+    cat > /usr/local/lib/minirhis/firstboot.d/aap-bundle-fetch.sh <<'FETCHEOF'
+#!/bin/bash
+set -euo pipefail
+AAP_BUNDLE_URL="{{AAP_BUNDLE_URL}}"
+AAP_BUNDLE_FALLBACK_URL="{{AAP_BUNDLE_FALLBACK_URL}}"
+bundle_home="/home/admin"
+bundle_dir="/home/admin/aap-setup"
+bundle_stage_dir="/home/admin/aap-setup.stage"
+bundle_filename="{{AAP_BUNDLE_FILENAME}}"
+if [ -z "${bundle_filename}" ] || [[ "${bundle_filename}" = */* ]]; then
+    bundle_filename="aap-bundle.tar.gz"
+fi
+bundle_tarball="${bundle_home}/${bundle_filename}"
+log="/var/log/MiniRHIS/aap-setup-ready.log"
+mkdir -p "$(dirname "${log}")" >/dev/null 2>&1 || true
+touch "${log}" >/dev/null 2>&1 || true
+echo "[$(date)] aap-bundle-fetch: first-boot retry starting" >> "${log}"
+mkdir -p "${bundle_dir}"
+chown -R admin:admin "${bundle_home}" || true
+
+stage_bundle_overrides() {
+    if [ -d "${bundle_dir}" ] && [ ! -L "${bundle_dir}" ] \
+        && [ ! -f "${bundle_dir}/ansible.containerized_installer.install.yml" ] \
+        && [ ! -f "${bundle_dir}/setup.sh" ]; then
+        rm -rf "${bundle_stage_dir}"
+        mv "${bundle_dir}" "${bundle_stage_dir}"
+    fi
+}
+
+extract_bundle_tree() {
+    local detected_root installer_root
+    stage_bundle_overrides
+    detected_root="$(tar -tzf "${bundle_tarball}" 2>/dev/null | sed -n '1p' | cut -d/ -f1)"
+    [ -n "${detected_root}" ] || detected_root="${bundle_filename%.tar.gz}"
+    tar -xzf "${bundle_tarball}" -C "${bundle_home}" >> "${log}" 2>&1
+    installer_root="${bundle_home}/${detected_root}"
+    [ -d "${installer_root}" ] || return 1
+    ln -sfn "${installer_root}" "${bundle_dir}"
+    if [ -d "${bundle_stage_dir}" ]; then
+        cp -af "${bundle_stage_dir}/." "${installer_root}/"
+        rm -rf "${bundle_stage_dir}"
+    fi
+    chown -h admin:admin "${bundle_dir}" || true
+    chown -R admin:admin "${installer_root}" || true
+}
+
+if [ -z "${AAP_BUNDLE_URL}" ]; then
+    echo "[$(date)] ERROR: AAP_BUNDLE_URL is empty in first-boot service." >> "${log}"
+    exit 1
+fi
+if [ -f "${bundle_tarball}" ] && tar -tzf "${bundle_tarball}" >/dev/null 2>&1; then
+    echo "[$(date)] Reusing existing local tarball: ${bundle_tarball}" >> "${log}"
+else
+    echo "[$(date)] Downloading from: ${AAP_BUNDLE_URL}" >> "${log}"
+    if ! curl -fL -C - --retry 5 --retry-delay 30 --connect-timeout 60 --max-time 7200 \
+        "${AAP_BUNDLE_URL}" -o "${bundle_tarball}" >> "${log}" 2>&1; then
+        if [ -n "${AAP_BUNDLE_FALLBACK_URL}" ] && [ "${AAP_BUNDLE_FALLBACK_URL}" != "${AAP_BUNDLE_URL}" ]; then
+            echo "[$(date)] Primary failed; retrying fallback URL from env.yml" >> "${log}"
+            curl -fL -C - --retry 5 --retry-delay 30 --connect-timeout 60 --max-time 7200 \
+                "${AAP_BUNDLE_FALLBACK_URL}" -o "${bundle_tarball}" >> "${log}" 2>&1
+        else
+            exit 7
+        fi
+    fi
+fi
+echo "[$(date)] Extracting bundle..." >> "${log}"
+extract_bundle_tree
+echo "[$(date)] Bundle fetch complete. (first-boot component)" >> "${log}"
+systemctl disable minirhis-firstboot@aap-bundle-fetch.service || true
+FETCHEOF
+    chmod 755 /usr/local/lib/minirhis/firstboot.d/aap-bundle-fetch.sh || true
+
+    # Create the instantiated unit that uses the generic runner
+    cat > /etc/systemd/system/minirhis-firstboot@aap-bundle-fetch.service <<'SVCEOF'
+[Unit]
+Description=MiniRHIS first-boot task aap-bundle-fetch
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/home/admin/aap-setup/ansible.containerized_installer.install.yml
+ConditionPathExists=!/home/admin/aap-setup/setup.sh
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/minirhis/firstboot-runner.sh aap-bundle-fetch
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+    # Ensure old legacy service is disabled if present
+    systemctl disable aap-bundle-fetch.service >/dev/null 2>&1 || true
+
+    systemctl enable minirhis-firstboot@aap-bundle-fetch.service || \
+        ln -sf /etc/systemd/system/minirhis-firstboot@aap-bundle-fetch.service \
+               /etc/systemd/system/multi-user.target.wants/minirhis-firstboot@aap-bundle-fetch.service
+    echo "minirhis-firstboot@aap-bundle-fetch.service enabled; will retry bundle download at first boot." >> /var/log/aap-setup-ready.log
+fi
 # Populated by normalize_shared_env_vars; must stay on 10.168.x.x internal network.
 HOST_INT_IP="${HOST_INT_IP:-}"
 CMDB_ENDPOINT_IP="${CMDB_ENDPOINT_IP:-}"
@@ -456,7 +527,44 @@ sanitize_log_message() {
 
 # Retries count and interval for provisioner container restart attempts.
 MINIRHIS_CONTAINER_RESTART_RETRIES="${MINIRHIS_CONTAINER_RESTART_RETRIES:-2}"
+
+# Ensure test counters are initialized early to avoid integer-comparison errors
+MINIRHIS_TEST_FAILURE_COUNT="${MINIRHIS_TEST_FAILURE_COUNT:-0}"
 MINIRHIS_CONTAINER_RESTART_INTERVAL="${MINIRHIS_CONTAINER_RESTART_INTERVAL:-10}"
+# Lightweight fallback for early callers of `run_phase_playbook_with_auth_fallback`.
+# Some phases may be invoked before the full, feature-complete implementation
+# appears later in the file; provide a minimal safe implementation here so
+# early checks (server-bootstrap, pre-config) can run.
+run_phase_playbook_with_auth_fallback() {
+    local phase_label="$1"
+    local phase_limit="$2"
+    local phase_playbook="$3"
+    local ansible_cfg
+    local inv
+
+    ansible_cfg="${MINIRHIS_ANSIBLE_CFG_HOST:-${HOME}/.ansible/conf/minirhis-ansible.runtime.cfg}"
+    inv="${MINIRHIS_INVENTORY_FILE:-${SCRIPT_DIR}/inventory/hosts}"
+
+    echo "[$(date)] [fallback-run_phase_playbook] ${phase_label} limit=${phase_limit} playbook=${phase_playbook}" >> "${MINIRHIS_LOG:-/var/log/minirhis/minirhis.log}"
+
+    # Respect vault/env files when present so roles like minirhis-rhsm receive
+    # credentials provided by MiniRHIS.sh via ${ANSIBLE_ENV_FILE}.
+    local -a _vault_arg=()
+    if [ -f "${ANSIBLE_VAULT_PASS_FILE:-}" ]; then
+        _vault_arg=(--vault-password-file "${ANSIBLE_VAULT_PASS_FILE}")
+    fi
+    local -a _vault_vars=()
+    if [ -f "${ANSIBLE_ENV_FILE:-}" ]; then
+        _vault_vars=(--extra-vars "@${ANSIBLE_ENV_FILE}")
+    fi
+
+    if ANSIBLE_CONFIG="${ansible_cfg}" ansible-playbook -i "${inv}" --limit "${phase_limit}" "${_vault_arg[@]}" "${_vault_vars[@]}" "${phase_playbook}"; then
+        return 0
+    else
+        echo "[$(date)] [fallback-run_phase_playbook] failed: ${phase_label}" >> "${MINIRHIS_LOG:-/var/log/minirhis/minirhis.log}"
+        return 1
+    fi
+}
 # DEMOKILL console behavior controls
 # 1 = compact one-line progress messages for DEMOKILL
 MINIRHIS_DEMOKILL_COMPACT="${MINIRHIS_DEMOKILL_COMPACT:-1}"
@@ -545,12 +653,36 @@ spinner_tick() {
     printf '\r\033[K'
 }
 
+# Wait for a pid while showing a one-line spinner and a short command synopsis.
+# Usage: wait_for_pid_spinner <pid> [message]
+wait_for_pid_spinner() {
+    local pid="$1"
+    local msg="${2:-Stand by — finishing background task}"
+    if [ -z "${pid}" ]; then
+        return 0
+    fi
+    if ! kill -0 "${pid}" >/dev/null 2>&1; then
+        return 0
+    fi
+    local synopsis
+    synopsis=$(ps -p "${pid}" -o args= 2>/dev/null | sed -n '1p' | tr -s '\\n' ' ')
+    synopsis=${synopsis:0:120}
+    local spin_chars='|/-\\' i=0
+    printf "%s" "${msg}"
+    while kill -0 "${pid}" >/dev/null 2>&1; do
+        i=$((i+1))
+        printf "\r[%c] %s — %s" "${spin_chars:i%${#spin_chars}:1}" "${msg}" "${synopsis}"
+        sleep 0.25
+    done
+    printf '\n'
+}
+
 print_warning() {
     local msg
     msg="$(sanitize_log_message "$*")"
     if is_enabled "${MINIRHIS_TEST_MODE:-0}"; then
         MINIRHIS_TEST_WARNING_COUNT=$((MINIRHIS_TEST_WARNING_COUNT + 1))
-        printf '%s\n' "${msg}" >> "${MINIRHIS_TEST_WARNING_FILE}"
+        printf '%s\n' "${msg}" >> "${MINIRHIS_TEST_WARNING_FILE:-/dev/null}"
     fi
     # Map warnings to red to make failures/warnings easy to spot
     echo -e "${RED}[WARNING]${NC} ${msg}"
@@ -967,8 +1099,15 @@ kickstart_password_hash() {
     local hashed_password=""
 
     if [ -z "${plain_password}" ]; then
-        print_warning "Kickstart password is empty; cannot generate rootpw/user password entry."
-        return 1
+        if [ "${DEMO_MODE:-0}" = "1" ]; then
+            print_warning "Kickstart password is empty; demo mode active — using default demo password."
+            # Use a consistent demo password for unattended demo installs. This keeps kickstarts
+            # valid even when users omit a password in demo mode.
+            plain_password="minirhis"
+        else
+            print_warning "Kickstart password is empty; cannot generate rootpw/user password entry."
+            return 1
+        fi
     fi
 
     if command -v openssl >/dev/null 2>&1; then
@@ -1070,9 +1209,10 @@ fi
 EOF
 }
 
+#kickstart_user_sudo_bootstrap_block() {
 kickstart_user_sudo_bootstrap_block() {
     local role_name="${1:-}"
-    cat <<EOF
+    cat <<'EOF'
 # 1.2 Ensure installer/admin user has passwordless sudo and virtualization groups
 ks_log "Phase 1.2: Ensure admin sudo bootstrap"
 target_user="${INSTALLER_USER:-${ADMIN_USER}}"
@@ -1288,8 +1428,8 @@ kickstart_rhc_connect_block() {
     cat <<'EOF'
 # 2.1 Red Hat Hybrid Cloud Console registration (rhc)
 ks_log "Phase 2.1: Optional rhc registration"
-if [ "${RHC_AUTO_CONNECT:-1}" = "1" ]; then
-    dnf install -y --nogpgcheck rhc >/dev/null 2>&1 || true
+    if [ "${RHC_AUTO_CONNECT:-1}" = "1" ]; then
+    dnf install -y ${DNF_FLAGS} rhc >/dev/null 2>&1 || true
     if command -v rhc >/dev/null 2>&1; then
         if ! rhc status >/dev/null 2>&1; then
             if [ -n "${RHC_ORGANIZATION_ID:-}" ] && [ -n "${RHC_ACTIVATION_KEY:-}" ]; then
@@ -1368,19 +1508,27 @@ packages_to_install=(
     "vim"
 )
 
-# Try installing each package; tolerate failures
-install_ok=0
-install_failed=0
-for pkg in "${packages_to_install[@]}"; do
-    if dnf install -y --skip-broken --allowerasing --best "${pkg}" >/dev/null 2>&1; then
-        install_ok=$((install_ok + 1))
-    else
-        install_failed=$((install_failed + 1))
-        echo "    ⚠ Skipped (tolerated): ${pkg}"
-    fi
-done
-
-echo "INFO: Satellite support packages - installed: ${install_ok}, skipped/failed: ${install_failed}"
+# Prefer a single dnf transaction so all package output is captured in the
+# kickstart %post log (/root/ks-post.log). If the bulk transaction fails,
+# fall back to per-package installs (appending to the same log) to identify
+# tolerant failures while keeping a single consolidated log file.
+ks_log "Attempting single-package-transaction for Satellite support packages"
+if dnf install -y --skip-broken --allowerasing --best "${packages_to_install[@]}"; then
+    ks_log "Satellite support packages installed in a single transaction"
+else
+    ks_log "Bulk install failed; falling back to per-package install (appending to same log)"
+    install_ok=0
+    install_failed=0
+    for pkg in "${packages_to_install[@]}"; do
+        if dnf install -y --skip-broken --allowerasing --best "${pkg}"; then
+            install_ok=$((install_ok + 1))
+        else
+            install_failed=$((install_failed + 1))
+            ks_log "    ⚠ Skipped (tolerated): ${pkg}"
+        fi
+    done
+    ks_log "Satellite support packages - installed: ${install_ok}, skipped/failed: ${install_failed}"
+fi
 EOF
 }
 
@@ -1536,6 +1684,72 @@ EOF_MINIRHIS_SET_DNS
 
 chmod 0755 /usr/local/bin/minirhis-set-dns.sh || true
 /usr/local/bin/minirhis-set-dns.sh || true
+
+# Ensure internal management IP is present on first boot. This is a fallback
+# that finds the interface by MAC and assigns the static IP if NetworkManager
+# hasn't activated the connection yet.
+cat > /usr/local/bin/minirhis-ensure-internal-ip.sh <<EOF_MINIRHIS_INTERNAL
+#!/bin/bash
+set -euo pipefail
+INT_MAC='${int_mac}'
+INT_IP='${int_ip}'
+INT_PREFIX='${int_prefix}'
+
+# Find device name by MAC address (case-insensitive)
+dev=$(ip -o link | awk -F': ' -v mac="${INT_MAC}" 'tolower($0) ~ tolower(mac) {print $2; exit}')
+if [ -n "${dev:-}" ]; then
+    if ! ip -4 addr show dev "${dev}" | grep -q "${INT_IP}"; then
+        /sbin/ip addr add ${INT_IP}/${INT_PREFIX} dev "${dev}" || true
+        /sbin/ip link set "${dev}" up || true
+    fi
+fi
+
+# Derive a live internal IP (prefer eth1 device found above). If missing,
+# try to detect any 10.168.x.x address from hostname -I as a last resort.
+LIVE_IP=""
+if [ -n "${dev:-}" ]; then
+    LIVE_IP=$(ip -4 -o addr show dev "${dev}" 2>/dev/null | awk '{print $4}' | cut -d/ -f1 || true)
+fi
+if [ -z "${LIVE_IP:-}" ]; then
+    LIVE_IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep '^10\.168\.' | head -n1 || true)
+fi
+
+    if [ -n "${LIVE_IP:-}" ]; then
+        HOSTNAME_FQDN=$(hostname -f 2>/dev/null || hostname 2>/dev/null || true)
+        # Update /etc/motd lines that reference the node IP and product UI so
+        # console/login shows the internal management address first.
+        sed -i -E "s/^(Node IP: ).*/\1${LIVE_IP}/" /etc/motd || true
+        sed -i -E "s|^(Product web UI: ).*|\1https://${LIVE_IP}/  or  https://${HOSTNAME_FQDN}/|" /etc/motd || true
+        # Also replace typical libvirt NAT / external addresses (e.g. 192.168.122.x)
+        sed -i -E "s/(192\\.168\\.[0-9]{1,3}\\.[0-9]{1,3})/${LIVE_IP}/g" /etc/motd || true
+
+        # Update /etc/issue.d/minirhis.issue and /etc/issue if present
+        if [ -f /etc/issue.d/minirhis.issue ]; then
+            sed -i -E "s/\([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\)/(${LIVE_IP})/g" /etc/issue.d/minirhis.issue || true
+            sed -i -E "s/(192\\.168\\.[0-9]{1,3}\\.[0-9]{1,3})/${LIVE_IP}/g" /etc/issue.d/minirhis.issue || true
+            sed -i -E "s|Product UI: .*|Product UI: https://${LIVE_IP}|" /etc/issue.d/minirhis.issue || true
+            cat /etc/issue.d/minirhis.issue > /etc/issue 2>/dev/null || true
+        fi
+    fi
+EOF_MINIRHIS_INTERNAL
+chmod 0755 /usr/local/bin/minirhis-ensure-internal-ip.sh || true
+
+cat > /etc/systemd/system/minirhis-ensure-internal-ip.service <<'EOF_MINIRHIS_SERVICE'
+[Unit]
+Description=MINIRHIS: ensure internal management IP is assigned
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/minirhis-ensure-internal-ip.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF_MINIRHIS_SERVICE
+
+systemctl daemon-reload || true
+systemctl enable --now minirhis-ensure-internal-ip.service || true
 EOF
 }
 
@@ -1660,7 +1874,7 @@ kickstart_creator_baseline_block() {
     cat <<EOF
 # MINIRHIS creator baseline (shared across all kickstarted nodes)
 # Ensures common tooling/services expected by creator/bootstrap automation.
-dnf install -y --nogpgcheck sudo openssh-clients rsync jq ansible-core cockpit || true
+    dnf install -y ${DNF_FLAGS} sudo openssh-clients rsync jq ansible-core cockpit || true
 systemctl enable --now chronyd || true
 
 # Configure Cockpit on a non-default port and enable it for immediate access.
@@ -2209,7 +2423,7 @@ sync_runtime_values_to_ansible_vault() {
             [ "${status}" = "skipped" ] && skipped_count=$((skipped_count + 1))
         done
         total_count="${#MINIRHIS_TEST_RESULTS[@]}"
-        overall_status="PASS"; [ "${MINIRHIS_TEST_FAILURE_COUNT}" -eq 0 ] || overall_status="FAIL"
+        overall_status="PASS"; (( ${MINIRHIS_TEST_FAILURE_COUNT:-0} == 0 )) || overall_status="FAIL"
         demo_display="OFF";    [ "${DEMO_MODE:-0}" = "1" ] && demo_display="ON"
 
         echo ""
@@ -2253,13 +2467,13 @@ sync_runtime_values_to_ansible_vault() {
         printf "${CYAN}  ───────────────────────────────────────────────────────────────${NC}\n"
         echo ""
         pass_bar="$(_minirhis_test_bar "${passed_count}"              "${total_count}")"
-        fail_bar="$(_minirhis_test_bar "${MINIRHIS_TEST_FAILURE_COUNT}"   "${total_count}")"
+        fail_bar="$(_minirhis_test_bar "${MINIRHIS_TEST_FAILURE_COUNT:-0}"   "${total_count}")"
         printf "  ${GREEN}Passed   :  %d / %d   ${BOLD}%s${NC}\n" \
             "${passed_count}" "${total_count}" "${pass_bar}"
         printf "  ${RED}Failed   :  %d / %d   ${BOLD}%s${NC}\n" \
             "${MINIRHIS_TEST_FAILURE_COUNT}" "${total_count}" "${fail_bar}"
         printf "  ${BLUE}Skipped  :  %-3d${NC}\n" "${skipped_count}"
-        printf "  ${RED}Warnings :  %-3d${NC}\n" "${MINIRHIS_TEST_WARNING_COUNT}"
+        printf "  ${RED}Warnings :  %-3d${NC}\n" "${MINIRHIS_TEST_WARNING_COUNT:-0}"
 
         if [ -s "${MINIRHIS_TEST_WARNING_FILE}" ]; then
             echo ""
@@ -2272,7 +2486,7 @@ sync_runtime_values_to_ansible_vault() {
         echo ""
         printf "${CYAN}  ───────────────────────────────────────────────────────────────${NC}\n"
         echo ""
-        if [ "${MINIRHIS_TEST_FAILURE_COUNT}" -eq 0 ]; then
+        if (( ${MINIRHIS_TEST_FAILURE_COUNT:-0} == 0 )); then
             printf "${BOLD}${GREEN}════════════════════════════════════════════════════════════════${NC}\n"
             printf "${BOLD}${GREEN}  ✔  ALL SYSTEMS GO — Your MINIRHIS stack is ready to build.${NC}\n"
             printf "${BOLD}${GREEN}════════════════════════════════════════════════════════════════${NC}\n"
@@ -2296,7 +2510,7 @@ sync_runtime_values_to_ansible_vault() {
         MINIRHIS_TEST_FAILURE_COUNT=0
         MINIRHIS_TEST_WARNING_COUNT=0
         _MINIRHIS_TEST_STEP=0
-        : > "${MINIRHIS_TEST_WARNING_FILE}"
+        : > "${MINIRHIS_TEST_WARNING_FILE:-/dev/null}"
 
         local demo_display="OFF"
         [ "${DEMO_MODE:-0}" = "1" ] && demo_display="ON"
@@ -2866,6 +3080,45 @@ probe_ssh_endpoint() {
     return 1
 }
 
+# Wait for SSH to become available on a host. Uses scripts/wait_for_ssh.sh when present,
+# otherwise falls back to an internal loop based on probe_ssh_endpoint.
+# Usage: wait_for_ssh [script-opts] host
+wait_for_ssh() {
+    local script="$SCRIPT_DIR/scripts/wait_for_ssh.sh"
+    if [ -f "$script" ]; then
+        # pass all args through to the helper script
+        bash "$script" "$@"
+        return $?
+    fi
+
+    # Fallback: basic timeout loop using probe_ssh_endpoint
+    local timeout=300
+    local interval=5
+    # parse optional -t and -i before host
+    local OPTIND=1 opt
+    while getopts ":t:i:" opt; do
+        case "$opt" in
+            t) timeout=$OPTARG ;;
+            i) interval=$OPTARG ;;
+            *) break ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+    local host="$1"
+    local start_ts; start_ts=$(date +%s)
+
+    while true; do
+        if probe_ssh_endpoint "$host"; then
+            return 0
+        fi
+        if [ $(( $(date +%s) - start_ts )) -ge "$timeout" ]; then
+            echo "[TIMEOUT] ${host} did not become reachable via SSH within ${timeout}s"
+            return 3
+        fi
+        sleep "$interval"
+    done
+}
+
 load_preseed_env() {
     if [ -f "$PRESEED_ENV_FILE" ]; then
         print_step "Loading preseed variables from $PRESEED_ENV_FILE"
@@ -3091,10 +3344,10 @@ normalize_shared_env_vars() {
     MINIRHIS_MANAGED_SSH_OVER_ETH0="0"
 
     # Guardrails: MINIRHIS node-to-node addresses must remain on the internal 10.168/16.
-    case "${SAT_IP}" in 10.168.*) ;; *) print_warning "SAT_IP='${SAT_IP}' is outside 10.168.x.x; resetting to 10.168.128.1."; SAT_IP="10.168.128.1" ;; esac
-    case "${AAP_IP}" in 10.168.*) ;; *) print_warning "AAP_IP='${AAP_IP}' is outside 10.168.x.x; resetting to 10.168.128.2."; AAP_IP="10.168.128.2" ;; esac
-    case "${IDM_IP}" in 10.168.*) ;; *) print_warning "IDM_IP='${IDM_IP}' is outside 10.168.x.x; resetting to 10.168.128.3."; IDM_IP="10.168.128.3" ;; esac
-    case "${HOST_INT_IP}" in 10.168.*) ;; *) print_warning "HOST_INT_IP='${HOST_INT_IP}' is outside 10.168.x.x; resetting to ${INTERNAL_GW:-10.168.0.1}."; HOST_INT_IP="${INTERNAL_GW:-10.168.0.1}" ;; esac
+    case "${SAT_IP}" in 10.168.*) ;; *) print_error "SAT_IP='${SAT_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
+    case "${AAP_IP}" in 10.168.*) ;; *) print_error "AAP_IP='${AAP_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
+    case "${IDM_IP}" in 10.168.*) ;; *) print_error "IDM_IP='${IDM_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
+    case "${HOST_INT_IP}" in 10.168.*) ;; *) print_error "HOST_INT_IP='${HOST_INT_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
     case "${CMDB_ENDPOINT_IP}" in 10.168.*) ;; *) print_warning "CMDB_ENDPOINT_IP='${CMDB_ENDPOINT_IP}' is outside 10.168.x.x; resetting to $(default_cmdb_endpoint_ip)."; CMDB_ENDPOINT_IP="$(default_cmdb_endpoint_ip)" ;; esac
 
     SAT_ORG="${SAT_ORG:-REDHAT}"
@@ -3241,6 +3494,15 @@ normalize_shared_env_vars() {
         [[ "${SAT_HOSTNAME}" == *.* ]] || SAT_HOSTNAME="${SAT_HOSTNAME}.${DOMAIN}"
         [[ "${AAP_HOSTNAME}" == *.* ]] || AAP_HOSTNAME="${AAP_HOSTNAME}.${DOMAIN}"
         [[ "${IDM_HOSTNAME}" == *.* ]] || IDM_HOSTNAME="${IDM_HOSTNAME}.${DOMAIN}"
+        
+        # Ensure hostnames use the current DOMAIN, even if loaded from env.yml with old domain suffix
+        # Extract short hostname and re-derive with current DOMAIN (e.g., satellite.example.com → satellite.prod.spg)
+        local _sat_short="${SAT_HOSTNAME%%.*}"
+        local _aap_short="${AAP_HOSTNAME%%.*}"
+        local _idm_short="${IDM_HOSTNAME%%.*}"
+        SAT_HOSTNAME="${_sat_short}.${DOMAIN}"
+        AAP_HOSTNAME="${_aap_short}.${DOMAIN}"
+        IDM_HOSTNAME="${_idm_short}.${DOMAIN}"
     fi
 
     # Safety: remove any trailing dots accidentally present (avoid 'name.').
@@ -4864,7 +5126,7 @@ launch_progress_dashboard_auto() {
     is_enabled "${MINIRHIS_AUTO_POPUP_MONITORS:-1}" || return 0
 
     stop_progress_monitors >/dev/null 2>&1 || true
-    : > "${MINIRHIS_PROGRESS_MONITOR_PID_FILE}"
+    : > "${MINIRHIS_PROGRESS_MONITOR_PID_FILE:-/dev/null}"
 
     dashboard_cmd="printf '\033]0;%s\007' 'MINIRHIS Progress'; cd '${SCRIPT_DIR}'; exec bash '${SCRIPT_DIR}/MiniRHIS.sh' --status-live"
 
@@ -4936,7 +5198,7 @@ launch_single_vm_console_monitor_auto() {
     monitor_cmd="printf '\033]0;%s\007' '${vm_label}'; echo '[${vm_label}] monitor active (auto-reconnect enabled)'; while true; do while ! sudo virsh dominfo ${vm} >/dev/null 2>&1; do sleep 5; done; echo '[${vm_label}] connecting virsh console (Ctrl+] to detach)'; ${console_attach_cmd}; echo '[${vm_label}] console disconnected (reboot/install transition); retrying in 5s...'; sleep 5; done"
 
     stop_vm_console_monitors >/dev/null 2>&1 || true
-    : > "${MINIRHIS_VM_MONITOR_PID_FILE}"
+    : > "${MINIRHIS_VM_MONITOR_PID_FILE:-/dev/null}"
 
     if ! command -v virsh >/dev/null 2>&1; then
         print_warning "virsh not found; skipping VM console monitor auto-launch."
@@ -4971,7 +5233,7 @@ launch_vm_console_monitors_auto() {
     local console_attach_cmd
 
     stop_vm_console_monitors >/dev/null 2>&1 || true
-    : > "${MINIRHIS_VM_MONITOR_PID_FILE}"
+    : > "${MINIRHIS_VM_MONITOR_PID_FILE:-/dev/null}"
 
     if ! command -v virsh >/dev/null 2>&1; then
         print_warning "virsh not found; skipping VM console monitor auto-launch."
@@ -5129,7 +5391,7 @@ ensure_node() {
     fi
 
     print_warning "Node.js not found. Attempting installation..."
-    sudo dnf install -y --nogpgcheck nodejs npm
+    sudo dnf install -y ${DNF_FLAGS} nodejs npm
     command -v node >/dev/null 2>&1
 }
 
@@ -5171,7 +5433,7 @@ ensure_firewalld() {
     # ── Bash fallback ───────────────────────────────────────────────────────
     if ! command -v firewall-cmd >/dev/null 2>&1; then
         print_warning "firewalld not found. Attempting installation..."
-        sudo dnf install -y --nogpgcheck firewalld
+        sudo dnf install -y ${DNF_FLAGS} firewalld
     fi
 
     sudo systemctl enable --now firewalld
@@ -5343,30 +5605,34 @@ install_local() {
 
 # ─── Container lifecycle and managed provisioner patches ─────────────────────
 ensure_rootless_podman() {
+    # Prefer an explicitly provided user, else fall back to SUDO_USER or USER env
+    local _user
+    _user="${MINIRHIS_ROOTLESS_USER:-${SUDO_USER:-${USER}}}"
+
     if [ "$(id -u)" -eq 0 ]; then
-        print_warning "Run this script as a regular user (not root) for rootless Podman."
+        print_warning "Run this script as a regular user (not root) for rootless Podman. Suggested user: ${_user}"
         return 1
     fi
 
     if ! command -v podman >/dev/null 2>&1; then
         print_warning "Podman not found. Installing..."
-        sudo dnf install -y --nogpgcheck podman shadow-utils slirp4netns fuse-overlayfs
+        sudo dnf install -y ${DNF_FLAGS} podman uidmap shadow-utils slirp4netns fuse-overlayfs
     fi
 
     local _subuids_added=0
-    if ! grep -q "^${USER}:" /etc/subuid 2>/dev/null; then
-        print_step "Adding subuid mapping for ${USER}..."
-        sudo usermod --add-subuids 100000-165535 "$USER"
+    if ! grep -q "^${_user}:" /etc/subuid 2>/dev/null; then
+        print_step "Adding subuid mapping for ${_user}..."
+        sudo usermod --add-subuids 100000-165535 "${_user}" || true
         _subuids_added=1
     fi
-    if ! grep -q "^${USER}:" /etc/subgid 2>/dev/null; then
-        print_step "Adding subgid mapping for ${USER}..."
-        sudo usermod --add-subgids 100000-165535 "$USER"
+    if ! grep -q "^${_user}:" /etc/subgid 2>/dev/null; then
+        print_step "Adding subgid mapping for ${_user}..."
+        sudo usermod --add-subgids 100000-165535 "${_user}" || true
         _subuids_added=1
     fi
 
     # Enable linger so the user's systemd session persists across logins.
-    sudo loginctl enable-linger "$USER" >/dev/null 2>&1 || true
+    sudo loginctl enable-linger "${_user}" >/dev/null 2>&1 || true
 
     # Always derive XDG_RUNTIME_DIR from the actual UID — never trust an
     # inherited value that may be empty or stale (e.g. /run/user/ with no UID).
@@ -5392,20 +5658,42 @@ ensure_rootless_podman() {
     # Migrate storage after any subuid/subgid change (idempotent on reruns).
     podman system migrate >/dev/null 2>&1 || true
 
+    # Ensure user systemd podman socket is enabled for rootless operation.
+    # Use runuser to operate against the target user's systemd --user scope
+    runuser -l "${_user}" -c 'systemctl --user enable --now podman.socket' >/dev/null 2>&1 || true
+
+    # If podman fails due to newuidmap/uid_map permission, attempt a safe sysctl fallback
+    # to enable unprivileged user namespaces (requires sudo to persist).
+    if ! podman info >/dev/null 2>&1; then
+        if podman info 2>&1 | grep -E "newuidmap|open of uid_map failed" >/dev/null 2>&1; then
+            if sudo -n true 2>/dev/null; then
+                print_step "Attempting to enable unprivileged user namespaces (kernel.unprivileged_userns_clone=1)"
+                sudo sysctl -w kernel.unprivileged_userns_clone=1 >/dev/null 2>&1 || true
+                echo 'kernel.unprivileged_userns_clone = 1' | sudo tee /etc/sysctl.d/99-minirhis-rootless.conf >/dev/null 2>&1 || true
+                sudo sysctl --system >/dev/null 2>&1 || true
+            else
+                print_warning "Podman newuidmap error detected; sudo is required to enable unprivileged user namespaces."
+                print_warning "Please run: sudo sysctl -w kernel.unprivileged_userns_clone=1 && sudo sysctl --system"
+            fi
+        fi
+    fi
+
     if [ "$(podman info --format '{{.Host.Security.Rootless}}' 2>/dev/null)" != "true" ]; then
-        print_warning "Podman is not operating rootless for user '${USER}'."
+        print_warning "Podman is not operating rootless for user '${_user}'."
         print_warning "  XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR}"
-        print_warning "  subuid entry  : $(grep "^${USER}:" /etc/subuid 2>/dev/null || echo '(none)')"
-        print_warning "  subgid entry  : $(grep "^${USER}:" /etc/subgid 2>/dev/null || echo '(none)')"
+        print_warning "  subuid entry  : $(grep "^${_user}:" /etc/subuid 2>/dev/null || echo '(none)')"
+        print_warning "  subgid entry  : $(grep "^${_user}:" /etc/subgid 2>/dev/null || echo '(none)')"
         if [ "${_subuids_added}" = "1" ]; then
             print_warning "Subuid/subgid mappings were just added — a full log-out/log-in is required for the kernel to load them."
         else
             print_warning "Try: sudo systemctl start user@${_uid}.service  (or log out and back in)"
         fi
+        export MINIRHIS_PODMAN_ROOTLESS_AVAILABLE=0
         return 1
     fi
 
-    print_success "Rootless Podman is configured for user: ${USER}"
+    print_success "Rootless Podman is configured for user: ${_user}"
+    export MINIRHIS_PODMAN_ROOTLESS_AVAILABLE=1
     return 0
 }
 
@@ -5994,6 +6282,36 @@ repair_web_uis() {
                 -m shell -a "${_cmd}" ${_extra} 2>&1
         }
 
+        # Run _rwu_admin_shell but show a spinner and live tail of a temp log
+        # Usage: _rwu_admin_shell_spinner <target> <cmd> [extra-args]
+        _rwu_admin_shell_spinner() {
+            local _target="$1" _cmd="$2" _extra="${3:---one-line}"
+            local _tmp logtail_pid ret
+            _tmp=$(mktemp /tmp/minirhis-rwu.XXXXXX) || _tmp=/tmp/minirhis-rwu.$$
+
+            # Launch the command in background, capture output to temp file
+            (
+                _rwu_admin_shell "${_target}" "${_cmd}" "${_extra}"
+            ) >"${_tmp}" 2>&1 &
+            local _rpid=$!
+
+            # Start a tail -f so the user sees live log lines
+            tail -n 10 -f "${_tmp}" &
+            logtail_pid=$!
+
+            # Show a one-line spinner + synopsis while the remote command runs
+            wait_for_pid_spinner "${_rpid}" "Waiting for remote task (press Ctrl-C to cancel)"
+
+            wait "${_rpid}" || ret=$?
+            sleep 0.2
+            kill "${logtail_pid}" >/dev/null 2>&1 || true
+            echo
+            # Show the final tail so the caller can see the end of output (mimics previous behavior)
+            tail -n 60 "${_tmp}" || true
+            rm -f "${_tmp}" >/dev/null 2>&1 || true
+            return ${ret:-0}
+        }
+
         # ── Helper: SSH shell direct via root key (bypasses Ansible inventory) ──
         _rwu_root_key_shell() {
             local _host="$1" _cmd="$2"
@@ -6086,7 +6404,7 @@ repair_web_uis() {
 
         if [ -n "${_aap_nat_ip}" ]; then
             local _bs_cmd
-            _bs_cmd='rpm -q podman >/dev/null 2>&1 || dnf install -y podman 2>&1 | tail -3; '
+            _bs_cmd='rpm -q podman >/dev/null 2>&1 || dnf install -y --skip-broken --allowerasing --best --nogpgcheck podman uidmap 2>&1 | tail -3; '
             _bs_cmd="${_bs_cmd}"'echo "admin:'"${ADMIN_PASS}"'" | chpasswd; '
             _bs_cmd="${_bs_cmd}"'grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config || { sed -i '"'"'s/^#\?PasswordAuthentication.*/PasswordAuthentication yes/'"'"' /etc/ssh/sshd_config && systemctl restart sshd; }; '
             _bs_cmd="${_bs_cmd}"'mkdir -p /home/admin/.ssh && chmod 700 /home/admin/.ssh && chown admin:admin /home/admin/.ssh; '
@@ -6094,7 +6412,7 @@ repair_web_uis() {
             _bs_cmd="${_bs_cmd}"'su - admin -c "cat /home/admin/.ssh/id_rsa.pub >> /home/admin/.ssh/authorized_keys && sort -u /home/admin/.ssh/authorized_keys > /tmp/_ak && mv /tmp/_ak /home/admin/.ssh/authorized_keys && chmod 600 /home/admin/.ssh/authorized_keys" 2>&1; '
             _bs_cmd="${_bs_cmd}"'su - admin -c "ssh-keyscan -H localhost >> /home/admin/.ssh/known_hosts 2>/dev/null; sort -u /home/admin/.ssh/known_hosts > /tmp/_kh && mv /tmp/_kh /home/admin/.ssh/known_hosts" 2>&1; '
             _bs_cmd="${_bs_cmd}"'loginctl enable-linger admin 2>/dev/null || true; '
-            _bs_cmd="${_bs_cmd}"'printf "%s\n" "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-minirhis-nopasswd && chmod 0440 /etc/sudoers.d/90-minirhis-nopasswd; '
+            _bs_cmd="${_bs_cmd}"'printf "%s\n" "admin ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/90-minirhis-nopasswd && chmod 0440 /etc/sudoers.d/90-minirhis-nopasswd; '
             _bs_cmd="${_bs_cmd}"'dnf clean all >/dev/null 2>&1 || true; '
             _bs_cmd="${_bs_cmd}"'{ _blink=/home/admin/bundle; _found=""; for _d in /home/admin/aap-setup /home/admin/ansible-automation-platform-containerized-setup-bundle-*/; do [ -d "${_d}/bundle" ] && { _found="${_d}/bundle"; break; }; done; [ -n "${_found}" ] && { ln -sfn "${_found}" "${_blink}"; chown -h admin:admin "${_blink}"; } || true; }; '
             _bs_cmd="${_bs_cmd}"'echo AAP_BOOTSTRAP_DONE'
@@ -6150,15 +6468,16 @@ repair_web_uis() {
             _aap_inv="${_aap_setup}/inventory"
             # Ensure PostgreSQL contrib extensions are present for Automation Hub (hstore),
             # then run the installer with explicit bundle_dir and validate_certs args.
-            _install_cmd='if command -v podman >/dev/null 2>&1 && podman ps -a --format "{{.Names}}" | grep -qx postgresql; then podman start postgresql >/dev/null 2>&1 || true; podman exec postgresql sh -lc "dnf install -y postgresql-contrib >/dev/null 2>&1 || true" || true; podman exec postgresql psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_available_extensions WHERE name='"'"'hstore'"'"'" | grep -q 1 && echo AAP_PG_HSTORE_OK || echo AAP_PG_HSTORE_WARN; fi; touch /tmp/aap-install.log && chown admin:admin /tmp/aap-install.log; su - admin -c "cd ${_aap_setup} && ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i ${_aap_inv} ${_aap_pb} -e bundle_dir=/home/admin/bundle -e validate_certs=false > /tmp/aap-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -30 /tmp/aap-install.log >&2; echo AAP_INSTALL_FAIL; }"'
+            _install_cmd='if command -v podman >/dev/null 2>&1 && podman ps -a --format "{% raw %}{{.Names}}{% endraw %}" | grep -qx postgresql; then podman start postgresql >/dev/null 2>&1 || true; podman exec postgresql sh -lc "dnf install -y --skip-broken --allowerasing --best --nogpgcheck postgresql-contrib >/dev/null 2>&1 || true" || true; podman exec postgresql psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_available_extensions WHERE name='"'"'hstore'"'"'" | grep -q 1 && echo AAP_PG_HSTORE_OK || echo AAP_PG_HSTORE_WARN; fi; touch /tmp/aap-install.log && chown admin:admin /tmp/aap-install.log; su - admin -c "cd ${_aap_setup} && ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i ${_aap_inv} ${_aap_pb} -e bundle_dir=/home/admin/bundle -e validate_certs=false > /tmp/aap-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -30 /tmp/aap-install.log >&2; echo AAP_INSTALL_FAIL; }"'
             if [ -n "${_aap_nat_ip}" ]; then
                 _rwu_root_key_shell "${_aap_nat_ip}" "${_install_cmd}" 2>&1 | tail -30 || \
                     print_warning "Repair AAP: installer run via ${_aap_nat_ip} may have had issues."
             else
-                _rwu_admin_shell "aap" \
-                    "if command -v podman >/dev/null 2>&1 && podman ps -a --format \"{{.Names}}\" | grep -qx postgresql; then podman start postgresql >/dev/null 2>&1 || true; podman exec postgresql sh -lc 'dnf install -y postgresql-contrib >/dev/null 2>&1 || true' || true; podman exec postgresql psql -U postgres -d postgres -tAc \"SELECT 1 FROM pg_available_extensions WHERE name='hstore'\" | grep -q 1 && echo AAP_PG_HSTORE_OK || echo AAP_PG_HSTORE_WARN; fi; cd ${_aap_setup} && ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i ${_aap_inv} ${_aap_pb} -e bundle_dir=/home/admin/bundle -e validate_certs=false > /tmp/aap-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -20 /tmp/aap-install.log; echo AAP_INSTALL_FAIL; }" \
-                    "--timeout 5400" 2>&1 | tail -30 || \
+                if ! _rwu_admin_shell_spinner "aap" \
+                    "if command -v podman >/dev/null 2>&1 && podman ps -a --format \"{% raw %}{{.Names}}{% endraw %}\" | grep -qx postgresql; then podman start postgresql >/dev/null 2>&1 || true; podman exec postgresql sh -lc 'dnf install -y --skip-broken --allowerasing --best --nogpgcheck postgresql-contrib >/dev/null 2>&1 || true' || true; podman exec postgresql psql -U postgres -d postgres -tAc \"SELECT 1 FROM pg_available_extensions WHERE name='hstore'\" | grep -q 1 && echo AAP_PG_HSTORE_OK || echo AAP_PG_HSTORE_WARN; fi; cd ${_aap_setup} && ANSIBLE_COLLECTIONS_PATHS=${_aap_cols} ansible-playbook -i ${_aap_inv} ${_aap_pb} -e bundle_dir=/home/admin/bundle -e validate_certs=false > /tmp/aap-install.log 2>&1 && echo AAP_INSTALL_OK || { tail -20 /tmp/aap-install.log; echo AAP_INSTALL_FAIL; }" \
+                    "--timeout 5400"; then
                     print_warning "Repair AAP: installer did not complete cleanly; check /tmp/aap-install.log on ${AAP_IP}."
+                fi
             fi
             # Fix TLS key/cert permissions so nginx (UID 999 inside container) can read them.
             # The AAP installer creates certs as 0400 admin:admin; the automation-gateway container
@@ -6549,7 +6868,12 @@ run_component_config_scope() {
     local -a targets=()
 
     if [ "${MINIRHIS_EXECUTION_MODE:-local}" = "container" ]; then
-        install_container || return 1
+        if ! install_container; then
+            print_warning "Container deployment failed; falling back to VM-based provisioning for component configuration."
+            MINIRHIS_EXECUTION_MODE="local"
+            # Attempt to ensure VMs exist so component configuration can proceed
+            create_minirhis_vms || print_warning "VM creation did not complete. Component configuration may be skipped."
+        fi
     fi
 
     case "${scope}" in
@@ -7078,7 +7402,7 @@ sync_minirhis_external_hosts_entries() {
             echo "# END MINIRHIS INTERNAL HOSTS"
         } > "${block_file_internal}"
     else
-        : > "${block_file_internal}"
+        : > "${block_file_internal:-/dev/null}"
     fi
 
     if [ "${#rows_external[@]}" -gt 0 ]; then
@@ -7090,7 +7414,7 @@ sync_minirhis_external_hosts_entries() {
             echo "# END MINIRHIS EXTERNAL HOSTS"
         } > "${block_file_external}"
     else
-        : > "${block_file_external}"
+        : > "${block_file_external:-/dev/null}"
     fi
 
     # Remove previously managed MINIRHIS blocks, then append refreshed blocks.
@@ -8352,6 +8676,13 @@ stage_satellite_manifest() {
 run_minirhis_config_as_code() {
     print_step "===== MINIRHIS Config-as-Code Phase ====="
     print_step "Generating fresh inventory and host_vars from env.yml..."
+    # Ensure server-bootstrap post-install checks are run at the beginning of
+    # the config-as-code phase if they haven't been run already. This helps
+    # catch registration/insights/connectivity issues early.
+    if [ -z "${MINIRHIS_SERVER_BOOTSTRAP_CHECKS_DONE:-}" ] && is_enabled "${MINIRHIS_ENABLE_SERVER_BOOTSTRAP_CHECKS:-1}"; then
+        MINIRHIS_SERVER_BOOTSTRAP_CHECKS_DONE=1
+        run_phase_playbook_with_auth_fallback "Config-start — server-bootstrap checks" "idm:scenario_satellite:aap" "${SCRIPT_DIR}/playbooks/server-bootstrap.yml" || print_warning "Server-bootstrap checks at config start reported issues or could not complete."
+    fi
     local idm_status="not-run"
     local satellite_status="not-run"
     local aap_status="not-run"
@@ -8452,6 +8783,7 @@ run_minirhis_config_as_code() {
     run_satellite_precontainer_bootstrap() {
         local sat_target_ip="${SAT_IP:-10.168.128.1}"
         local sat_target_host="${SAT_HOSTNAME:-satellite}"
+        local sat_target_short_host="${sat_target_host%%.*}"
         local ssh_key="${MINIRHIS_INSTALLER_SSH_PRIVATE_KEY:-${HOME}/.ssh/minirhis-installer/id_rsa}"
         local root_auth_pass="${ROOT_PASS:-${ADMIN_PASS:-}}"
         local rh_user_q=""
@@ -8492,7 +8824,10 @@ run_minirhis_config_as_code() {
 
                                 remote_cmd="set -euo pipefail; \
 hostnamectl set-hostname ${sat_target_host}; \
-grep -q \"${sat_target_ip}.*${sat_target_host}\" /etc/hosts || echo \"${sat_target_ip} ${sat_target_host} satellite\" >> /etc/hosts; \
+# ensure PATH includes puppet/tools so installer processes can find keytool if symlinked
+export PATH=/opt/puppetlabs/bin:/usr/local/bin:/usr/bin:\$PATH; \
+if grep -Eq '^[[:space:]]*${sat_target_ip}[[:space:]]+' /etc/hosts; then sed -i -E '/^[[:space:]]*${sat_target_ip}[[:space:]]+/d' /etc/hosts; fi; \
+echo \"${sat_target_ip} ${sat_target_host} ${sat_target_short_host}\" >> /etc/hosts; \
 nmcli device modify eth1 ipv4.addresses ${sat_target_ip}/16 ipv4.method manual >/dev/null 2>&1 || true; \
 nmcli device up eth1 >/dev/null 2>&1 || true; \
 if ! subscription-manager identity >/dev/null 2>&1; then \
@@ -8503,29 +8838,72 @@ subscription-manager repos --enable=rhel-9-for-x86_64-baseos-rpms --enable=rhel-
 dnf clean all; \
 if command -v foreman-maintain >/dev/null 2>&1; then foreman-maintain packages unlock >/dev/null 2>&1 || true; fi; \
 if [ \"${run_sat_upgrade}\" = \"1\" ]; then dnf upgrade -y; fi; \
-if ! rpm -q satellite >/dev/null 2>&1; then dnf install -y --allowerasing --best satellite; fi; \
+if ! rpm -q satellite >/dev/null 2>&1; then dnf install -y ${DNF_FLAGS} satellite; fi; \
+# Ensure Java/keytool available for Puppet keystore providers: prefer existing JVM keytool, otherwise install
+if ! command -v keytool >/dev/null 2>&1; then \
+    _kt=\"\$(find /usr/lib/jvm -type f -name keytool -print -quit || true)\"; \
+    if [ -n \"\${_kt}\" ] && [ -x \"\${_kt}\" ]; then \
+        ln -sf \"\${_kt}\" /usr/bin/keytool || true; \
+        ln -sf \"\${_kt}\" /usr/local/bin/keytool || true; \
+        ln -sf \"\${_kt}\" /opt/puppetlabs/bin/keytool || true; \
+        ln -sf \"\${_kt}\" /opt/puppetlabs/puppet/bin/keytool || true; \
+    else \
+        dnf install -y ${DNF_FLAGS} java-17-openjdk-headless java-17-openjdk || dnf install -y ${DNF_FLAGS} java-17-openjdk-headless || true; \
+        _kt2=\"\$(command -v keytool 2>/dev/null || true)\"; \
+        if [ -n \"\${_kt2}\" ]; then \
+            ln -sf \"\${_kt2}\" /usr/bin/keytool || true; \
+            ln -sf \"\${_kt2}\" /usr/local/bin/keytool || true; \
+            ln -sf \"\${_kt2}\" /opt/puppetlabs/bin/keytool || true; \
+            ln -sf \"\${_kt2}\" /opt/puppetlabs/puppet/bin/keytool || true; \
+        fi; \
+    fi; \
+fi; \
+# final fallback: if package provided keytool path exists, link it
+if [ -x /usr/bin/keytool ]; then :; else \
+    _kt3=\"\$(rpm -ql java-17-openjdk-headless 2>/dev/null | grep '/usr/lib/jvm/.*/bin/keytool$' | head -n1 || true)\"; \
+    if [ -n \"\${_kt3}\" ] && [ -x \"\${_kt3}\" ]; then \
+        ln -sf \"\${_kt3}\" /usr/bin/keytool || true; ln -sf \"\${_kt3}\" /usr/local/bin/keytool || true; \
+    fi; \
+fi; \
+# Persist PATH for system processes that read /etc/environment
+echo 'PATH="/opt/puppetlabs/bin:/usr/local/bin:/usr/bin:/sbin:/bin"' > /etc/environment || true; \
+hash -r || true; \
+/opt/puppetlabs/bin/puppet config set path /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/puppetlabs/bin --section main >/dev/null 2>&1 || true; \
+[ -x /usr/bin/keytool ] || { echo \"ERROR: keytool is still unavailable after Java install\"; exit 1; }; \
 if command -v foreman-maintain >/dev/null 2>&1; then foreman-maintain packages unlock >/dev/null 2>&1 || true; fi; \
-satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" --foreman-initial-location \"${SAT_LOC:-CORE}\" --foreman-initial-admin-username ${admin_user_q} --foreman-initial-admin-password ${admin_pass_q} --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface \"${SAT_PROVISIONING_INTERFACE:-eth1}\" --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-gateway \"${SAT_PROVISIONING_GW:-${INTERNAL_GW:-10.168.0.1}}\" --foreman-proxy-dhcp-nameservers \"${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP:-10.168.128.1}}\" --foreman-proxy-dhcp-range \"${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername \"${SAT_IP:-10.168.128.1}\" --enable-foreman-plugin-remote-execution --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible"
+satellite-installer --scenario satellite --skip-checks-i-know-better --foreman-initial-organization \"${SAT_ORG:-REDHAT}\" --foreman-initial-location \"${SAT_LOC:-CORE}\" --foreman-initial-admin-username ${admin_user_q} --foreman-initial-admin-password ${admin_pass_q} --foreman-proxy-http true --foreman-proxy-templates true --foreman-proxy-dhcp true --foreman-proxy-dhcp-interface \"${SAT_PROVISIONING_INTERFACE:-eth1}\" --foreman-proxy-dhcp-managed true --foreman-proxy-dhcp-gateway \"${SAT_PROVISIONING_GW:-${INTERNAL_GW:-10.168.0.1}}\" --foreman-proxy-dhcp-nameservers \"${SAT_PROVISIONING_DNS_PRIMARY:-${SAT_IP:-10.168.128.1}}\" --foreman-proxy-dhcp-range \"${SAT_PROVISIONING_DHCP_START:-10.168.130.1} ${SAT_PROVISIONING_DHCP_END:-10.168.255.254}\" --foreman-proxy-tftp true --foreman-proxy-tftp-managed true --foreman-proxy-tftp-servername \"${SAT_IP:-10.168.128.1}\" --enable-foreman-plugin-remote-execution --enable-foreman-compute-libvirt --enable-foreman-plugin-openscap --enable-foreman-proxy-plugin-openscap --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible"
 
     print_step "Pre-container Satellite bootstrap: register, clear package locks when possible, upgrade, install satellite, then run first-pass satellite-installer"
 
-        if [ -r "${ssh_key}" ] && timeout 10 ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${sat_target_ip}" 'echo ready' >/dev/null 2>&1; then
-            if ssh -i "${ssh_key}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${sat_target_ip}" "${remote_cmd}"; then
-                print_success "Satellite pre-container bootstrap complete on ${sat_target_host} (${sat_target_ip})."
-                return 0
-            fi
-        fi
+        local _sat_bootstrap_attempt=1
+        local _sat_bootstrap_max_attempts=4
+        while [ "${_sat_bootstrap_attempt}" -le "${_sat_bootstrap_max_attempts}" ]; do
+            print_step "Satellite pre-container bootstrap attempt ${_sat_bootstrap_attempt}/${_sat_bootstrap_max_attempts}"
 
-        # Fallback to password auth when key-based root login is not ready.
-        if [ -n "${root_auth_pass}" ] && command -v sshpass >/dev/null 2>&1; then
-            print_warning "Satellite pre-container bootstrap key-auth failed; retrying with root password auth fallback."
-            if sshpass -p "${root_auth_pass}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${sat_target_ip}" "${remote_cmd}"; then
-                print_success "Satellite pre-container bootstrap complete with password fallback on ${sat_target_host} (${sat_target_ip})."
-                return 0
+            if [ -r "${ssh_key}" ] && timeout 12 ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${sat_target_ip}" 'echo ready' >/dev/null 2>&1; then
+                if ssh -i "${ssh_key}" -o ConnectTimeout=12 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${sat_target_ip}" "${remote_cmd}"; then
+                    print_success "Satellite pre-container bootstrap complete on ${sat_target_host} (${sat_target_ip})."
+                    return 0
+                fi
             fi
-        fi
 
-        print_warning "Satellite pre-container bootstrap failed before container phase."
+            # Fallback to password auth when key-based root login is not ready.
+            if [ -n "${root_auth_pass}" ] && command -v sshpass >/dev/null 2>&1; then
+                print_warning "Satellite pre-container bootstrap key-auth failed; retrying with root password auth fallback."
+                if sshpass -p "${root_auth_pass}" ssh -o ConnectTimeout=12 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${sat_target_ip}" "${remote_cmd}"; then
+                    print_success "Satellite pre-container bootstrap complete with password fallback on ${sat_target_host} (${sat_target_ip})."
+                    return 0
+                fi
+            fi
+
+            if [ "${_sat_bootstrap_attempt}" -lt "${_sat_bootstrap_max_attempts}" ]; then
+                print_warning "Satellite pre-container bootstrap attempt ${_sat_bootstrap_attempt} failed (possible reboot/login transition). Waiting 45s before retry."
+                sleep 45
+            fi
+            _sat_bootstrap_attempt=$((_sat_bootstrap_attempt + 1))
+        done
+
+        print_warning "Satellite pre-container bootstrap failed before container phase after ${_sat_bootstrap_max_attempts} attempts."
         return 1
     }
 
@@ -8567,17 +8945,17 @@ satellite-installer --scenario satellite --foreman-initial-organization \"${SAT_
         fi
 
         remote_cmd="set -euo pipefail; \
-hostnamectl set-hostname ${aap_target_host}; \
-grep -q \"${aap_target_ip}.*${aap_target_host}\" /etc/hosts || echo \"${aap_target_ip} ${aap_target_host} aap\" >> /etc/hosts; \
-nmcli device modify eth1 ipv4.addresses ${aap_target_ip}/16 ipv4.method manual >/dev/null 2>&1 || true; \
-nmcli device up eth1 >/dev/null 2>&1 || true; \
-if ! subscription-manager identity >/dev/null 2>&1; then \
-    subscription-manager register --username ${rh_user_q} --password ${rh_pass_q} --force; \
-fi; \
-subscription-manager refresh || true; \
-dnf clean all; \
-if [ \"${run_aap_upgrade}\" = \"1\" ]; then dnf install -y --nogpgcheck nginx nginx-core nginx-filesystem redhat-logos-httpd || true; dnf upgrade --nogpgcheck -y; fi; \
-true"
+        hostnamectl set-hostname ${aap_target_host}; \
+        grep -q \"${aap_target_ip}.*${aap_target_host}\" /etc/hosts || echo \"${aap_target_ip} ${aap_target_host} aap\" >> /etc/hosts; \
+        nmcli device modify eth1 ipv4.addresses ${aap_target_ip}/16 ipv4.method manual >/dev/null 2>&1 || true; \
+        nmcli device up eth1 >/dev/null 2>&1 || true; \
+        if ! subscription-manager identity >/dev/null 2>&1; then \
+            subscription-manager register --username ${rh_user_q} --password ${rh_pass_q} --force; \
+        fi; \
+        subscription-manager refresh || true; \
+        dnf clean all; \
+        if [ \"${run_aap_upgrade}\" = \"1\" ]; then dnf install -y ${DNF_FLAGS} nginx nginx-core nginx-filesystem redhat-logos-httpd || true; dnf upgrade ${DNF_FLAGS} -y; fi; \
+        true"
 
         if [ -r "${ssh_key}" ] && timeout 10 ssh -i "${ssh_key}" -o BatchMode=yes -o ConnectTimeout=6 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${aap_target_ip}" 'echo ready' >/dev/null 2>&1; then
             if ssh -i "${ssh_key}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ForwardX11=no "root@${aap_target_ip}" "${remote_cmd}"; then
@@ -8600,11 +8978,19 @@ true"
     }
 
     if [ "${run_satellite}" -eq 1 ]; then
-        run_satellite_precontainer_bootstrap || return 1
+        if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-0}" = "1" ]; then
+            print_step "Skipping pre-container Satellite bootstrap due to MINIRHIS_DEFER_COMPONENT_INSTALL=1 (deferred to first-boot)."
+        else
+            run_satellite_precontainer_bootstrap || return 1
+        fi
     fi
 
     if [ "${run_aap}" -eq 1 ]; then
-        run_aap_precontainer_bootstrap || return 1
+        if [ "${MINIRHIS_DEFER_COMPONENT_INSTALL:-0}" = "1" ]; then
+            print_step "Skipping pre-container AAP bootstrap due to MINIRHIS_DEFER_COMPONENT_INSTALL=1 (deferred to first-boot)."
+        else
+            run_aap_precontainer_bootstrap || return 1
+        fi
     fi
 
     # Pull latest image and ensure container is running with fresh mounts
@@ -9466,7 +9852,7 @@ EOF
 
         if ! command -v ansible-playbook >/dev/null 2>&1; then
             print_step "Installing ansible-core for local fallback execution"
-            sudo dnf install -y --nogpgcheck ansible-core >/dev/null 2>&1 || return 1
+            sudo dnf install -y ${DNF_FLAGS} ansible-core >/dev/null 2>&1 || return 1
         fi
 
         [ -f "${local_playbook}" ] || return 1
@@ -9819,6 +10205,12 @@ EOF
         print_step "  Waiting for Satellite to reboot (60 seconds)..."
         sleep_with_spinner 60 "  Satellite rebooting"
 
+        # Ensure SSH is available on Satellite before running validation steps
+        print_step "  Waiting for SSH on Satellite (${sat_target_ip})"
+        if ! wait_for_ssh -t ${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT:-300} -i 5 "${sat_target_ip}"; then
+            print_warning "Satellite SSH did not become reachable after reboot; continuing to validation attempts (may fail)."
+        fi
+
         # Phase 2: Wait for SSH to be ready and validate satellite service
         print_step "  Phase 2/3: Waiting for SSH and validating satellite-installer scenario"
         local retry_count=0
@@ -9839,7 +10231,9 @@ EOF
             retry_count=$((retry_count+1))
             if [ $retry_count -lt $max_retries ]; then
                         print_progress_bar "$retry_count" "${max_retries}" "  Satellite not yet ready, retrying..."
-                        sleep_with_spinner 10 "  Satellite validation retry"
+                        # Use a silent sleep here to avoid per-second spinner output
+                        # so logs show a single updating progress bar line.
+                        sleep 10
             fi
         done
 
@@ -9856,11 +10250,11 @@ EOF
         foreman_setup_cmd="set -euo pipefail; \
 su foreman -s /bin/bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && [ -f ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -b 4096 -N "" -f ~/.ssh/id_rsa'; \
 su foreman -s /bin/bash -c 'ssh-copy-id -o StrictHostKeyChecking=no -o BatchMode=yes root@${libvirt_host} 2>/dev/null || true'; \
-dnf install -y foreman-cli >/dev/null 2>&1 || satellite-maintain packages install -y foreman-cli >/dev/null 2>&1 || true; \
-bash tools/hammer_api_fallback.sh compute_resources 'name="Libvirt_Prod_Server"' -- \
+dnf install -y ${DNF_FLAGS} foreman-cli >/dev/null 2>&1 || satellite-maintain packages install -y foreman-cli >/dev/null 2>&1 || true; \
+bash scripts/hammer_api_fallback.sh compute_resources 'name="Libvirt_Prod_Server"' -- \
     hammer compute-resource create --name \"Libvirt_Prod_Server\" --provider \"Libvirt\" --url \"qemu+ssh://root@${libvirt_host}/system\" --display-type \"VNC\" --locations \"${SAT_LOC:-CORE}\" --organizations \"${SAT_ORG:-REDHAT}\" >/dev/null 2>&1 || true; \
 echo \"Compute resource created. Testing connection...\"; \
-bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\"' -- \
+bash scripts/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\"' -- \
     hammer compute-resource info --name \"Libvirt_Prod_Server\" | head -n 10 || echo \"Note: Compute resource info may need foreman API authentication\""
 
         if [ -r "${ssh_key}" ] && timeout 300 ssh -i "${ssh_key}" ${ssh_opts} "root@${sat_target_ip}" "${foreman_setup_cmd}" >/dev/null 2>&1; then
@@ -9951,8 +10345,16 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
                 _manifest_file="$(ls -t /var/lib/libvirt/images/files/manifest*.zip 2>/dev/null | head -1 || true)"
             fi
             if [ -n "${_manifest_file}" ]; then
+                # Ensure SAT_URL exported so import_manifest.sh doesn't need to guess
+                if [ -z "${SAT_URL:-}" ]; then
+                    if [ -n "${SAT_HOSTNAME:-}" ]; then
+                        export SAT_URL="https://${SAT_HOSTNAME}"
+                    elif [ -n "${SAT_IP:-}" ]; then
+                        export SAT_URL="https://${SAT_IP}"
+                    fi
+                fi
                 print_step "Satellite post-CaC: importing subscription manifest ${_manifest_file}"
-                if bash "${MINIRHIS_SCRIPT_DIR:-$(dirname "$0")}/tools/import_manifest.sh" --file "${_manifest_file}" 2>&1 | while IFS= read -r _ml; do print_step "  manifest: ${_ml}"; done; then
+                if bash "${MINIRHIS_SCRIPT_DIR:-$(dirname "$0")}/scripts/import_manifest.sh" --file "${_manifest_file}" 2>&1 | while IFS= read -r _ml; do print_step "  manifest: ${_ml}"; done; then
                     print_success "Satellite manifest imported successfully."
                 else
                     print_warning "Satellite manifest import failed; subscriptions must be imported manually."
@@ -10013,8 +10415,16 @@ bash tools/hammer_api_fallback.sh compute_resources 'name=\"Libvirt_Prod_Server\
             _manifest_file_c="$(ls -t /var/lib/libvirt/images/files/manifest*.zip 2>/dev/null | head -1 || true)"
         fi
         if [ -n "${_manifest_file_c}" ]; then
+            # Ensure SAT_URL exported so import_manifest.sh doesn't need to guess
+            if [ -z "${SAT_URL:-}" ]; then
+                if [ -n "${SAT_HOSTNAME:-}" ]; then
+                    export SAT_URL="https://${SAT_HOSTNAME}"
+                elif [ -n "${SAT_IP:-}" ]; then
+                    export SAT_URL="https://${SAT_IP}"
+                fi
+            fi
             print_step "Satellite post-CaC: importing subscription manifest ${_manifest_file_c}"
-            if bash "${MINIRHIS_SCRIPT_DIR:-$(dirname "$0")}/tools/import_manifest.sh" --file "${_manifest_file_c}" 2>&1 | while IFS= read -r _ml; do print_step "  manifest: ${_ml}"; done; then
+            if bash "${MINIRHIS_SCRIPT_DIR:-$(dirname "$0")}/scripts/import_manifest.sh" --file "${_manifest_file_c}" 2>&1 | while IFS= read -r _ml; do print_step "  manifest: ${_ml}"; done; then
                 print_success "Satellite manifest imported successfully."
             else
                 print_warning "Satellite manifest import failed; subscriptions must be imported manually."
@@ -13155,6 +13565,19 @@ extract_installer_bundle() {
     fi
     chown -h admin:admin "${INSTALLER_LINK}" || true
     chown -R admin:admin "${INSTALLER_ROOT}" || true
+    # If the extracted bundle includes Jinja2 templates for inventory or ansible
+    # config (e.g. DEMO-inventory.j2, ansible.cfg.j2), copy them into their
+    # runtime filenames so downstream rendering/upload tooling can find them.
+    if [ -f "${INSTALLER_ROOT}/DEMO-inventory.j2" ] && [ ! -f "${INSTALLER_ROOT}/DEMO-inventory" ]; then
+        cp -f "${INSTALLER_ROOT}/DEMO-inventory.j2" "${INSTALLER_ROOT}/DEMO-inventory"
+        chown admin:admin "${INSTALLER_ROOT}/DEMO-inventory" || true
+        chmod 600 "${INSTALLER_ROOT}/DEMO-inventory" || true
+    fi
+    if [ -f "${INSTALLER_ROOT}/ansible.cfg.j2" ] && [ ! -f "${INSTALLER_ROOT}/ansible.cfg" ]; then
+        cp -f "${INSTALLER_ROOT}/ansible.cfg.j2" "${INSTALLER_ROOT}/ansible.cfg"
+        chown admin:admin "${INSTALLER_ROOT}/ansible.cfg" || true
+        chmod 600 "${INSTALLER_ROOT}/ansible.cfg" || true
+    fi
     # Normalize /home/admin/bundle to always resolve to a directory that contains
     # an 'images/' subdir, because the containerized installer asserts this.
     bundle_source_dir=""
@@ -13219,7 +13642,7 @@ if ! dnf -q list podman crun slirp4netns fuse-overlayfs >/dev/null 2>&1; then
             echo "[aap-install] WARNING: RH credentials are unavailable; cannot auto-register this host"
         fi
     fi
-    dnf install -y --nogpgcheck podman crun slirp4netns fuse-overlayfs || true
+    dnf install -y --nogpgcheck podman uidmap crun slirp4netns fuse-overlayfs || true
 fi
 
 if ! dnf -q list podman crun slirp4netns fuse-overlayfs >/dev/null 2>&1; then
@@ -13445,7 +13868,7 @@ fi
 if command -v podman >/dev/null 2>&1 && podman ps -a --format '{{.Names}}' | grep -qx postgresql; then
     echo "[aap-install] ensuring postgresql-contrib is installed in postgresql container (hstore requirement)"
     podman start postgresql >/dev/null 2>&1 || true
-    podman exec postgresql sh -lc 'dnf install -y postgresql-contrib >/dev/null 2>&1 || true' || true
+    podman exec postgresql sh -lc 'dnf install -y --skip-broken --allowerasing --best --nogpgcheck postgresql-contrib >/dev/null 2>&1 || true' || true
     if podman exec postgresql psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_available_extensions WHERE name='hstore'" | grep -q 1; then
         echo "[aap-install] hstore extension available in postgresql container"
     else
@@ -14107,7 +14530,7 @@ sleep_with_spinner 3 "Finalizing Foreman API setup"
 
 # Configure Hammer CLI globally for root and all admin users
 # (centralized helper to reduce duplication)
-bash tools/setup_hammer_cli.sh || true
+bash scripts/setup_hammer_cli.sh || true
 
 # Grant all wheel-group users a valid Satellite admin role so they can run
 # hammer commands without sudo. Keep this block shell-only in %post.
@@ -14132,20 +14555,20 @@ fi
 
 # --- 5.1.1 Create Lifecycle Environments for RHEL 10 ---
 echo "Creating RHEL 10 lifecycle environments..."
-bash tools/hammer_api_fallback.sh lifecycle_environments 'name="DEV_RHEL_10_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh lifecycle_environments 'name="DEV_RHEL_10_x86_64"' -- \
     hammer lifecycle-environment create --organization="${SAT_ORG}" --name="DEV_RHEL_10_x86_64" --description="Development environment for RHEL 10 x86_64" --prior="Library" 2>/dev/null || echo "  ℹ DEV_RHEL_10_x86_64 already exists"
-bash tools/hammer_api_fallback.sh lifecycle_environments 'name="TEST_RHEL_10_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh lifecycle_environments 'name="TEST_RHEL_10_x86_64"' -- \
     hammer lifecycle-environment create --organization="${SAT_ORG}" --name="TEST_RHEL_10_x86_64" --description="Testing environment for RHEL 10 x86_64" --prior="DEV_RHEL_10_x86_64" 2>/dev/null || echo "  ℹ TEST_RHEL_10_x86_64 already exists"
-bash tools/hammer_api_fallback.sh lifecycle_environments 'name="PROD_RHEL_10_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh lifecycle_environments 'name="PROD_RHEL_10_x86_64"' -- \
     hammer lifecycle-environment create --organization="${SAT_ORG}" --name="PROD_RHEL_10_x86_64" --description="Production environment for RHEL 10 x86_64" --prior="TEST_RHEL_10_x86_64" 2>/dev/null || echo "  ℹ PROD_RHEL_10_x86_64 already exists"
 
 # --- 5.1.2 Create Lifecycle Environments for RHEL 9 ---
 echo "Creating RHEL 9 lifecycle environments..."
-bash tools/hammer_api_fallback.sh lifecycle_environments 'name="DEV_RHEL_9_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh lifecycle_environments 'name="DEV_RHEL_9_x86_64"' -- \
     hammer lifecycle-environment create --organization="${SAT_ORG}" --name="DEV_RHEL_9_x86_64" --description="Development environment for RHEL 9 x86_64" --prior="Library" 2>/dev/null || echo "  ℹ DEV_RHEL_9_x86_64 already exists"
-bash tools/hammer_api_fallback.sh lifecycle_environments 'name="TEST_RHEL_9_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh lifecycle_environments 'name="TEST_RHEL_9_x86_64"' -- \
     hammer lifecycle-environment create --organization="${SAT_ORG}" --name="TEST_RHEL_9_x86_64" --description="Testing environment for RHEL 9 x86_64" --prior="DEV_RHEL_9_x86_64" 2>/dev/null || echo "  ℹ TEST_RHEL_9_x86_64 already exists"
-bash tools/hammer_api_fallback.sh lifecycle_environments 'name="PROD_RHEL_9_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh lifecycle_environments 'name="PROD_RHEL_9_x86_64"' -- \
     hammer lifecycle-environment create --organization="${SAT_ORG}" --name="PROD_RHEL_9_x86_64" --description="Production environment for RHEL 9 x86_64" --prior="TEST_RHEL_9_x86_64" 2>/dev/null || echo "  ℹ PROD_RHEL_9_x86_64 already exists"
 
 # --- 5.1.3 Create Content Views for RHEL 10 & 9 ---
@@ -14153,7 +14576,7 @@ echo "Creating content views..."
 
 # RHEL 10 Content View - API-first (centralized wrapper handles hammer fallback)
 echo "Ensuring rhel-10-for-x86_64 content view (API-first)..."
-bash tools/hammer_api_fallback.sh content_views 'name="rhel-10-for-x86_64"' -- \
+bash scripts/hammer_api_fallback.sh content_views 'name="rhel-10-for-x86_64"' -- \
     hammer content-view create --organization="${SAT_ORG}" --name="rhel-10-for-x86_64" --description="RHEL 10 BaseOS + AppStream for x86_64" 2>/dev/null || echo "  ℹ rhel-10-for-x86_64 content view already exists"
 
 # Attach repositories to the RHEL 10 content view if not already attached (API-first)
@@ -14161,7 +14584,7 @@ for repo_name in "${SAT_RHEL10_BASEOS_REPO}" "${SAT_RHEL10_APPSTREAM_REPO}"; do
     cv_id=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://${SAT_IP}}/api/v2/content_views?search=name=\"rhel-10-for-x86_64\"" 2>/dev/null | sed -n 's/.*"results":\s*\[\(.*\)\].*/\1/p' | sed -n 's/.*"id":\s*\([0-9]*\).*/\1/p' | head -1 || true)
     if [ -n "${cv_id}" ]; then
         # Use wrapper to check repository attachment and run hammer add-repository as fallback
-        bash tools/hammer_api_fallback.sh "content_views/${cv_id}/repositories" 'name="${repo_name}"' -- \
+        bash scripts/hammer_api_fallback.sh "content_views/${cv_id}/repositories" 'name="${repo_name}"' -- \
             hammer content-view add-repository --organization="${SAT_ORG}" --name="rhel-10-for-x86_64" --repository="${repo_name}" 2>/dev/null || echo "  ⚠ Failed to add ${repo_name} to rhel-10 CV"
     else
         echo "  ⚠ rhel-10-for-x86_64 content view not found; skipping repo attach for ${repo_name}"
@@ -14172,7 +14595,7 @@ done
 api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://${SAT_IP}}/api/v2/content_views?search=name=\"rhel-9-for-x86_64\"" 2>/dev/null || true)
 # RHEL 9 Content View - API-first (centralized wrapper handles hammer fallback)
 echo "Ensuring rhel-9-for-x86_64 content view (API-first)..."
-bash tools/hammer_api_fallback.sh content_views 'name="rhel-9-for-x86_64"' -- \
+bash scripts/hammer_api_fallback.sh content_views 'name="rhel-9-for-x86_64"' -- \
     hammer content-view create --organization="${SAT_ORG}" --name="rhel-9-for-x86_64" --description="RHEL 9 BaseOS + AppStream for x86_64" 2>/dev/null || echo "  ℹ rhel-9-for-x86_64 content view already exists"
 
 # Attach repositories to the RHEL 9 content view if not already attached (API-first)
@@ -14184,7 +14607,7 @@ for repo_name in "${SAT_RHEL9_BASEOS_REPO}" "${SAT_RHEL9_APPSTREAM_REPO}"; do
             echo "  ℹ ${repo_name} already attached to rhel-9-for-x86_64 (verified via API)"
         else
             echo "  ℹ Attaching ${repo_name} to rhel-9-for-x86_64 via hammer (API missing or not attached)"
-            bash tools/hammer_api_fallback.sh "content_views/${cv_id}/repositories" 'name="${repo_name}"' -- \
+            bash scripts/hammer_api_fallback.sh "content_views/${cv_id}/repositories" 'name="${repo_name}"' -- \
                 hammer content-view add-repository --organization="${SAT_ORG}" --name="rhel-9-for-x86_64" --repository="${repo_name}" 2>/dev/null || echo "  ⚠ Failed to add ${repo_name} to rhel-9 CV"
         fi
     else
@@ -14203,7 +14626,7 @@ if [ -f "${RHEL10_GPG_KEY_PATH}" ]; then
         RHEL10_GPG_KEY_ID=\$(echo "${gpg_api_resp}" | grep -o '"id":[0-9]*' | head -1 | sed 's/[^0-9]*//g' || true)
     else
         echo "  ℹ Creating GPG key (API reported missing or unreachable)"
-        bash tools/hammer_api_fallback.sh gpg_keys 'name="${SAT_RHEL10_GPG_KEY_NAME}"' -- \
+        bash scripts/hammer_api_fallback.sh gpg_keys 'name="${SAT_RHEL10_GPG_KEY_NAME}"' -- \
             hammer gpg create --organization="${SAT_ORG}" --name="${SAT_RHEL10_GPG_KEY_NAME}" --key="${RHEL10_GPG_KEY_PATH}" 2>/dev/null || echo "  ⚠ Failed to create Satellite GPG key (continuing)"
         RHEL10_GPG_KEY_ID="\$(hammer gpg list --organization="${SAT_ORG}" --search "name=\"${SAT_RHEL10_GPG_KEY_NAME}\"" --fields Id --csv 2>/dev/null | tail -1 | tr -d '\r')"
     fi
@@ -14235,7 +14658,7 @@ cv_id=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://${SAT_
 if [ -n "${cv_id}" ]; then
     curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" -X POST "${SAT_URL:-https://${SAT_IP}}/api/v2/content_views/${cv_id}/publish" -o /dev/null -w "%{http_code}" | grep -qE '20[1-3]' && echo "  ℹ rhel-10 CV publish initiated via API" || echo "  ⚠ API publish failed; falling back to hammer"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        bash tools/hammer_api_fallback.sh content_views 'name="rhel-10-for-x86_64"' -- \
+        bash scripts/hammer_api_fallback.sh content_views 'name="rhel-10-for-x86_64"' -- \
             hammer content-view publish --organization="${SAT_ORG}" --name="rhel-10-for-x86_64" 2>/dev/null || echo "  ℹ rhel-10 CV publish initiated or already published"
     fi
 else
@@ -14248,7 +14671,7 @@ cv_id=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://${SAT_
 if [ -n "${cv_id}" ]; then
     curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" -X POST "${SAT_URL:-https://${SAT_IP}}/api/v2/content_views/${cv_id}/publish" -o /dev/null -w "%{http_code}" | grep -qE '20[1-3]' && echo "  ℹ rhel-9 CV publish initiated via API" || echo "  ⚠ API publish failed; falling back to hammer"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        bash tools/hammer_api_fallback.sh content_views 'name="rhel-9-for-x86_64"' -- \
+        bash scripts/hammer_api_fallback.sh content_views 'name="rhel-9-for-x86_64"' -- \
             hammer content-view publish --organization="${SAT_ORG}" --name="rhel-9-for-x86_64" 2>/dev/null || echo "  ℹ rhel-9 CV publish initiated or already published"
     fi
 else
@@ -14258,20 +14681,20 @@ fi
 
 # --- 5.1.4 Create Activation Keys for RHEL 10 ---
 echo "Creating RHEL 10 activation keys..."
-bash tools/hammer_api_fallback.sh activation_keys 'name="DEV_RHEL_10_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh activation_keys 'name="DEV_RHEL_10_x86_64"' -- \
     hammer activation-key create --organization="${SAT_ORG}" --name="DEV_RHEL_10_x86_64" --lifecycle-environment="DEV_RHEL_10_x86_64" --content-view="rhel-10-for-x86_64" --unlimited-content-hosts 2>/dev/null || echo "  ℹ DEV_RHEL_10_x86_64 activation key already exists"
-bash tools/hammer_api_fallback.sh activation_keys 'name="TEST_RHEL_10_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh activation_keys 'name="TEST_RHEL_10_x86_64"' -- \
     hammer activation-key create --organization="${SAT_ORG}" --name="TEST_RHEL_10_x86_64" --lifecycle-environment="TEST_RHEL_10_x86_64" --content-view="rhel-10-for-x86_64" --unlimited-content-hosts 2>/dev/null || echo "  ℹ TEST_RHEL_10_x86_64 activation key already exists"
-bash tools/hammer_api_fallback.sh activation_keys 'name="PROD_RHEL_10_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh activation_keys 'name="PROD_RHEL_10_x86_64"' -- \
     hammer activation-key create --organization="${SAT_ORG}" --name="PROD_RHEL_10_x86_64" --lifecycle-environment="PROD_RHEL_10_x86_64" --content-view="rhel-10-for-x86_64" --unlimited-content-hosts 2>/dev/null || echo "  ℹ PROD_RHEL_10_x86_64 activation key already exists"
 
 # --- 5.1.5 Create Activation Keys for RHEL 9 ---
 echo "Creating RHEL 9 activation keys..."
-bash tools/hammer_api_fallback.sh activation_keys 'name="DEV_RHEL_9_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh activation_keys 'name="DEV_RHEL_9_x86_64"' -- \
     hammer activation-key create --organization="${SAT_ORG}" --name="DEV_RHEL_9_x86_64" --lifecycle-environment="DEV_RHEL_9_x86_64" --content-view="rhel-9-for-x86_64" --unlimited-content-hosts 2>/dev/null || echo "  ℹ DEV_RHEL_9_x86_64 activation key already exists"
-bash tools/hammer_api_fallback.sh activation_keys 'name="TEST_RHEL_9_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh activation_keys 'name="TEST_RHEL_9_x86_64"' -- \
     hammer activation-key create --organization="${SAT_ORG}" --name="TEST_RHEL_9_x86_64" --lifecycle-environment="TEST_RHEL_9_x86_64" --content-view="rhel-9-for-x86_64" --unlimited-content-hosts 2>/dev/null || echo "  ℹ TEST_RHEL_9_x86_64 activation key already exists"
-bash tools/hammer_api_fallback.sh activation_keys 'name="PROD_RHEL_9_x86_64"' -- \
+bash scripts/hammer_api_fallback.sh activation_keys 'name="PROD_RHEL_9_x86_64"' -- \
     hammer activation-key create --organization="${SAT_ORG}" --name="PROD_RHEL_9_x86_64" --lifecycle-environment="PROD_RHEL_9_x86_64" --content-view="rhel-9-for-x86_64" --unlimited-content-hosts 2>/dev/null || echo "  ℹ PROD_RHEL_9_x86_64 activation key already exists"
 
 # --- 5.1.6 Configure Provisioning Subnet (Internal Network) ---
@@ -14286,7 +14709,7 @@ if [ -n "${subnet_api_resp}" ] && ! echo "${subnet_api_resp}" | grep -q '"total"
     echo "  ℹ internal-provision subnet already exists (verified via API)"
 else
     echo "  ℹ Creating internal-provision subnet via hammer (API missing or absent)"
-    bash tools/hammer_api_fallback.sh subnets 'name="internal-provision"' -- \
+    bash scripts/hammer_api_fallback.sh subnets 'name="internal-provision"' -- \
         hammer subnet create --name="internal-provision" \
             --network="${SAT_PROVISIONING_SUBNET:-${INTERNAL_NETWORK:-10.168.0.0}}" \
             --mask="${SAT_PROVISIONING_NETMASK:-${NETMASK:-255.255.0.0}}" \
@@ -14361,7 +14784,7 @@ os10_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https:
 if [ -n "${os10_api_resp}" ] && ! echo "${os10_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL 10 OS definition already exists (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh operating_systems 'major="10"' -- hammer os create --name="RHEL" --major="10" --description="Red Hat Enterprise Linux 10" \
+    bash scripts/hammer_api_fallback.sh operating_systems 'major="10"' -- hammer os create --name="RHEL" --major="10" --description="Red Hat Enterprise Linux 10" \
         --family="Redhat" --release-name="Ootpa" \
         --architectures="x86_64" \
         --password-hash="SHA256" 2>/dev/null || echo "  ℹ RHEL 10 OS definition already exists"
@@ -14372,7 +14795,7 @@ os9_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https:/
 if [ -n "${os9_api_resp}" ] && ! echo "${os9_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL 9 OS definition already exists (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh operating_systems 'major="9"' -- hammer os create --name="RHEL" --major="9" --description="Red Hat Enterprise Linux 9" \
+    bash scripts/hammer_api_fallback.sh operating_systems 'major="9"' -- hammer os create --name="RHEL" --major="9" --description="Red Hat Enterprise Linux 9" \
         --family="Redhat" --release-name="Plow" \
         --architectures="x86_64" \
         --password-hash="SHA256" 2>/dev/null || echo "  ℹ RHEL 9 OS definition already exists"
@@ -14388,7 +14811,7 @@ media10_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-htt
 if [ -n "${media10_api_resp}" ] && ! echo "${media10_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL 10 installation media already configured (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh media 'name="RHEL 10"' -- hammer medium create --name="RHEL 10" --path="/pulp/content/ORGANIZATION_PATH/Library/custom/rhel-10-for-x86_64-baseos-rpms" \
+    bash scripts/hammer_api_fallback.sh media 'name="RHEL 10"' -- hammer medium create --name="RHEL 10" --path="/pulp/content/ORGANIZATION_PATH/Library/custom/rhel-10-for-x86_64-baseos-rpms" \
         --operating-system-ids=\$(hammer os list --search "major=10" --fields=Id --csv | tail -1) 2>/dev/null || echo "  ℹ RHEL 10 installation media already configured"
 fi
 
@@ -14396,7 +14819,7 @@ media9_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-http
 if [ -n "${media9_api_resp}" ] && ! echo "${media9_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL 9 installation media already configured (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh media 'name="RHEL 9"' -- hammer medium create --name="RHEL 9" --path="/pulp/content/ORGANIZATION_PATH/Library/custom/rhel-9-for-x86_64-baseos-rpms" \
+    bash scripts/hammer_api_fallback.sh media 'name="RHEL 9"' -- hammer medium create --name="RHEL 9" --path="/pulp/content/ORGANIZATION_PATH/Library/custom/rhel-9-for-x86_64-baseos-rpms" \
         --operating-system-ids=\$(hammer os list --search "major=9" --fields=Id --csv | tail -1) 2>/dev/null || echo "  ℹ RHEL 9 installation media already configured"
 fi
 
@@ -14410,7 +14833,7 @@ hg_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://
 if [ -n "${hg_api_resp}" ] && ! echo "${hg_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL10-DEV-Provision host group already exists (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh hostgroups 'name="RHEL10-DEV-Provision"' -- hammer hostgroup create --name="RHEL10-DEV-Provision" \
+    bash scripts/hammer_api_fallback.sh hostgroups 'name="RHEL10-DEV-Provision"' -- hammer hostgroup create --name="RHEL10-DEV-Provision" \
         --organization="${SAT_ORG}" \
         --location="${SAT_LOC}" \
         --architecture="x86_64" \
@@ -14426,7 +14849,7 @@ hg_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://
 if [ -n "${hg_api_resp}" ] && ! echo "${hg_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL10-PROD-Provision host group already exists (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh hostgroups 'name="RHEL10-PROD-Provision"' -- hammer hostgroup create --name="RHEL10-PROD-Provision" \
+    bash scripts/hammer_api_fallback.sh hostgroups 'name="RHEL10-PROD-Provision"' -- hammer hostgroup create --name="RHEL10-PROD-Provision" \
         --organization="${SAT_ORG}" \
         --location="${SAT_LOC}" \
         --architecture="x86_64" \
@@ -14442,7 +14865,7 @@ hg_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://
 if [ -n "${hg_api_resp}" ] && ! echo "${hg_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL9-DEV-Provision host group already exists (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh hostgroups 'name="RHEL9-DEV-Provision"' -- hammer hostgroup create --name="RHEL9-DEV-Provision" \
+    bash scripts/hammer_api_fallback.sh hostgroups 'name="RHEL9-DEV-Provision"' -- hammer hostgroup create --name="RHEL9-DEV-Provision" \
         --organization="${SAT_ORG}" \
         --location="${SAT_LOC}" \
         --architecture="x86_64" \
@@ -14458,7 +14881,7 @@ hg_api_resp=\$(curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" "${SAT_URL:-https://
 if [ -n "${hg_api_resp}" ] && ! echo "${hg_api_resp}" | grep -q '"total": *0'; then
     echo "  ℹ RHEL9-PROD-Provision host group already exists (verified via API)"
 else
-    bash tools/hammer_api_fallback.sh hostgroups 'name="RHEL9-PROD-Provision"' -- \
+    bash scripts/hammer_api_fallback.sh hostgroups 'name="RHEL9-PROD-Provision"' -- \
         hammer hostgroup create --name="RHEL9-PROD-Provision" \
             --organization="${SAT_ORG}" \
             --location="${SAT_LOC}" \
@@ -14490,7 +14913,7 @@ ensure_flatpak_remote() {
         echo "  ✓ flathub flatpak remote created via API"
         return 0
     fi
-    bash tools/hammer_api_fallback.sh flatpak_remotes '' -- hammer flatpak-remote create --name="flathub" --url="https://dl.flathub.org/repo/flathub.flatpakrepo" 2>/dev/null || echo "  ⚠ Could not create flathub flatpak remote (add manually)"
+    bash scripts/hammer_api_fallback.sh flatpak_remotes '' -- hammer flatpak-remote create --name="flathub" --url="https://dl.flathub.org/repo/flathub.flatpakrepo" 2>/dev/null || echo "  ⚠ Could not create flathub flatpak remote (add manually)"
 }
 
 create_weekly_sync_plan() {
@@ -14508,7 +14931,7 @@ create_weekly_sync_plan() {
     fi
     if [ -n "${repo_ids}" ]; then
         echo "  ℹ Creating sync plan with repository IDs: ${repo_ids}"
-        bash tools/hammer_api_fallback.sh sync_plans '' -- hammer sync-plan create --name="weekly_all_repos" --interval=weekly --repository-ids="${repo_ids}" 2>/dev/null && echo "  ✓ weekly_all_repos sync plan created" || echo "  ⚠ Failed to create weekly_all_repos via hammer; create manually"
+        bash scripts/hammer_api_fallback.sh sync_plans '' -- hammer sync-plan create --name="weekly_all_repos" --interval=weekly --repository-ids="${repo_ids}" 2>/dev/null && echo "  ✓ weekly_all_repos sync plan created" || echo "  ⚠ Failed to create weekly_all_repos via hammer; create manually"
     else
         echo "  ⚠ No repositories found to include in sync plan; skipping automatic creation"
     fi
@@ -14531,7 +14954,7 @@ import_latest_manifest() {
     if curl -sS -k -u "${ADMIN_USER}:${ADMIN_PASS}" -F "file=@${target}" "${SAT_URL:-https://${SAT_IP}}/api/v2/manifest_imports" -o /dev/null -w "%{http_code}" | grep -qE '20[1-3]'; then
         echo "  ✓ Manifest uploaded via Satellite API"
     else
-        bash tools/hammer_api_fallback.sh manifest_imports '' -- hammer subscription upload_manifest --organization="${SAT_ORG}" --file="${target}" 2>/dev/null && echo "  ✓ Manifest uploaded via hammer" || echo "  ⚠ Manifest upload failed; import manually via Satellite web UI"
+        bash scripts/hammer_api_fallback.sh manifest_imports '' -- hammer subscription upload_manifest --organization="${SAT_ORG}" --file="${target}" 2>/dev/null && echo "  ✓ Manifest uploaded via hammer" || echo "  ⚠ Manifest upload failed; import manually via Satellite web UI"
     fi
 }
 
@@ -14915,6 +15338,13 @@ generate_aap_oemdrv_only() {
 generate_idm_kickstart_core() {
     bootstrap_ssh_keys="$(collect_bootstrap_public_keys)"
     ks_runtime_exports="$(kickstart_runtime_exports_block "${bootstrap_ssh_keys}")"
+    local ks_file="${KS_DIR}/idm.ks"
+    # Compute interface MACs and prefix for IdM kickstart
+    idm_ext_mac="$(get_vm_external_mac "idm")"
+    idm_int_mac="$(get_vm_internal_mac "idm")"
+    idm_prefix="$(netmask_to_prefix "${IDM_NETMASK}")"
+    print_kickstart_effective_values "IdM" "${IDM_IP}" "${IDM_HOSTNAME}" "${IDM_NETMASK}" "${IDM_GW}"
+
     prepare_kickstart_shared_blocks "idm" "${IDM_HOSTNAME}" "${IDM_IP}" \
         "${idm_ext_mac}" "${idm_int_mac}" "${IDM_IP}" "${idm_prefix}" "${IDM_GW}" \
         0 1 "IdM" \
@@ -14931,6 +15361,10 @@ generate_idm_kickstart_core() {
     ks_trust_bootstrap_keys="${MINIRHIS_KS_TRUST_BOOTSTRAP_KEYS}"
     ks_creator_baseline="${MINIRHIS_KS_CREATOR_BASELINE}"
     ks_perf_network_snapshot="$(kickstart_perf_network_snapshot_block)"
+
+    # Compute password hashes for kickstart (ensures non-empty rootpw in DEMO mode)
+    root_pass_hash="$(kickstart_password_hash "${ROOT_PASS:-${ADMIN_PASS}}")" || return 1
+    admin_pass_hash="$(kickstart_password_hash "${ADMIN_PASS}")" || return 1
 
     tmp_ks="$(mktemp)"
 
@@ -15413,6 +15847,12 @@ create_aap_vm_only() {
     else
         print_step "Standard mode: production/best-practice AAP VM specifications"
         aap_disk="50G"; aap_ram=16384; aap_vcpu=8
+    fi
+
+    # Enforce minimum RAM for containerized AAP installer (requires >= 16384 MB)
+    if [[ "${AAP_DEPLOYMENT_TYPE:-container}" == "container" ]] && [ "${aap_ram:-0}" -lt 16384 ]; then
+        print_warning "AAP VM RAM (${aap_ram}MB) below recommended 16384MB for containerized AAP; increasing to 16384MB"
+        aap_ram=16384
     fi
 
     cleanup_minirhis_lock_files || true
@@ -16530,6 +16970,12 @@ generate_idm_kickstart() {
         0) return 0 ;;
         *) print_warning "Invalid choice. Please select 0-4." ;;
     esac
+
+    # Menu workflow is complete at this point. Do not fall through into the
+    # legacy inline generator block below (which can run with unset locals and
+    # emit invalid rootpw/user password hashes into idm.ks).
+    return 0
+
     bootstrap_ssh_keys="$(collect_bootstrap_public_keys)"
     ks_runtime_exports="$(kickstart_runtime_exports_block "${bootstrap_ssh_keys}")"
     prepare_kickstart_shared_blocks "idm" "${IDM_HOSTNAME}" "${IDM_IP}" \
@@ -16977,6 +17423,54 @@ create_libvirt_storage_pool() {
     sudo virsh pool-autostart default >/dev/null 2>&1 || true
 }
 
+# Ensure libvirt and any running QEMU processes are consistent.
+# If libvirt shows no domains but QEMU processes are running (or images are locked),
+# attempt to restart libvirtd to reattach. If that fails, stop orphaned qemu processes
+# that reference libvirt image files so the provisioning can proceed cleanly.
+ensure_libvirt_consistent() {
+    # If virsh not available, nothing to do
+    command -v virsh >/dev/null 2>&1 || return 0
+
+    # If libvirt already reports defined domains, we're good.
+    if sudo virsh list --all 2>/dev/null | sed -n '3,$p' | grep -qE '\S'; then
+        return 0
+    fi
+
+    # No domains visible. If no qemu processes exist, nothing to reconcile.
+    if ! pgrep -af qemu-kvm >/dev/null 2>&1; then
+        return 0
+    fi
+
+    print_warning "libvirt shows no domains but QEMU processes exist; attempting to restart libvirtd to reattach."
+    sudo systemctl restart libvirtd || print_warning "libvirtd restart failed; continuing to reconciliation attempts."
+
+    # Give libvirt a short window to reattach to running QEMU processes
+    local i
+    for i in 1 2 3 4 5; do
+        sleep 1
+        if sudo virsh list --all 2>/dev/null | sed -n '3,$p' | grep -qE '\S'; then
+            print_step "libvirt reattached to domains after restart."
+            return 0
+        fi
+    done
+
+    print_warning "libvirt did not reattach; terminating orphaned QEMU processes that reference libvirt image files."
+
+    # Find QEMU processes referencing files under /var/lib/libvirt/images and kill them.
+    # This is a last-resort reconciliation so provisioning can start cleanly.
+    local pids
+    pids=$(pgrep -af qemu-kvm | awk '/\/var\/lib\/libvirt\/images/ {print $1}' || true)
+    if [ -n "${pids:-}" ]; then
+        for pid in $pids; do
+            print_warning "Killing orphaned QEMU PID ${pid}"
+            sudo kill -9 "${pid}" 2>/dev/null || true
+        done
+        sleep 1
+    fi
+
+    return 0
+}
+
 launch_vm_console_popup() {
     local vm_name="${1:-}"
     local viewer_log="/tmp/minirhis-virt-viewer-${vm_name}.log"
@@ -17026,11 +17520,14 @@ create_vm_if_missing() {
     external_mac="$(get_vm_external_mac "$vm_name")"
     internal_mac="$(get_vm_internal_mac "$vm_name")"
 
+    # Reconcile any libvirt <-> QEMU inconsistencies before creating a VM.
+    ensure_libvirt_consistent || true
+
     if ! mkdir -p "$(dirname "$disk_path")" 2>/dev/null; then
         sudo mkdir -p "$(dirname "$disk_path")" || return 1
     fi
 
-	if sudo virsh dominfo "$vm_name" >/dev/null 2>&1; then
+    if sudo virsh dominfo "$vm_name" >/dev/null 2>&1; then
 		print_warning "VM already exists: $vm_name (skipping)"
 		return 0
 	fi
@@ -17296,6 +17793,12 @@ create_minirhis_vms() {
         idm_disk="60G";  idm_ram=16384; idm_vcpu=4
     fi
 
+    # Enforce minimum RAM for containerized AAP installer (requires >= 16384 MB)
+    if [[ "${AAP_DEPLOYMENT_TYPE:-container}" == "container" ]] && [ "${aap_ram:-0}" -lt 16384 ]; then
+        print_warning "AAP VM RAM (${aap_ram}MB) below recommended 16384MB for containerized AAP; increasing to 16384MB"
+        aap_ram=16384
+    fi
+
     cleanup_minirhis_lock_files || true
     prune_local_ssh_trust_for_component "all" || true
 
@@ -17310,10 +17813,12 @@ create_minirhis_vms() {
     create_libvirt_storage_pool || return 1
 
     # Pre-flight: ensure SSH keys exist for post-boot AAP callback orchestration
-    ensure_ssh_keys || {
-        print_warning "Failed to generate SSH keys; AAP callback orchestration will not work."
-        return 1
-    }
+    # Non-fatal: if SSH keys cannot be created now, continue VM creation and
+    # defer AAP callback orchestration to first-boot/config-as-code steps.
+    if ! ensure_ssh_keys; then
+        print_warning "Could not generate SSH keys now; AAP callback orchestration will be deferred to post-boot. Continuing VM creation."
+        MINIRHIS_SKIP_AAP_CALLBACK=1
+    fi
 
     # Resolve the bundle source used by kickstart and callback fallback.
     # Preferred path: pre-download once on installer host and serve locally to
@@ -17330,10 +17835,18 @@ create_minirhis_vms() {
         print_warning "AAP bundle preflight download failed; using direct URL from AAP_BUNDLE_URL during guest install."
     fi
 
-    # Pre-flight guard: we still require a usable bundle URL path.
+    # Pre-flight guard: prefer a usable bundle URL path, but don't fail VM
+    # creation solely because the bundle isn't pre-staged. If no effective URL
+    # exists, try falling back to the configured CDN URL; otherwise defer
+    # component installs to post-boot so the VM can still be created.
     if [ -z "${AAP_BUNDLE_EFFECTIVE_URL:-}" ]; then
-        print_warning "AAP bundle source is empty. Set AAP_BUNDLE_URL in ${ANSIBLE_ENV_FILE} or pre-stage ${AAP_BUNDLE_DIR}/aap-bundle.tar.gz."
-        return 1
+        if [ -n "${AAP_BUNDLE_URL:-}" ]; then
+            AAP_BUNDLE_EFFECTIVE_URL="${AAP_BUNDLE_URL}"
+            print_step "AAP bundle source set to CDN URL: ${AAP_BUNDLE_EFFECTIVE_URL} (will be fetched by guest during install)."
+        else
+            print_warning "AAP bundle source is empty and no AAP_BUNDLE_URL set; deferring component installs to post-boot. Continuing VM creation."
+            MINIRHIS_DEFER_COMPONENT_INSTALL=1
+        fi
     fi
 
     write_kickstarts || return 1
@@ -17399,6 +17912,14 @@ create_minirhis_vms() {
 
     # Trigger config-as-code via the provisioner container after SSH baseline is in place.
     print_phase 5 8 "Config-as-code orchestration"
+    # Run an installer-side server bootstrap/checks play to catch post-install issues
+    # early (RHSM/Insights, dnf check, basic connectivity). Protect with a
+    # idempotent guard so it only runs once when invoked from multiple entrypoints.
+    if [ -z "${MINIRHIS_SERVER_BOOTSTRAP_CHECKS_DONE:-}" ] && is_enabled "${MINIRHIS_ENABLE_SERVER_BOOTSTRAP_CHECKS:-1}"; then
+        MINIRHIS_SERVER_BOOTSTRAP_CHECKS_DONE=1
+        run_phase_playbook_with_auth_fallback "Pre-config — server-bootstrap checks" "idm:scenario_satellite:aap" "${SCRIPT_DIR}/playbooks/server-bootstrap.yml" || print_warning "Server-bootstrap pre-config checks reported issues or could not complete."
+    fi
+
     run_minirhis_config_as_code || print_warning "Config-as-code phase did not complete cleanly. VMs are running; re-run manually if needed."
 
     if [ "${ssh_mesh_bootstrap_ok}" -eq 0 ]; then
@@ -17489,6 +18010,25 @@ reboot_all_minirhis_vms() {
     # Allow guests to come back up and perform a light settle
     sleep_with_spinner 15 "  Waiting for guests to settle"
     wait_for_post_vm_settle || print_warning "Post-reboot settle checks reported issues"
+    # Ensure SSH is reachable on each VM before continuing (non-Ansible workflows)
+    for vm in "${vms[@]}"; do
+        case "${vm}" in
+            satellite) node_ip="${SAT_IP}" ;;
+            aap)       node_ip="${AAP_IP}" ;;
+            idm)       node_ip="${IDM_IP}" ;;
+            *)         node_ip="" ;;
+        esac
+        if [ -z "${node_ip}" ]; then
+            print_warning "No internal IP known for ${vm}; skipping SSH wait."
+            continue
+        fi
+        print_step "Waiting for SSH to return on ${vm} (${node_ip})"
+        if wait_for_ssh -t ${MINIRHIS_INTERNAL_SSH_WAIT_TIMEOUT:-300} -i 5 "${node_ip}"; then
+            print_success "SSH reachable on ${vm} (${node_ip})"
+        else
+            print_warning "SSH did not become reachable on ${vm} (${node_ip}) within timeout"
+        fi
+    done
     print_success "Reboot command issued for MINIRHIS VMs"
     return 0
 }
@@ -18553,7 +19093,7 @@ ensure_installer_host_ansible_collections() {
         local failed_file="${SCRIPT_DIR}/failed_packages.txt"
 
         print_step "Installing Python requirements line-by-line from ${container_requirements_txt} (robust fallback strategy)"
-        : > "${failed_file}"
+        : > "${failed_file:-/dev/null}"
 
         while IFS= read -r req_line || [ -n "${req_line}" ]; do
             # Strip inline comments and trim whitespace.
@@ -18730,6 +19270,42 @@ main() {
     init_minirhis_run_logging
     print_minirhis_header
 
+    # Record start time and install an exit handler to print a final summary
+    MINIRHIS_RUN_START_TS="$(date +%s)"
+    on_minirhis_exit() {
+        local rc=$?
+        # Avoid running summary for quick CLI-only demokill path
+        if [ -n "${CLI_DEMOKILL:-}" ]; then
+            return ${rc}
+        fi
+
+        echo ""
+        print_step "Final summary: collecting run results and duration"
+        # Print health summary and test summary if functions are available
+        if declare -f print_minirhis_health_summary >/dev/null 2>&1; then
+            print_minirhis_health_summary || true
+        fi
+        if declare -f minirhis_test_print_summary >/dev/null 2>&1; then
+            minirhis_test_print_summary || true
+        fi
+
+        if [ -n "${MINIRHIS_RUN_START_TS:-}" ]; then
+            local end_ts
+            end_ts="$(date +%s)"
+            local elapsed
+            elapsed=$((end_ts - MINIRHIS_RUN_START_TS))
+            # Format elapsed as H:MM:SS
+            local hours minutes seconds
+            hours=$(( elapsed / 3600 ))
+            minutes=$(( (elapsed % 3600) / 60 ))
+            seconds=$(( elapsed % 60 ))
+            printf "Run duration: %02d:%02d:%02d (HH:MM:SS)\n" "$hours" "$minutes" "$seconds"
+        fi
+
+        return ${rc}
+    }
+    trap on_minirhis_exit EXIT
+
     parse_args "$@"
     apply_cli_overrides
 
@@ -18781,6 +19357,35 @@ main() {
         fi
     }
     normalize_shared_env_vars
+
+    # Enforce RULES.md: require internal network IPs to be provided via vaulted env or CLI
+    validate_rules_env() {
+        # Required variables
+        local missing=0
+        for v in SAT_IP AAP_IP IDM_IP HOST_INT_IP INTERNAL_NETWORK; do
+            if [ -z "${!v:-}" ]; then
+                print_error "Required variable '${v}' is not set in ${ANSIBLE_ENV_FILE} or CLI. See docs/RULES.md." >&2
+                missing=1
+            fi
+        done
+        if [ "$missing" -eq 1 ]; then
+            print_error "Vaulted environment missing required network variables. Run './MiniRHIS.sh --reconfigure' or populate ${ANSIBLE_ENV_FILE} via ansible-vault." >&2
+            exit 2
+        fi
+
+        # Enforce internal network space (10.168.x.x) as required by RULES.md
+        case "${SAT_IP}" in 10.168.*) ;; *) print_error "SAT_IP='${SAT_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
+        case "${AAP_IP}" in 10.168.*) ;; *) print_error "AAP_IP='${AAP_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
+        case "${IDM_IP}" in 10.168.*) ;; *) print_error "IDM_IP='${IDM_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
+        case "${HOST_INT_IP}" in 10.168.*) ;; *) print_error "HOST_INT_IP='${HOST_INT_IP}' is outside 10.168.x.x; aborting per RULES.md."; exit 3 ;; esac
+
+        # Ensure INTERNAL_NETWORK is the canonical 10.168.0.0/16 (or starts with 10.168.)
+        case "${INTERNAL_NETWORK}" in 10.168.*) ;; *) print_error "INTERNAL_NETWORK='${INTERNAL_NETWORK}' is not a 10.168.* network; aborting per RULES.md."; exit 3 ;; esac
+
+        return 0
+    }
+
+    validate_rules_env || true
 
     # CLI-only fast path: run pre-flight validation and exit.
     if [ -n "${CLI_VALIDATE:-}" ]; then

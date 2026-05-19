@@ -1,6 +1,7 @@
 ---
-# RHSM registration: idempotent, supports org/activation-key and username/password
-
+# Early RHSM & Red Hat Insights registration tasks (best-effort)
+# This role attempts registration using vaulted credentials and will not
+# fail the play when network or credentials are unavailable.
 - name: Normalize RHSM variables from environment
   ansible.builtin.set_fact:
     rh_user: "{{ rh_user | default(RH_USER | default('')) }}"
@@ -12,6 +13,85 @@
       default(MINIRHIS_DEFER_COMPONENT_INSTALL | default('1')) }}"
     minirhis_skip_rhsm_register: "{{ minirhis_skip_rhsm_register |
       default(MINIRHIS_SKIP_RHSM_REGISTER | default(0)) }}"
+
+- block:
+    - name: Wait for RHSM host connectivity (best-effort)
+      ansible.builtin.wait_for:
+        host: "{{ minirhis_rhsm_check_host }}"
+        port: "{{ minirhis_rhsm_check_port }}"
+        timeout: 30
+      register: _minirhis_rhsm_net
+      failed_when: false
+      changed_when: false
+
+    # Vaulted env variables are expected to be passed to the play via
+    # --extra-vars @/path/to/env.yml (as done by MiniRHIS.sh). Do not attempt
+    # to read controller-side files on the remote host here.
+
+    - name: Check subscription-manager identity (is host already registered?)
+      ansible.builtin.command:
+        cmd: subscription-manager identity
+      register: _sm_identity
+      failed_when: false
+      changed_when: false
+
+    - name: Register via Satellite activation key (best-effort)
+      ansible.builtin.command: >-
+        subscription-manager register --org={{ cdn_organization_id }} --activationkey={{ cdn_sat_activation_key }} --force
+      register: _sm_register_attempt
+      failed_when: false
+      changed_when: _sm_register_attempt.rc == 0
+      until: _sm_register_attempt.rc == 0
+      retries: "{{ minirhis_rhsm_retries }}"
+      delay: "{{ minirhis_rhsm_retry_delay }}"
+      when:
+        - _sm_identity.rc != 0
+        - cdn_organization_id is defined
+        - cdn_sat_activation_key is defined
+
+    - name: Register via Red Hat credentials (best-effort)
+      ansible.builtin.command: >-
+        subscription-manager register --username={{ rh_user }} --password={{ rh_pass }} --force
+      register: _sm_register_attempt_2
+      failed_when: false
+      changed_when: _sm_register_attempt_2.rc == 0
+      until: _sm_register_attempt_2.rc == 0
+      retries: "{{ minirhis_rhsm_retries }}"
+      delay: "{{ minirhis_rhsm_retry_delay }}"
+      when:
+        - _sm_identity.rc != 0
+        - rh_user is defined
+        - rh_pass is defined
+
+    - name: Run subscription-manager attach --auto (best-effort)
+      ansible.builtin.command: subscription-manager attach --auto
+      register: _sm_attach
+      failed_when: false
+      changed_when: _sm_attach.rc == 0
+      when: _sm_identity.rc != 0 and (_sm_register_attempt.rc == 0 or _sm_register_attempt_2.rc == 0)
+
+    - name: Ensure insights-client package present (best-effort)
+      ansible.builtin.package:
+        name: insights-client
+        state: present
+      failed_when: false
+      changed_when: false
+      when: ensure_insights | default(true)
+
+    - name: Attempt to register Insights client (best-effort)
+      ansible.builtin.command: insights-client --register
+      register: insights_register
+      failed_when: false
+      changed_when: insights_register.rc == 0
+      until: insights_register.rc == 0
+      retries: "{{ minirhis_rhsm_retries }}"
+      delay: "{{ minirhis_rhsm_retry_delay }}"
+      when: ensure_insights | default(true)
+
+- name: Set insights_registered fact
+  ansible.builtin.set_fact:
+    insights_registered: "{{ (insights_register is defined and insights_register.rc == 0) | default(false) }}"
+  when: ensure_insights | default(true)
 
 - name: Check current RHSM registration
   ansible.builtin.command: subscription-manager identity

@@ -19,7 +19,7 @@
   ansible.builtin.shell: |
     TMPFILE=$(mktemp /tmp/image-mode-kickstart.XXXX.erb)
     cp /usr/share/foreman/provision_templates/minirhis_image_mode/image-mode-kickstart.erb "$TMPFILE"
-    bash tools/hammer_api_fallback.sh unattended/provision_template 'name="{{ template_name }}"' -- \
+    bash scripts/hammer_api_fallback.sh unattended/provision_template 'name="{{ template_name }}"' -- \
       hammer template create --name="{{ template_name }}" --file="$TMPFILE" --template-kind=provision --organization "{{ satellite_org }}" || true
     rm -f "$TMPFILE"
   args:
@@ -32,7 +32,7 @@
     set -euo pipefail
     for HG in {{ image_hostgroups | default(['RHEL10-DEV-Provision','RHEL10-PROD-Provision']) | join(' ') }}; do
       echo "Ensuring hostgroup ${HG} exists..."
-      bash tools/hammer_api_fallback.sh hostgroups "name=\"${HG}\"" -- \
+      bash scripts/hammer_api_fallback.sh hostgroups "name=\"${HG}\"" -- \
         hammer hostgroup create --name="${HG}" --organization "{{ satellite_org }}" --location "{{ satellite_location | default('Default Location') }}" \
           --architecture="x86_64" --operatingsystem=$(hammer os list --search "major={{ image_hostgroup_os_major | default('10') }}" --fields=Id --csv | tail -1) \
           --partition-table="rhel-lvm" --subnet="{{ provisioning_subnet | default('internal-provision') }}" --root-password="{{ satellite_admin_pass | default('changeme') }}" || true

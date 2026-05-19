@@ -34,7 +34,7 @@
     path: "{{ aap_http_log | dirname }}"
     state: directory
     owner: root
-    ansible.builtin.group: root
+    group: root
     mode: "0755"
   when: aap_bundle_stat.stat.exists | default(false)
   become: true

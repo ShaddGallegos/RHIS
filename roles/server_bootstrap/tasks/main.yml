@@ -13,10 +13,90 @@
       "{{ server_packages.split() if server_packages is string
       else (server_packages | default([])) }}"
 
+# Ensure Java/keytool (keytool) is available for Puppet/Foreman installers
+# This helps Puppet keystore providers that call the 'keytool' binary during
+# foreman-installer / Puppet runs. Idempotent and tolerates missing JVMs.
+- name: Check for keytool on system
+  ansible.builtin.command: command -v keytool
+  register: _keytool_check
+  failed_when: false
+  changed_when: false
+
+- name: Search for JVM keytool under /usr/lib/jvm when keytool missing
+  ansible.builtin.find:
+    paths: /usr/lib/jvm
+    patterns: keytool
+    recurse: yes
+    file_type: file
+  register: _jvm_keytool
+  when: _keytool_check.rc != 0
+
+- name: Create symlink to JVM keytool in /usr/bin when found
+  ansible.builtin.file:
+    src: "{{ _jvm_keytool.files[0].path }}"
+    dest: /usr/bin/keytool
+    state: link
+    force: true
+  when:
+    - _keytool_check.rc != 0
+    - _jvm_keytool.matched | default(0) > 0
+
+- name: Ensure java-17-openjdk-headless is installed when keytool still missing
+  ansible.builtin.package:
+    name: java-17-openjdk-headless
+    state: present
+  when: _keytool_check.rc != 0 and (_jvm_keytool.matched | default(0) == 0)
+
+- name: Re-check keytool path and register it
+  ansible.builtin.command: command -v keytool
+  register: _keytool_path
+  failed_when: false
+  changed_when: false
+
+- name: Create symlinks to keytool for Puppet's bin paths (if keytool available)
+  ansible.builtin.file:
+    src: "{{ _keytool_path.stdout }}"
+    dest: "{{ item }}"
+    state: link
+    force: true
+  loop:
+    - /opt/puppetlabs/bin/keytool
+    - /opt/puppetlabs/puppet/bin/keytool
+    - /usr/local/bin/keytool
+  when: _keytool_path.stdout is defined and _keytool_path.stdout != ''
+  failed_when: false
+
+- name: Ensure /etc/environment PATH contains puppet bin precedence
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    regexp: "^PATH="
+    line: 'PATH="/opt/puppetlabs/bin:/usr/local/bin:/usr/bin:/sbin:/bin"'
+    create: yes
+    backup: yes
+  when: ansible_facts.os_family == 'RedHat'
+
+- name: Ensure puppet config path includes /opt/puppetlabs/bin (if puppet exists)
+  ansible.builtin.stat:
+    path: /opt/puppetlabs/bin/puppet
+  register: _puppet_bin_stat
+  when: ansible_facts.os_family == 'RedHat'
+
+- name: Set puppet config path to include /opt/puppetlabs/bin when puppet present
+  ansible.builtin.command: /opt/puppetlabs/bin/puppet config set path /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/puppetlabs/bin --section main
+  failed_when: false
+  changed_when: false
+  when: ansible_facts.os_family == 'RedHat' and _puppet_bin_stat.stat.exists
+
+- name: Include RHSM/Insights preflight role (best-effort)
+  ansible.builtin.include_role:
+    name: minirhis-rhsm
+  # best-effort: let role handle failures and idempotence
+
 - name: Install base and server-specific packages
   ansible.builtin.package:
     name: "{{ base_packages_list + server_packages_list }}"
     state: present
+
 
 - name: Ensure `admin` user password matches `global_admin_password` (vaulted)
   become: true
@@ -98,7 +178,10 @@
 
 - name: Optionally probe web UI until healthy
   ansible.builtin.uri:
-    url: "https://{{ ansible_fqdn | default(inventory_hostname) }}"
+    url: >-
+      {{ satellite_url if (satellite_url is defined and satellite_url|length > 0)
+         else ('https://' + (sat_ip if (sat_ip is defined and sat_ip|length > 0)
+         else (ansible_fqdn | default(inventory_hostname)))) }}
     validate_certs: false
     return_content: false
   register: ui_check_result
@@ -247,8 +330,7 @@
     - name: Save this host's admin public key to controller for later import
       ansible.builtin.copy:
         content: "{{ admin_pub.content | b64decode }}"
-        dest:
-          "/tmp/minirhis_node_keys/{{ inventory_hostname }}-{{ admin_user |
+        dest: "/tmp/minirhis_node_keys/{{ inventory_hostname }}-{{ admin_user |
           default('admin') }}.pub"
         mode: "0644"
       delegate_to: localhost
@@ -297,3 +379,128 @@
         msg: |
           Insights register rc={{ insights_register_result.rc | default(insights_register_result_false_creds.rc | default('unset')) }}
           out={{ insights_register_result.stdout | default(insights_register_result_false_creds.stdout | default('')) }}
+
+    # Post-install and pre-configuration checks and automatic remediation
+    - name: Post-install automated checks (registration, connectivity, logs)
+      when: perform_post_install_checks | default(true)
+      block:
+        - name: Ensure subscription-manager and insights-client packages are present
+          ansible.builtin.package:
+            name:
+              - subscription-manager
+              - insights-client
+            state: present
+          register: _pkgs_installed
+
+        - name: Attempt to register with Satellite or Red Hat if not already registered
+          block:
+            - name: Check subscription-manager identity
+              ansible.builtin.command: subscription-manager identity
+              register: _sm_identity
+              failed_when: false
+              changed_when: false
+
+            - name: Register via Satellite activation key when provided
+              ansible.builtin.command: >-
+                subscription-manager register --org={{ cdn_organization_id }} --activationkey={{ cdn_sat_activation_key }} --force
+              when:
+                - _sm_identity.rc != 0
+                - cdn_organization_id is defined
+                - cdn_sat_activation_key is defined
+              register: _sm_register_attempt
+              failed_when: false
+              changed_when: _sm_register_attempt.rc == 0
+
+            - name: Register via Red Hat credentials when Satellite activation key not used
+              ansible.builtin.command: >-
+                subscription-manager register --username={{ rh_user | default('') }} --password={{ rh_pass | default('') }} --force
+              when:
+                - _sm_identity.rc != 0
+                - not (cdn_organization_id is defined and cdn_sat_activation_key is defined)
+                - (rh_user is defined and rh_pass is defined)
+              register: _sm_register_attempt_2
+              failed_when: false
+              changed_when: _sm_register_attempt_2.rc == 0
+
+            - name: Run subscription-manager attach --auto (best-effort)
+              ansible.builtin.command: subscription-manager attach --auto
+              failed_when: false
+              changed_when: false
+              when: _sm_identity.rc != 0
+
+        - name: Ensure Insights client is registered and scheduled
+          block:
+            - name: Check insights-client status
+              ansible.builtin.command: insights-client --status
+              register: _ins_status
+              failed_when: false
+              changed_when: false
+
+            - name: Register Insights client if not registered
+              ansible.builtin.command: insights-client --register
+              when: _ins_status.rc != 0
+              register: _ins_register
+              failed_when: false
+              changed_when: _ins_register.rc == 0
+
+            - name: Enable insights-client timer
+              ansible.builtin.systemd:
+                name: insights-client.timer
+                state: started
+                enabled: true
+              failed_when: false
+
+        - name: Run quick package database check (dnf/yum)
+          ansible.builtin.command: >-
+            {{ 'dnf check' if ansible_facts.pkg_mgr == 'dnf' else 'yum check' }}
+          register: _pkg_check
+          failed_when: false
+          changed_when: false
+
+        - name: Determine interface used for default route
+          ansible.builtin.set_fact:
+            _default_iface: "{{ ansible_default_ipv4.interface | default('eth0') }}"
+
+        - name: Check internet connectivity via default interface
+          ansible.builtin.command: ping -I {{ _default_iface }} -c 3 {{ internet_check_host | default('8.8.8.8') }}
+          register: _internet_check
+          failed_when: false
+          changed_when: false
+
+        - name: Build list of internal targets to verify reachability
+          ansible.builtin.set_fact:
+            _internal_targets: >-
+              {{ ([aap_ip, idm_ip, sat_ip] | default([])) + (internal_test_ips | default([])) | select('defined') | list }}
+
+        - name: Ping internal test targets
+          ansible.builtin.command: ping -c 3 {{ item }}
+          loop: "{{ _internal_targets }}"
+          register: _internal_ping_results
+          failed_when: false
+          changed_when: false
+          when: _internal_targets | length > 0
+
+        - name: Gather journal error and warning snippets
+          ansible.builtin.command: >-
+            bash -c "journalctl -p 3 -n 200 --no-pager; echo '----WARNINGS----'; journalctl -p 4 -n 200 --no-pager"
+          register: _journal_snippets
+          failed_when: false
+          changed_when: false
+
+        - name: Report post-install check summary
+          ansible.builtin.debug:
+            msg: |
+              post_install: subscription_identity_rc={{ _sm_identity.rc | default('unset') }}
+              subscription_register_rc={{ _sm_register_attempt.rc | default(_sm_register_attempt_2.rc | default('unset')) }}
+              insights_status_rc={{ _ins_status.rc | default('unset') }}
+              dnf_check_rc={{ _pkg_check.rc | default('unset') }}
+              internet_check_rc={{ _internet_check.rc | default('unset') }}
+              internal_ping_results={{ _internal_ping_results.results | default([]) }}
+              journal_snippets={{ (_journal_snippets.stdout_lines | default([]))[:80] }}
+
+        - name: Fail the play if critical failures detected (subscription or internet)
+          ansible.builtin.fail:
+            msg: "Critical post-install checks failed: subscription or internet unreachable"
+          when: >-
+            (_sm_identity.rc != 0 and (_sm_register_attempt.rc | default(_sm_register_attempt_2.rc | default(1))) != 0)
+            or (_internet_check.rc is defined and _internet_check.rc != 0)

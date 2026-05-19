@@ -14,7 +14,7 @@
     path: "{{ mount_point }}"
     state: directory
     owner: root
-    ansible.builtin.group: root
+    group: root
     mode: "0755"
 
 - name: Mount backup image (read-write)
@@ -33,7 +33,7 @@
     path: "{{ mount_point }}/root/.ssh"
     state: directory
     owner: 0
-    ansible.builtin.group: 0
+    group: 0
     mode: "0700"
 
 - name: Copy installer public key into mounted image authorized_keys
@@ -42,7 +42,7 @@
     src: "{{ installer_pubkey }}"
     dest: "{{ mount_point }}/root/.ssh/authorized_keys"
     owner: "0"
-    ansible.builtin.group: "0"
+    group: "0"
     mode: "0600"
   delegate_to: localhost
 

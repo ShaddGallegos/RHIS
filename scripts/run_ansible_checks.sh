@@ -7,7 +7,7 @@ command -v ansible-lint >/dev/null 2>&1 || { echo "ansible-lint missing"; exit 0
 
 # FQCN check (local enforcement)
 command -v python3 >/dev/null 2>&1 || { echo "python3 missing"; exit 0; }
-python3 tools/ansible_fqcn_check.py || true
+python3 scripts/ansible_fqcn_check.py || true
 
 yamllint -c .yamllint.yml . || true
 ansible-lint || true

@@ -8,7 +8,7 @@
     path: "{{ item.path }}"
     state: directory
     owner: "{{ admin_user | default('admin') }}"
-    ansible.builtin.group: "{{ admin_user | default('admin') }}"
+    group: "{{ admin_user | default('admin') }}"
     mode: "0755"
   loop:
     - { path: "/home/{{ admin_user | default('admin') }}" }
@@ -79,7 +79,7 @@
   ansible.builtin.file:
     path: "{{ aap_extract_dir }}"
     owner: "{{ admin_user | default('admin') }}"
-    ansible.builtin.group: "{{ admin_user | default('admin') }}"
+    group: "{{ admin_user | default('admin') }}"
     recurse: true
   when: (aap_extract_verify is defined) or (not (aap_existing_marker.stat.exists | default(false)))
 
@@ -95,7 +95,7 @@
     path: /etc/ansible/templates
     state: directory
     owner: root
-    ansible.builtin.group: root
+    group: root
     mode: "0755"
 
 - name: Ensure qemu-img is present for verification
@@ -103,33 +103,15 @@
     path: /usr/bin/qemu-img
   register: qemu_img_verify_stat
 
-- name: Run qemu-img check on backup (best-effort)
-  become: yes
-  ansible.builtin.command:
-    /usr/bin/qemu-img check {{ recovery_backup_dir }}/{{ vm_name }}.{{
-    recovery_ts.stdout }}.qcow2
-  register: qemu_img_check
-  changed_when: false
-  failed_when: false
-  when: qemu_img_verify_stat.stat.exists
-
-- name: Compute sha256 checksum of backup (for audit)
-  become: true
-  ansible.builtin.command: sha256sum {{ recovery_backup_dir }}/{{ vm_name }}.{{ recovery_ts.stdout }}.qcow2
-  register: backup_sha256
-  changed_when: false
-
-- name: Show verification results
-  ansible.builtin.debug:
-    msg:
-      - "qemu-img check: {{ qemu_img_check.stdout | default('not-run') }}"
-      - "backup sha256: {{ backup_sha256.stdout }}"
-bundle templates
+  # Note: qemu-img verification and backup auditing are out-of-scope for bundle
+  # extraction; we keep a lightweight presence check above for best-effort
+  # verification steps that may be useful in other roles.
+- name: "Copy bundle templates into /etc/ansible/templates"
   ansible.builtin.copy:
     src: "{{ item.path }}"
     dest: /etc/ansible/templates/
     owner: root
-    ansible.builtin.group: root
+    group: root
     mode: "0644"
   loop: "{{ aap_j2_templates.files }}"
   when: (aap_j2_templates.files | length > 0) and not (aap_existing_marker.stat.exists | default(false))

@@ -1,10 +1,10 @@
 #! /bin/sh
 # 1.2 Ensure installer/admin user has passwordless sudo and virtualization groups
 ks_log "Phase 1.2: Ensure admin sudo bootstrap"
-target_user="{{ installer_user }}"
-if [ "{{ installer_user }}" != "{{ admin_user }}" ] && ! id "{{ installer_user }}" >/dev/null 2>&1; then
-    useradd -m -G wheel "{{ installer_user }}" || true
-    echo "{{ installer_user }}:{{ admin_pass | default('') }}" | chpasswd || true
+target_user="{{ installer_user | default(admin_user | default('admin')) }}"
+if [ "{{ installer_user | default(admin_user | default('admin')) }}" != "{{ admin_user | default('admin') }}" ] && ! id "{{ installer_user | default(admin_user | default('admin')) }}" >/dev/null 2>&1; then
+    useradd -m -G wheel "{{ installer_user | default(admin_user | default('admin')) }}" || true
+    echo "{{ installer_user | default(admin_user | default('admin')) }}:{{ admin_pass | default('') }}" | chpasswd || true
 fi
 # Core virtualization and admin groups for all systems
 for grp in libvirt qemu kvm wheel foreman; do
@@ -15,7 +15,7 @@ usermod -aG libvirt,qemu,kvm,wheel,foreman "$target_user" || true
 sed -i -E 's/^#?[[:space:]]*%wheel[[:space:]]+ALL=\(ALL\)[[:space:]]+ALL/%wheel ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || true
 # Create a user-specific sudoers drop-in validated with visudo to avoid syntax errors
 if [ -z "$target_user" ]; then
-    target_user="{{ admin_user }}"
+    target_user="{{ admin_user | default('admin') }}"
 fi
 tmp_sudoers="$(mktemp /tmp/90-minirhis-${target_user}-XXXX)"
 printf '%s\n' "${target_user} ALL=(ALL) NOPASSWD: ALL" > "${tmp_sudoers}"

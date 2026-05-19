@@ -1,0 +1,8 @@
+---
+# Placeholder installer playbook for containerized_installer
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "containerized installer placeholder"
+      ansible.builtin.debug:
+        msg: "containerized_installer install.yml placeholder - no-op"

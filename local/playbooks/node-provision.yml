@@ -13,5 +13,9 @@
 - name: "Node provisioning"
   hosts: "{{ target_hosts | default(node_type | default('all')) }}"
   become: true
+  pre_tasks:
+    - name: Early RHSM/Insights preflight (best-effort)
+      ansible.builtin.include_role:
+        name: minirhis-rhsm
   roles:
     - role: node_common

@@ -7,6 +7,9 @@
     - name: Wait for SSH connectivity to Satellite hosts
       ansible.builtin.wait_for_connection:
         timeout: 900
+    - name: Early RHSM/Insights preflight (best-effort)
+      ansible.builtin.include_role:
+        name: minirhis-rhsm
 
   roles:
     - role: server_bootstrap

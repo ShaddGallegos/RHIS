@@ -38,7 +38,9 @@ wait_for_web: false
 web_port: 443
 
 # Whether to register systems with Red Hat Insights (best-effort)
-ensure_insights: false
+# Default to true so nodes attempt registration early in bootstrap when
+# vaulted credentials or network connectivity are available.
+ensure_insights: true
 
 # When true and RH credentials are available (RH_USER/RH_PASS), attempt to
 # register using those credentials. If false, the role will attempt an

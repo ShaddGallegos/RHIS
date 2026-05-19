@@ -23,7 +23,7 @@ Options:
   -h, --help             Show this help.
 
 Behavior:
-  - Canonical source key: aap_admin_pass (fallback: admin_pass, then redhat).
+    - Canonical source key: aap_admin_pass (fallback: admin_pass or other alias in env.yml).
   - Normalized keys:
       admin_pass
       aap_admin_pass
@@ -141,7 +141,19 @@ if [[ -z "$CANONICAL" ]]; then
     CANONICAL="$(extract_value "admin_pass" || true)"
 fi
 if [[ -z "$CANONICAL" ]]; then
-    CANONICAL="redhat"
+    # Try to pick the first non-empty password among known aliases to avoid
+    # inserting a hard-coded fallback into the vaulted env file.
+    for k in "${KEYS[@]}"; do
+        val="$(extract_value "$k" || true)"
+        if [[ -n "$val" ]]; then
+            CANONICAL="$val"
+            break
+        fi
+    done
+fi
+if [[ -z "$CANONICAL" ]]; then
+    echo "No canonical password (aap_admin_pass/admin_pass or aliases) found in $ENV_FILE; aborting to avoid inserting defaults." >&2
+    exit 1
 fi
 
 KEYS_CSV="$(IFS=,; echo "${KEYS[*]}")"

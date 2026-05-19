@@ -1,14 +1,8 @@
 ---
-# Defaults for RHSM registration role
-rh_user: ""
-rh_pass: ""
-cdn_organization_id: ""
-cdn_sat_activation_key: ""
-
-# Control behavior (can be overridden via inventory/env)
-minirhis_defer_component_install: "1"
-minirhis_skip_rhsm_register: 0
-
-# Registration retry policy
-rhsm_register_retries: 10
-rhsm_register_delay: 15
+# Default variables for minirhis-rhsm role
+# Controls early RHSM/Insights registration behavior and retry policy.
+ensure_insights: true
+minirhis_rhsm_retries: 3
+minirhis_rhsm_retry_delay: 15
+minirhis_rhsm_check_host: subscription.rhsm.redhat.com
+minirhis_rhsm_check_port: 443

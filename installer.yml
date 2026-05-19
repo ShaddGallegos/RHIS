@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "Installer placeholder"
+      ansible.builtin.debug:
+        msg: "installer.yml placeholder - no-op"

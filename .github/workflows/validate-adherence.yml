@@ -1,10 +1,11 @@
+---
 name: Validate Adherence Doc
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   validate-adherence:

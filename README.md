@@ -43,6 +43,26 @@ If you are starting fresh, review:
 - [Headless Troubleshooting](#headless-troubleshooting)
 - [Recovery & Diagnostics](#recovery--diagnostics)
 - [Configuration and secrets](#configuration-and-secrets)
+
+### Secrets and vaulted configuration
+
+All sensitive values (passwords, tokens, keys) must be stored in the vaulted
+file at `~/.ansible/conf/env.yml` and never committed in plaintext. `MiniRHIS.sh`
+will attempt to load that file at startup using `ansible-vault` and the
+`ANSIBLE_VAULT_PASSWORD_FILE` mechanism. If you do not have a vaulted env file,
+use `./MiniRHIS.sh --reconfigure` to create one interactively (it will be
+encrypted with your configured vault password file).
+
+Notes:
+- Do not hard-code any production or demo passwords in tracked files.
+- Use the `scripts/normalize_env_password_aliases.sh` helper to canonicalize
+  password aliases into `aap_admin_pass`/`admin_pass` inside the vaulted file.
+- You can inspect the vaulted file with:
+
+```bash
+ANSIBLE_VAULT_PASSWORD_FILE=$HOME/.ansible/conf/.vaultpass.txt ansible-vault view $HOME/.ansible/conf/env.yml
+```
+
 - [Default lab layout](#default-lab-layout)
 - [Kickstart generation](#kickstart-generation)
 - [VM provisioning behavior](#vm-provisioning-behavior)
@@ -132,6 +152,21 @@ This keeps the installer host self-sufficient for the MiniRHIS workflow.
 ```
 
 ---
+
+### Importing accounts from Excel
+
+If you have account lists in Excel (.xlsx/.xls) you can convert them to a
+repository YAML suitable for Ansible with the provided helper:
+
+```bash
+python3 scripts/import_accounts_from_excel.py accounts.xlsx -o local/vars/external_inventory/accounts/region.yml
+```
+
+The script auto-detects common column names (username, groups, comment,
+ssh_key, shell), deduplicates by username (case-insensitive), and writes a
+`node_common_users` style YAML fragment which can be included in your
+inventory or referenced by roles such as `node_common`.
+
 
 ## Main entry point
 
@@ -356,18 +391,18 @@ Notes:
 
 ### Environment Variables Cheat Sheet
 
-| Variable       | Purpose              | Example                 | Required     |
-| -------------- | -------------------- | ----------------------- | ------------ |
-| `RH_USER`      | Red Hat CDN username | `<your-rh-username>`    | Menu 1,2,4,5 |
-| `RH_PASS`      | Red Hat CDN password | `<your-rh-password>`    | Menu 1,2,4,5 |
-| `ADMIN_PASS`   | Local admin password | `<your-admin-password>` | Menu 3,4,5,7 |
-| `IDM_IP`       | IdM VM IP (internal) | `10.168.128.3`          | Menu 3,4,5,7 |
-| `IDM_HOSTNAME` | IdM FQDN             | `idm.example.com`       | Menu 4,5,7   |
-| `SAT_IP`       | Satellite VM IP      | `10.168.128.1`          | Menu 3,4,5,7 |
-| `SAT_HOSTNAME` | Satellite FQDN       | `satellite.example.com` | Menu 4,5,7   |
-| `AAP_IP`       | AAP VM IP            | `10.168.128.2`          | Menu 3,4,5,7 |
-| `AAP_HOSTNAME` | AAP FQDN             | `aap.example.com`       | Menu 4,5,7   |
-| `HUB_TOKEN`    | Automation Hub token | `<your-hub-token>`      | Menu 4,5,7   |
+| Variable       | Purpose              | Example                                          | Required     |
+| -------------- | -------------------- | ------------------------------------------------ | ------------ |
+| `RH_USER`      | Red Hat CDN username | `<your-rh-username>`                             | Menu 1,2,4,5 |
+| `RH_PASS`      | Red Hat CDN password | `<your-rh-password>`                             | Menu 1,2,4,5 |
+| `ADMIN_PASS`   | Local admin password | `<your-admin-password>`                          | Menu 3,4,5,7 |
+| `IDM_IP`       | IdM VM IP (internal) | `10.168.128.3`                                   | Menu 3,4,5,7 |
+| `IDM_HOSTNAME` | IdM FQDN             | `idm.<domain>` (defaults to `example.com`)       | Menu 4,5,7   |
+| `SAT_IP`       | Satellite VM IP      | `10.168.128.1`                                   | Menu 3,4,5,7 |
+| `SAT_HOSTNAME` | Satellite FQDN       | `satellite.<domain>` (defaults to `example.com`) | Menu 4,5,7   |
+| `AAP_IP`       | AAP VM IP            | `10.168.128.2`                                   | Menu 3,4,5,7 |
+| `AAP_HOSTNAME` | AAP FQDN             | `aap.<domain>` (defaults to `example.com`)       | Menu 4,5,7   |
+| `HUB_TOKEN`    | Automation Hub token | `<your-hub-token>`                               | Menu 4,5,7   |
 
 ---
 

@@ -21,4 +21,20 @@ This checklist summarizes current progress and next steps for the MINIRHIS repos
 
 ## Notes
 - The canonical vault path is `~/.ansible/conf/env.yml` and the vault password is read from `~/.ansible/conf/.vaultpass.txt` by default.
-- Do NOT commit `env.yml` or vault password files. Add any sensitive artifacts to `.gitignore`.
+ - Do NOT commit `env.yml` or vault password files. Add any sensitive artifacts to `.gitignore`.
+
+## Red Hat API & Downloads
+
+- API access page: https://access.redhat.com/management/api
+- Token exchange endpoint: https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token
+- Image download endpoint (template): https://api.access.redhat.com/management/v1/images/<image-id>/download
+
+To exchange an offline token for an access token:
+
+```bash
+offline_token='YOUR_OFFLINE_TOKEN'
+token=$(curl https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token \
+		 -d grant_type=refresh_token \
+		 -d client_id=rhsm-api \
+		 -d refresh_token=$offline_token | jq -r .access_token)
+```

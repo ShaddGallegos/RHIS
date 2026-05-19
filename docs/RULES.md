@@ -14,6 +14,14 @@ Quick rules (must follow):
 8. Record run metadata, logs and link to PR/issue for any deviation from these rules.
 9. All Ansible modules used in playbooks and roles must use Fully Qualified Collection Names (FQCN), for example `ansible.builtin.package` or `ansible.posix.firewalld`. Enforce via `ansible-lint` and CI.
 
+10. FAILURE/HALT POLICY: On any install failure, warning, or unexpected problem the workflow MUST stop immediately. The operator (script/automation) must:
+  - Halt the current automated phase and gather diagnostics (libvirt console capture, `qemu-guest-agent` logs, `journalctl`, and Ansible ad-hoc probes).
+  - Attempt best-effort automated remediation by running the matching remediation playbook(s) (for example: `playbooks/remediate-rootless-podman.yml`, `playbooks/fix-guest-sudoers.yml`, role-based repairs).
+  - Append any remaining required manual/unresolved actions to the persistent TODO list and reorder TODOs by precedence (highest priority first).
+  - Only resume the paused phase when diagnostics show cleared ERROR/WARNING tokens and smoke checks pass; otherwise fail loudly and require operator review.
+  - Never delete undone TODOs; only mark completed items as completed. The orchestrator must persist TODO state and surface it to operators.
+
+
 Execution goal (current MiniRHIS workflow)
 
 - Installer node: perform all prework required to orchestrate installation.
@@ -82,8 +90,8 @@ Implementation Mapping Checklist (rules -> automation path)
 | Product install: Satellite                                  | Partial     | `playbooks/satellite-install.yml`                                                           | Current playbook performs readiness checks; full install workflow remains to be codified         |
 | Product install: AAP                                        | Partial     | `playbooks/aap-install.yml`, `playbooks/run-aap-container-setup.yml`                        | Current playbooks focus on readiness/host prep; full app install workflow remains to be codified |
 | Product post-install web/service checks                     | Implemented | `playbooks/idm-install.yml`, `playbooks/satellite-install.yml`, `playbooks/aap-install.yml` | Port/UI probes and service status checks                                                         |
-| Satellite manifest import                                   | Implemented | `tools/import_manifest.sh`                                                                  | API-first with hammer fallback                                                                   |
-| Satellite hammer/API helper setup                           | Implemented | `tools/setup_hammer_cli.sh`, `tools/hammer_api_fallback.sh`                                 | Standardizes Hammer CLI config and API fallback pattern                                          |
+| Satellite manifest import                                   | Implemented | `scripts/import_manifest.sh`                                                                  | API-first with hammer fallback                                                                   |
+| Satellite hammer/API helper setup                           | Implemented | `scripts/setup_hammer_cli.sh`, `scripts/hammer_api_fallback.sh`                                 | Standardizes Hammer CLI config and API fallback pattern                                          |
 | Satellite sync plan/lifecycle/content views/activation keys | TODO        | (no canonical playbook yet)                                                                 | Required by rules; codify in Ansible role/playbook                                               |
 | Satellite DNS/DHCP/TFTP and provisioning subnet/domain      | TODO        | (no canonical playbook yet)                                                                 | Required by rules; codify in Ansible role/playbook                                               |
 | Libvirt compute resources, hostgroup, naming conventions    | TODO        | (no canonical playbook yet)                                                                 | Required by rules; codify in Ansible role/playbook                                               |

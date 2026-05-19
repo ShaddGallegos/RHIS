@@ -17,7 +17,7 @@
     state: directory
     mode: "0755"
     owner: root
-    ansible.builtin.group: root
+    group: root
   become: true
 
 - name: Render SSH baseline kickstart snippet
@@ -26,7 +26,7 @@
     dest: "{{ kickstart_output_dir }}/ssh_baseline.sh"
     mode: "0644"
     owner: root
-    ansible.builtin.group: root
+    group: root
   become: true
 
 - name: Render sudo bootstrap kickstart snippet
@@ -35,7 +35,7 @@
     dest: "{{ kickstart_output_dir }}/sudo_bootstrap.sh"
     mode: "0644"
     owner: root
-    ansible.builtin.group: root
+    group: root
   become: true
 
 - name: Expose kickstart snippet paths as facts

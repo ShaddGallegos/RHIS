@@ -42,7 +42,11 @@ end
 ostreecontainer --url <%= ostreecontainer %>
 
 # 2. Set the root password to make the system login-able
+<% if defined?(root_pass) && root_pass && root_pass.to_s.strip != '' -%>
 rootpw --iscrypted <%= root_pass %>
+<% else -%>
+# root password omitted (demo or not provided)
+<% end -%>
 
 # 3. Allow SSH for remote login
 firewall --service=ssh

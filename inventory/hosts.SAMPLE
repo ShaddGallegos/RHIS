@@ -27,10 +27,10 @@
 
 # ─── Controller / KVM host ────────────────────────────────────────────────────
 [ansibledev]
-{{CONTROLLER_HOST}}
+{{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
 
 [libvirt]
-{{CONTROLLER_HOST}}
+{{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
 
 [installer]
 {{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
@@ -65,9 +65,7 @@ idm
 # ─── Group vars shared across all managed nodes ───────────────────────────────
 [all:vars]
 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
-# global_admin_password is referenced by host_vars templates; set it in your
-# Ansible vault (see ~/.ansible/conf/env.yml) rather than in plain text here.
-# global_admin_password: "changeme"
+global_admin_password: ""
 
 # Placeholder groups to avoid noisy "Could not match supplied host pattern" warnings
 # in demo environments where these groups may be referenced but are intentionally
