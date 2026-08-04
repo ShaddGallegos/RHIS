@@ -1,0 +1,7 @@
+---
+- name: Syntax check node_common role
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - role: node_common

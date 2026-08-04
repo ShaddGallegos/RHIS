@@ -1,0 +1,26 @@
+---
+name: Validate Adherence Doc
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-adherence:
+    name: Validate adherence document presence
+    # RHEL-only CI requirement
+    runs-on: [self-hosted, rhel]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Run adherence validator
+        run: |
+          python3 scripts/validate_adherence.py

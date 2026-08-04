@@ -1,0 +1,30 @@
+---
+# Defaults for containerized AAP role
+aap_controller_image: "automation-controller:2.6" # placeholder, replace with registry image path
+aap_controller_volumes:
+  - /var/lib/aap-controller/data
+  - /var/lib/aap-controller/pgdata
+podman_pkg: podman
+crun_pkg: crun
+container_user: root
+
+# packages required to extract the AAP staged bundle (tar auto-detects via suffix)
+aap_extract_prereqs:
+  - zstd
+  - xz
+  - gzip
+  - bzip2
+  - unzip
+  - tar
+  - qemu-guest-agent
+
+# Where to search for the AAP bundle on the target host (order matters)
+aap_bundle_search_paths:
+  - /var/tmp
+  - "/home/{{ global_admin | default(admin_user | default('admin')) }}"
+  - "/home/{{ global_admin | default(admin_user | default('admin')) }}/Downloads"
+  - /root/Downloads
+  - /tmp
+
+# Extraction target directory on the guest (defaults to admin user's bundle dir)
+aap_extract_dir: "/home/{{ global_admin | default(admin_user | default('admin')) }}/bundle"

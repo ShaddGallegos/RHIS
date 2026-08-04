@@ -1,0 +1,130 @@
+---
+# Wrapper tasks: download / install / configure / test sequence for node types
+
+- name: "Node wrappers: install packages for node"
+  ansible.builtin.package:
+    name: "{{ node_packages | default([]) }}"
+    state: present
+  when: (node_packages is defined) and (node_packages | length) > 0
+  become: true
+
+- name: "Node wrappers: download node_artifacts (URLs or local paths)"
+  block:
+    - name: Ensure artifact dest exists
+      ansible.builtin.file:
+        path: /var/tmp
+        state: directory
+        mode: "0755"
+      become: true
+
+    - name: Download remote artifacts
+      ansible.builtin.get_url:
+        url: "{{ item }}"
+        dest: "/var/tmp/{{ item | basename }}"
+        mode: "0644"
+        timeout: 600
+      loop: "{{ node_artifacts | default([]) }}"
+      when: node_artifacts is defined and (node_artifacts | length) > 0
+
+    - name: Copy local artifact paths to /var/tmp
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/var/tmp/{{ item | basename }}"
+        remote_src: true
+        mode: "0644"
+      loop: "{{ node_artifacts | default([]) }}"
+      when: node_artifacts is defined and (node_artifacts | length) > 0
+  when: node_artifacts is defined and (node_artifacts | length) > 0
+
+- name: "Node wrappers: install local RPMs (node_rpms)"
+  block:
+    - name: Ensure /var/tmp exists for rpms
+      ansible.builtin.file:
+        path: /var/tmp
+        state: directory
+      become: true
+
+    - name: Copy RPMs to /var/tmp if local paths
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/var/tmp/{{ item | basename }}"
+        remote_src: true
+        mode: "0644"
+      loop: "{{ node_rpms | default([]) }}"
+      when: node_rpms is defined and (node_rpms | length) > 0
+      become: true
+
+    - name: Install RPM packages from /var/tmp
+      ansible.builtin.package:
+        name: "/var/tmp/{{ item | basename }}"
+        state: present
+      loop: "{{ node_rpms | default([]) }}"
+      when: node_rpms is defined and (node_rpms | length) > 0
+      become: true
+  when: node_rpms is defined and (node_rpms | length) > 0
+
+- name: "Node wrappers: run install commands (providing optional creates marker)"
+  ansible.builtin.command:
+    cmd: "{{ item.cmd }}"
+    creates: "{{ item.marker | default(omit) }}"
+  loop: "{{ node_install_commands | default([]) }}"
+  when: node_install_commands is defined and (node_install_commands | length) > 0
+  become: true
+
+- name: "Node wrappers: deploy configuration templates and files"
+  block:
+    - name: Render template config files
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "{{ item.mode | default('0644') }}"
+      loop: "{{ node_configs | default([]) }}"
+      when: item.template | default(false)
+      loop_control:
+        label: "{{ item.dest }}"
+      become: true
+
+    - name: Copy plain config files
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "{{ item.mode | default('0644') }}"
+        remote_src: "{{ item.remote_src | default(false) }}"
+      loop: "{{ node_configs | default([]) }}"
+      when: not (item.template | default(false))
+      loop_control:
+        label: "{{ item.dest }}"
+      become: true
+  when: node_configs is defined and (node_configs | length) > 0
+
+- name: "Node wrappers: run configuration tests (shell commands that must return 0)"
+  vars:
+    tests: "{{ node_config_tests | default([]) }}"
+  block:
+    - name: Run a configuration test
+      ansible.builtin.shell: "{{ item.cmd }}"
+      register: cfg_test_result
+      failed_when: cfg_test_result.rc != 0
+      loop: "{{ tests }}"
+      loop_control:
+        label: "{{ item.name | default(item.cmd) }}"
+      become: true
+  when: node_config_tests is defined and (node_config_tests | length) > 0
+
+- name: "Node wrappers: run integration tests"
+  vars:
+    itests: "{{ node_integration_tests | default([]) }}"
+  block:
+    - name: Run integration test command
+      ansible.builtin.shell: "{{ item.cmd }}"
+      register: itest_result
+      failed_when: itest_result.rc != 0
+      loop: "{{ itests }}"
+      loop_control:
+        label: "{{ item.name | default(item.cmd) }}"
+      become: true
+  when: node_integration_tests is defined and (node_integration_tests | length) > 0
+
+- name: "Node wrappers: set completion fact"
+  ansible.builtin.set_fact:
+    node_wrappers_completed: true

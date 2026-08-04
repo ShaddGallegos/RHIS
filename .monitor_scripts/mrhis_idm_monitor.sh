@@ -1,0 +1,1 @@
+scripts/minirhis_idm_monitor.sh

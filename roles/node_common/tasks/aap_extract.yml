@@ -1,0 +1,84 @@
+---
+# Normalize and extract AAP bundle when available.
+- name: Normalize AAP bundle URL from env vars
+  ansible.builtin.set_fact:
+    aap_bundle_url: "{{ aap_bundle_url | default(AAP_BUNDLE_URL | default('')) }}"
+
+- name: Set aap_bundle_path when URL provided
+  ansible.builtin.set_fact:
+    aap_bundle_path: "/var/tmp/{{ aap_bundle_url | basename }}"
+  when: aap_bundle_url is defined and (aap_bundle_url | length) > 0
+
+- name: Find staged AAP bundle in search paths when no URL provided
+  ansible.builtin.find:
+    paths: "{{ aap_bundle_search_paths | default(['/var/tmp', '/home/' + (global_admin | default(admin_user | default('admin'))), '/tmp']) }}"
+    patterns: "ansible-automation-platform-containerized-setup-bundle-*.tar*"
+    recurse: no
+  register: aap_bundle_search
+  when: aap_bundle_path is not defined
+
+- name: Set aap_bundle_path from search results
+  ansible.builtin.set_fact:
+    aap_bundle_path: "{{ (aap_bundle_search.files | sort(attribute='mtime') | last).path }}"
+  when: aap_bundle_search is defined and (aap_bundle_search.files | length) > 0
+    and (aap_bundle_path is not defined)
+
+- name: Fail if no AAP bundle found
+  ansible.builtin.fail:
+    msg: "AAP bundle not found via AAP_BUNDLE_URL or in aap_bundle_search_paths ({{
+      aap_bundle_search_paths | default([]) }})"
+  when: aap_bundle_path is not defined
+
+- name: Determine effective extract dir
+  ansible.builtin.set_fact:
+    _aap_extract_dir: "{{ aap_extract_dir | default('/home/' + (global_admin | default(admin_user | default('admin'))) + '/bundle') }}"
+
+- name: Ensure extract dir exists
+  ansible.builtin.file:
+    path: "{{ _aap_extract_dir }}"
+    state: directory
+    owner: "{{ global_admin | default(admin_user | default('admin')) }}"
+    mode: "0755"
+  become: true
+
+- name: Inspect archive top-level entry
+  ansible.builtin.command:
+    cmd: "tar -tf '{{ aap_bundle_path }}' | head -n1"
+  register: aap_archive_top
+  changed_when: false
+  failed_when: aap_archive_top.rc != 0
+  when: aap_bundle_path is defined
+  become: true
+
+- name: Set archive top-level name fact
+  ansible.builtin.set_fact:
+    aap_archive_top_name: "{{ (aap_archive_top.stdout | default('')) .split('/') | first }}"
+  when: aap_archive_top is defined and (aap_archive_top.stdout | length) > 0
+
+- name: Check if bundle already extracted
+  ansible.builtin.stat:
+    path: "{{ _aap_extract_dir + '/' + (aap_archive_top_name | default('')) }}"
+  register: aap_extract_check
+  when: aap_archive_top_name is defined and (aap_archive_top_name | length) > 0
+
+- name: Extract AAP bundle if not already present
+  ansible.builtin.unarchive:
+    src: "{{ aap_bundle_path }}"
+    dest: "{{ _aap_extract_dir }}"
+    remote_src: true
+    extra_opts: [ "--no-overwrite-dir" ]
+  when: aap_extract_check is not defined or not aap_extract_check.stat.exists
+  become: true
+
+- name: Create extraction marker file
+  ansible.builtin.file:
+    path: "{{ _aap_extract_dir }}/.mrhis_extracted"
+    state: touch
+    owner: "{{ global_admin | default(admin_user | default('admin')) }}"
+    mode: "0644"
+  become: true
+
+- name: Expose aap_bundle_path and aap_extract_dir facts for downstream roles
+  ansible.builtin.set_fact:
+    aap_bundle_path: "{{ aap_bundle_path }}"
+    aap_extract_dir: "{{ _aap_extract_dir }}"

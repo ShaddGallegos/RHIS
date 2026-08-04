@@ -1,0 +1,5 @@
+{
+    "ansible.validation.lint.enabled": false,
+    "chat.agent.maxRequests": 75,
+    "github.copilot.chat.agentDebugLog.fileLogging.enabled": false
+}

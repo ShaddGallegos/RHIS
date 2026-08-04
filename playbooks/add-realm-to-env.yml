@@ -1,0 +1,84 @@
+---
+- name: Add 'realm' to vaulted env.yml
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars:
+    env_file: "{{ lookup('env','HOME') + '/.ansible/conf/env.yml' }}"
+
+  tasks:
+    - name: Check for vaulted env file
+      ansible.builtin.stat:
+        path: "{{ env_file }}"
+      register: env_stat
+
+    - name: Fail if vaulted env file is missing
+      ansible.builtin.fail:
+        msg: "Vaulted env file {{ env_file }} not found. Create it first."
+      when: not env_stat.stat.exists
+
+    - name: Create temporary file for decrypted content
+      ansible.builtin.tempfile:
+        state: file
+        prefix: env_decrypted_
+        suffix: .yml
+      register: tmpfile
+
+    - name: Dump decrypted env.yml to temp file
+      ansible.builtin.command: >-
+        {%- if vault_password_file is defined -%} ansible-vault view "{{
+        env_file }}" --vault-password-file "{{ vault_password_file }}" {%- else
+        -%} ansible-vault view "{{ env_file }}" {%- endif %}
+      register: env_plain
+      no_log: true
+
+    - name: Write decrypted content to temp file
+      ansible.builtin.copy:
+        dest: "{{ tmpfile.path }}"
+        content: "{{ env_plain.stdout }}"
+        mode: "0600"
+
+    - name: Load decrypted YAML into fact
+      ansible.builtin.set_fact:
+        env_data: "{{ lookup('file', tmpfile.path) | from_yaml }}"
+
+    - name: Ensure env_data is a mapping
+      ansible.builtin.set_fact:
+        env_data: "{{ env_data or {} }}"
+
+    - name: Skip if 'realm' already present
+      ansible.builtin.debug:
+        msg: "'realm' already present in {{ env_file }}; no changes made"
+      when: env_data is defined and env_data.realm is defined
+
+    - name: Add 'realm' to data
+      ansible.builtin.set_fact:
+        env_data: "{{ env_data | combine({'realm': realm}) }}"
+      when: env_data is not defined or env_data.realm is not defined
+
+    - name: Write updated YAML back to temp file
+      ansible.builtin.copy:
+        dest: "{{ tmpfile.path }}"
+        content: "{{ env_data | to_nice_yaml }}"
+        mode: "0600"
+
+    - name: Encrypt the temp file with ansible-vault
+      ansible.builtin.command: >-
+        {%- if vault_password_file is defined -%} ansible-vault encrypt "{{
+        tmpfile.path }}" --vault-password-file "{{ vault_password_file }}" {%-
+        else -%} ansible-vault encrypt "{{ tmpfile.path }}" {%- endif %}
+      no_log: true
+
+    - name: Backup original env.yml
+      ansible.builtin.command: >-
+        mv "{{ env_file }}" "{{ env_file }}.bak-{{ lookup('pipe','date
+        +%Y%m%d%H%M%S') }}"
+      when: env_stat.stat.exists
+
+    - name: Move encrypted temp file into place
+      ansible.builtin.command: >-
+        mv "{{ tmpfile.path }}" "{{ env_file }}"
+
+    - name: Show result
+      ansible.builtin.debug:
+        msg: "realm added to {{ env_file }} (or already present)"

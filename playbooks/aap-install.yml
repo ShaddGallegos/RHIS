@@ -1,0 +1,29 @@
+---
+- name: AAP bootstrap and readiness
+  hosts: aap
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Wait for SSH connectivity to AAP hosts
+      ansible.builtin.wait_for_connection:
+        timeout: 900
+    - name: Early RHSM/Insights preflight (best-effort)
+      ansible.builtin.include_role:
+        name: mrhis-rhsm
+
+  roles:
+    - role: server_bootstrap
+      server_packages: []
+      open_9443: true
+      ensure_httpd: false
+      wait_for_web: true
+      web_port: 9443
+
+  tasks:
+    - name: Check for AAP services (best-effort)
+      ansible.builtin.shell: |
+        for svc in ansible-automation-platform-controller ansible-tower httpd; do
+          systemctl status $svc --no-pager || true
+        done
+      register: aap_services
+      changed_when: false

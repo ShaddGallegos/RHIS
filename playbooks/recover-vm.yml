@@ -1,0 +1,10 @@
+---
+- name: Recover VM image and inject SSH key (run on libvirt host)
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  vars:
+    vm_name: "{{ vm_name | default('aap') }}"
+  roles:
+    - role: mrhis-recovery

@@ -1,0 +1,7 @@
+---
+- name: Prepare AAP container host
+  hosts: installer
+  become: true
+  roles:
+    - role: mrhis-aap-container
+  gather_facts: false

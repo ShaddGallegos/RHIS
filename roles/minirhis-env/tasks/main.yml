@@ -1,0 +1,8 @@
+---
+# Load user vaulted env into the play scope. This role is safe to include
+# at the start of any play that needs access to user-specific vaulted
+# runtime configuration at $HOME/.ansible/conf/env.yml
+- name: Load vaulted env from user's home
+  ansible.builtin.include_vars:
+    file: "{{ lookup('env','HOME') + '/.ansible/conf/env.yml' }}"
+    ignore_missing: true

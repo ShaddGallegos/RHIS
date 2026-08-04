@@ -1,0 +1,30 @@
+---
+
+- hosts: localhost
+  connection: local
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Load installer env vars if present
+      include_vars:
+        file: ~/.ansible/conf/env.yml
+      ignore_errors: true
+
+    - name: Remove existing Minirhis host entries to avoid duplicates
+      lineinfile:
+        path: /etc/hosts
+        state: absent
+        regexp: '\\b(satellite\.prod\.spg|aap\.prod\.spg|idm\.prod\.spg|installer\.prod\.spg)\\b'
+      become: true
+
+    - name: Render mrhis hosts block
+      template:
+        src: templates/mrhis-hosts.j2
+        dest: /tmp/mrhis-hosts-rendered
+        mode: '0644'
+
+    - name: Ensure RHIS INTERNAL HOSTS block in /etc/hosts
+      blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} RHIS INTERNAL HOSTS"
+        block: "{{ lookup('file','/tmp/mrhis-hosts-rendered') }}"

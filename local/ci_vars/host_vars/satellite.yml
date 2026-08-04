@@ -1,0 +1,8 @@
+---
+# CI/CD host vars for Satellite — used by GitHub Actions workflows
+# Values are injected at runtime from GitHub Actions secrets / environment.
+# Do NOT hard-code IPs or URLs here.
+
+sat_ip: "{{ lookup('env', 'SAT_IP') | default('') }}"
+satellite_url: >-
+  {{ 'https://' + (lookup('env', 'SAT_IP') | default('localhost')) }}

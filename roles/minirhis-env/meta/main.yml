@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: MiniRHIS automation
+  description: "Load user vaulted env file (~/.ansible/conf/env.yml) into play scope"
+  license: MIT
+  min_ansible_version: 2.12
+dependencies: []

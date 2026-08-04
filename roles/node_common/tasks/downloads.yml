@@ -1,0 +1,18 @@
+---
+# Downloads: fetch large artifacts (opt-in by variable presence)
+- name: Download AAP bundle if URL provided
+  ansible.builtin.get_url:
+    url: "{{ AAP_BUNDLE_URL }}"
+    dest: "/var/tmp/{{ AAP_BUNDLE_URL | basename }}"
+    mode: "0644"
+    timeout: 600
+  when: AAP_BUNDLE_URL is defined and (AAP_BUNDLE_URL | length) > 0
+  become: true
+
+- name: Copy local Satellite manifest to remote /var/tmp if provided
+  ansible.builtin.copy:
+    src: "{{ sat_manifest_path }}"
+    dest: "/var/tmp/{{ sat_manifest_path | basename }}"
+    mode: "0644"
+  when: sat_manifest_path is defined and sat_manifest_path != ''
+  become: true

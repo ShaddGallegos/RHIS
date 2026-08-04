@@ -1,0 +1,11 @@
+---
+# Communication: manage /etc/hosts entries for intra-node reachability when provided
+- name: Add /etc/hosts entries for communication
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item.ip }} {{ item.host }}"
+    state: present
+    create: true
+  loop: "{{ mrhis_communication_hosts | default([]) }}"
+  when: mrhis_communication_hosts is defined
+  become: true

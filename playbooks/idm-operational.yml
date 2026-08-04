@@ -1,0 +1,12 @@
+---
+# IdM operational playbook (post-install tasks)
+- name: Configure IdM operational settings (post-install)
+  hosts: idm
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Early RHSM/Insights preflight (best-effort)
+      ansible.builtin.include_role:
+        name: mrhis-rhsm
+  roles:
+    - mrhis-idm-operational

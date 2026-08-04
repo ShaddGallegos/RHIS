@@ -1,0 +1,66 @@
+---
+- name: Install and enable IdM (FreeIPA)
+  hosts: idm_primary:idm
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Wait for SSH connectivity to IdM hosts
+      ansible.builtin.wait_for_connection:
+        timeout: 900
+    - name: Early RHSM/Insights preflight (best-effort)
+      ansible.builtin.include_role:
+        name: mrhis-rhsm
+
+  vars:
+    idm_packages:
+      - freeipa-server
+      - bind-dyndb-ldap
+    idm_ds_pass: "{{ idm_admin_pass | default(global_admin_password | default(aap_admin_pass | default(''))) }}"
+
+  roles:
+    - role: server_bootstrap
+      server_packages: "{{ idm_packages }}"
+      open_9443: false
+      ensure_httpd: false
+      wait_for_web: false
+      web_port: 443
+
+  tasks:
+    - name: Check if IdM is already configured
+      ansible.builtin.stat:
+        path: /etc/ipa/default.conf
+      register: ipa_conf
+
+    - name: Determine IdM DS password candidate
+      ansible.builtin.set_fact:
+        idm_ds_candidate: "{{ idm_ds_pass | default('') }}"
+
+    - name: Prefer idm_admin_pass when DS password too short
+      ansible.builtin.set_fact:
+        idm_ds_candidate: "{{ idm_admin_pass }}"
+      when: idm_ds_candidate | length < 8 and (idm_admin_pass | default('') | length) >= 8
+
+    - name: Prefer global_admin_password when DS password still too short
+      ansible.builtin.set_fact:
+        idm_ds_candidate: "{{ global_admin_password }}"
+      when: idm_ds_candidate | length < 8 and (global_admin_password | default('') | length) >= 8
+
+    - name: Fail if DS password candidate is too short
+      ansible.builtin.fail:
+        msg: "IdM DS password is too short (<8). Set 'idm_ds_pass' in vaulted env.yml or set 'idm_admin_pass'/'global_admin_password' to >=8 characters."
+      when: idm_ds_candidate | length < 8
+
+    - name: Run unattended IPA server install (idempotent)
+      ansible.builtin.command: >
+        ipa-server-install --unattended --realm={{ idm_realm }} --domain={{
+        idm_domain }} --ds-password={{ idm_ds_candidate }} --admin-password={{
+        idm_admin_pass | default(global_admin_password | default(aap_admin_pass | default(''))) }}
+        --hostname={{ ansible_fqdn }}
+      args:
+        creates: /etc/ipa/default.conf
+      when: not ipa_conf.stat.exists
+
+    - name: Wait for IdM HTTPS to be reachable after install
+      ansible.builtin.wait_for:
+        port: 443
+        timeout: 600

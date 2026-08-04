@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: "Satellite placeholder"
+      ansible.builtin.debug:
+        msg: "satellite.yml placeholder - no-op"

@@ -1,0 +1,13 @@
+# Distribute installer SSH public key to target users
+# Usage: ANSIBLE_CONFIG=~/.ansible/conf/mrhis-ansible.runtime.cfg \
+#  ansible-playbook -i local/vars/external_inventory/hosts.yml \
+#  --vault-password-file ~/.ansible/conf/.vaultpass.txt playbooks/distribute-ssh-keys.yml
+ 
+- name: Distribute mrhis installer public key
+  hosts: all
+  gather_facts: false
+  become: true
+
+  roles:
+    - role: mrhis-ssh-keys
+      become: true

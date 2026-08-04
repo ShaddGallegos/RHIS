@@ -1,0 +1,97 @@
+---
+- name: Deploy HTTP->HTTPS redirect for ALL hosts with nginx
+  hosts: all
+  become: true
+  vars:
+    redirect_conf: /etc/nginx/conf.d/http_redirect.conf
+    # Set to 'hostname', 'eth1_ip' or 'canonical' to control redirect target
+    redirect_preference: hostname
+    # Path on the remote host to read canonical redirect vars from; if empty the play will default
+    # to $HOME/.ansible/conf/env.yml on the remote host (no hardcoded usernames)
+    redirect_env_file: ""
+    # Variable name inside the env file that holds the canonical redirect target
+    redirect_env_var_name: env_redirect_target
+    # Network interface to use when selecting an interface IP (default: eth1)
+    redirect_interface: eth1
+
+  tasks:
+    - name: Ensure nginx is installed
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Determine redirect target (default to hostname)
+      ansible.builtin.set_fact:
+        redirect_target: "{{ (ansible_fqdn | default(inventory_hostname)) }}"
+
+    - name: Set default redirect_env_file if not provided (remote user's HOME)
+      ansible.builtin.set_fact:
+        redirect_env_file: "{{ ansible_env.HOME + '/.ansible/conf/env.yml' }}"
+      when: redirect_env_file is not defined or (redirect_env_file | trim) == ''
+
+    - name: If preference is canonical, attempt to read env file from remote host
+      ansible.builtin.slurp:
+        src: "{{ redirect_env_file }}"
+      register: slurped_env
+      when: redirect_preference == 'canonical'
+      failed_when: false
+      ignore_errors: true
+
+    - name: Parse env file YAML into env_file_vars (if slurped)
+      ansible.builtin.set_fact:
+        env_file_vars: "{{ (slurped_env.content | default('') ) | b64decode | from_yaml }}"
+      when: redirect_preference == 'canonical' and (slurped_env is defined and slurped_env.content is defined)
+
+    - name: Fail if canonical requested but env var not provided
+      ansible.builtin.fail:
+        msg: "redirect_preference=canonical but {{ redirect_env_var_name }} not defined in {{ redirect_env_file }}"
+      when: redirect_preference == 'canonical' and (env_file_vars is not defined or (redirect_env_var_name not in env_file_vars))
+
+    - name: If preference is canonical, set redirect_target from parsed env var
+      ansible.builtin.set_fact:
+        redirect_target: "{{ env_file_vars[redirect_env_var_name] }}"
+      when: redirect_preference == 'canonical' and (env_file_vars is defined and (redirect_env_var_name in env_file_vars))
+
+    - name: If preference requests an interface IP, attempt to use configured interface
+      ansible.builtin.set_fact:
+        redirect_target: "{{ hostvars[inventory_hostname]['ansible_' + redirect_interface].ipv4.address }}"
+      when: redirect_preference in ['eth1_ip','interface_ip'] and (('ansible_' + redirect_interface) in hostvars[inventory_hostname])
+
+    - name: If preference requests an interface IP but it is not present, fall back to default IPv4
+      ansible.builtin.set_fact:
+        redirect_target: "{{ ansible_default_ipv4.address }}"
+      when: redirect_preference in ['eth1_ip','interface_ip'] and (('ansible_' + redirect_interface) not in hostvars[inventory_hostname])
+
+    - name: Deploy HTTP redirect config (template-driven)
+      ansible.builtin.template:
+        src: templates/http_redirect.j2
+        dest: "{{ redirect_conf }}"
+        owner: root
+        ansible.builtin.group: root
+        mode: "0644"
+      notify: Test and reload nginx
+
+    - name: Ensure firewall allows http and https (if firewalld present)
+      block:
+        - name: Check if firewall-cmd is available and running
+          ansible.builtin.command: firewall-cmd --state
+          register: fw_state
+          failed_when: false
+          changed_when: false
+
+        - name: Add http/https services to firewall
+          ansible.builtin.command: firewall-cmd --permanent --add-service=http --add-service=https
+          when: fw_state.rc == 0
+          register: fw_add
+          failed_when: false
+
+        - name: Reload firewall
+          ansible.builtin.command: firewall-cmd --reload
+          when: fw_state.rc == 0 and fw_add.rc == 0
+          failed_when: false
+
+  handlers:
+    - name: Test and reload nginx
+      ansible.builtin.shell: nginx -t && systemctl reload nginx
+      args:
+        warn: false

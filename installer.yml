@@ -1,0 +1,14 @@
+---
+- hosts: localhost
+  gather_facts: false
+  connection: local
+  vars:
+    installer_msg: "installer.yml is the single installer entrypoint."
+  tasks:
+    - name: "Announce installer entrypoint"
+      ansible.builtin.debug:
+        msg: "{{ installer_msg }}"
+
+    - name: "Run installation sequence (placeholder)"
+      ansible.builtin.debug:
+        msg: "No-op: replace with real installer tasks as needed."

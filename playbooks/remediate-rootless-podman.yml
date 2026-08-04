@@ -1,0 +1,133 @@
+---
+- name: Remediate rootless Podman for a user
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: true
+  vars:
+    remediation_user: sgallego
+    subuid_base: 100000
+    subgid_base: 100000
+    sub_range: 65536
+    backup_dir: /root/mrhis_sub_backup
+    podman_test_cmd: "/usr/bin/podman info --debug"
+    strace_path: /usr/bin/strace
+
+  tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Backup /etc/subuid (if present)
+      copy:
+        src: /etc/subuid
+        dest: "{{ backup_dir }}/subuid.bak.{{ ansible_date_time.iso8601_basic }}"
+        remote_src: true
+      ignore_errors: true
+
+    - name: Backup /etc/subgid (if present)
+      copy:
+        src: /etc/subgid
+        dest: "{{ backup_dir }}/subgid.bak.{{ ansible_date_time.iso8601_basic }}"
+        remote_src: true
+      ignore_errors: true
+
+    - name: Consolidate /etc/subuid for remediation user
+      shell: |
+        awk -F: '$1 != "{{ remediation_user }}" {print $0}' /etc/subuid 2>/dev/null > /tmp/subuid.new || true
+        echo "{{ remediation_user }}:{{ subuid_base }}:{{ sub_range }}" >> /tmp/subuid.new
+        cp /tmp/subuid.new /etc/subuid
+      args:
+        warn: false
+
+    - name: Consolidate /etc/subgid for remediation user
+      shell: |
+        awk -F: '$1 != "{{ remediation_user }}" {print $0}' /etc/subgid 2>/dev/null > /tmp/subgid.new || true
+        echo "{{ remediation_user }}:{{ subgid_base }}:{{ sub_range }}" >> /tmp/subgid.new
+        cp /tmp/subgid.new /etc/subgid
+      args:
+        warn: false
+
+    - name: Check for /usr/bin/newuidmap
+      stat:
+        path: /usr/bin/newuidmap
+      register: newuidmap_stat
+
+    - name: Ensure newuidmap is setuid root when present
+      file:
+        path: /usr/bin/newuidmap
+        mode: "4755"
+        owner: root
+        group: root
+      when: newuidmap_stat.stat.exists
+
+    - name: Enable linger for remediation user
+      command: loginctl enable-linger "{{ remediation_user }}"
+
+    - name: Get UID for remediation user
+      command: id -u "{{ remediation_user }}"
+      register: remediation_uid
+      changed_when: false
+
+    - name: Restart user@UID service
+      systemd:
+        name: "user@{{ remediation_uid.stdout }}.service"
+        state: restarted
+      when: remediation_uid.stdout is defined
+
+    - name: Test podman rootless as remediation user
+      become: false
+      become_user: "{{ remediation_user }}"
+      shell: "{{ podman_test_cmd }}"
+      register: podman_test
+      ignore_errors: true
+
+    - name: If podman test failed - capture strace as remediation user
+      when: podman_test.rc is defined and podman_test.rc != 0
+      become: true
+      shell: |
+        sudo -u {{ remediation_user }} {{ strace_path }} -f -s 200 -o /tmp/podman-remediate-strace-{{ ansible_date_time.iso8601_basic }} /usr/bin/podman info --debug || true
+      args:
+        warn: false
+      ignore_errors: true
+
+    - name: If podman test failed - gather kernel/audit logs (best-effort)
+      when: podman_test.rc is defined and podman_test.rc != 0
+      shell: |
+        echo '==== ausearch AVC (last 200) ====' > /tmp/podman-remediate-log-{{ ansible_date_time.iso8601_basic }} || true
+        ausearch -m avc -ts recent -i 2>/dev/null | tail -n 200 >> /tmp/podman-remediate-log-{{ ansible_date_time.iso8601_basic }} || true
+        echo '==== kernel journal grep ====' >> /tmp/podman-remediate-log-{{ ansible_date_time.iso8601_basic }} || true
+        journalctl -k -n 200 --no-pager | egrep -i 'uid_map|newuidmap|userns|podman|avc|denied' >> /tmp/podman-remediate-log-{{ ansible_date_time.iso8601_basic }} || true
+      args:
+        warn: false
+      register: remediate_logs
+      ignore_errors: true
+
+    - name: If podman test failed - restore original subuid/subgid backups
+      when: podman_test.rc is defined and podman_test.rc != 0
+      block:
+        - name: Restore /etc/subuid from most recent backup if present
+          shell: |
+            latest=$(ls -1t {{ backup_dir }}/subuid.bak.* 2>/dev/null | head -n1 || true)
+            if [ -n "$latest" ]; then cp -f "$latest" /etc/subuid; fi
+          args:
+            warn: false
+
+        - name: Restore /etc/subgid from most recent backup if present
+          shell: |
+            latest=$(ls -1t {{ backup_dir }}/subgid.bak.* 2>/dev/null | head -n1 || true)
+            if [ -n "$latest" ]; then cp -f "$latest" /etc/subgid; fi
+          args:
+            warn: false
+
+    - name: Fail when podman rootless test failed
+      fail:
+        msg: "Podman rootless test failed for {{ remediation_user }}; backups restored and logs placed under /tmp/podman-remediate-*. Inspect those files for details."
+      when: podman_test.rc is defined and podman_test.rc != 0
+
+    - name: Report success when podman rootless test passed
+      debug:
+        msg: "Podman rootless test succeeded for {{ remediation_user }}; backups stored in {{ backup_dir }}."
+      when: podman_test.rc is defined and podman_test.rc == 0

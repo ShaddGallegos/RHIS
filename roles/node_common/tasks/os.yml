@@ -1,0 +1,104 @@
+---
+# OS-level basics: install minimal packages used by subsequent tasks (idempotent)
+- name: Set default package list
+  ansible.builtin.set_fact:
+    node_common_packages: "{{ node_common_packages | default(['chrony','curl','bind-utils']) }}"
+
+- name: Install essential packages
+  ansible.builtin.package:
+    name: "{{ node_common_packages }}"
+    state: present
+
+- name: Ensure chrony is enabled and running
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true
+
+- name: Ensure runtime clocksource prefers kvm-clock when available
+  become: true
+  ansible.builtin.shell: |
+    if [ -f /sys/devices/system/clocksource/clocksource0/available_clocksource ] && \
+       grep -qw kvm-clock /sys/devices/system/clocksource/clocksource0/available_clocksource; then
+      cur=$(cat /sys/devices/system/clocksource/clocksource0/current_clocksource 2>/dev/null || true)
+      if [ "${cur}" != "kvm-clock" ]; then
+        echo kvm-clock > /sys/devices/system/clocksource/clocksource0/current_clocksource
+        echo changed
+      fi
+    fi
+  args:
+    warn: false
+  register: set_clocksource_result
+  changed_when: "'changed' in set_clocksource_result.stdout"
+
+- name: Ensure grubby is present (to persist kernel args) on KVM guests
+  ansible.builtin.package:
+    name: grubby
+    state: present
+  when: ansible_facts['virtualization_type'] is defined and ansible_facts['virtualization_type'] == 'kvm'
+
+- name: Check kernel cmdline for clocksource=kvm-clock (KVM only)
+  ansible.builtin.command: grep -q 'clocksource=kvm-clock' /proc/cmdline
+  register: cmdline_has_clocksource
+  failed_when: false
+  changed_when: false
+  when: ansible_facts['virtualization_type'] is defined and ansible_facts['virtualization_type'] == 'kvm'
+
+- name: Persist kvm-clock kernel arg for all kernels (grubby) when missing
+  become: true
+  ansible.builtin.command: grubby --update-kernel=ALL --args="clocksource=kvm-clock"
+  when:
+    - ansible_facts['virtualization_type'] is defined
+    - ansible_facts['virtualization_type'] == 'kvm'
+    - cmdline_has_clocksource is defined
+    - cmdline_has_clocksource.rc != 0
+  register: grubby_result
+  changed_when: grubby_result.rc == 0
+
+- name: Reboot host if kernel args were updated so playbook can continue after boot
+  become: true
+  ansible.builtin.reboot:
+    reboot_timeout: 600
+    test_command: whoami
+  when: grubby_result is defined and grubby_result is not none and grubby_result.rc == 0
+
+- name: Ensure SSH daemon is running and enabled
+  ansible.builtin.service:
+    name: sshd
+    state: started
+    enabled: true
+
+- name: Ensure cockpit.socket is enabled and started when cockpit installed
+  ansible.builtin.service:
+    name: cockpit.socket
+    state: started
+    enabled: true
+  when: "'cockpit' in (node_common_packages | default([]))"
+
+- name: Configure chrony to prefer Satellite (non-satellite nodes)
+  ansible.builtin.lineinfile:
+    path: /etc/chrony.conf
+    line: "server {{ SAT_IP }} iburst prefer"
+    insertafter: EOF
+    state: present
+  when:
+    - SAT_IP is defined
+    - "ansible_default_ipv4.address is defined"
+    - "ansible_default_ipv4.address != (SAT_IP | string)"
+
+- name: Configure chrony to use external pools on Satellite itself
+  ansible.builtin.lineinfile:
+    path: /etc/chrony.conf
+    line: "pool 2.rhel.pool.ntp.org iburst"
+    insertafter: EOF
+    state: present
+  when:
+    - SAT_IP is defined
+    - "ansible_default_ipv4.address is defined"
+    - "ansible_default_ipv4.address == (SAT_IP | string)"
+
+- name: Restart chrony if changed
+  ansible.builtin.service:
+    name: chronyd
+    state: restarted
+  when: SAT_IP is defined

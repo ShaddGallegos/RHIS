@@ -1,0 +1,92 @@
+---
+# Install and manage a systemd service that serves the AAP bundle via Python http.server
+
+- name: Normalize variables
+  ansible.builtin.set_fact:
+    aap_bundle_dir: "{{ aap_bundle_dir | default(AAP_BUNDLE_DIR |
+      default('/var/lib/libvirt/images/aap-bundle')) }}"
+    host_int_ip: "{{ host_int_ip | default(HOST_INT_IP | default('10.168.0.1')) }}"
+    host_port: "{{ host_port | default(8080) }}"
+    aap_http_log: "{{ aap_http_log | default('/var/log/mrhis/aap-http.log') }}"
+    service_name: "{{ service_name | default('mrhis-aap-bundle.service') }}"
+    firewalld_zone: "{{ firewalld_zone | default('libvirt') }}"
+
+- name: Stat AAP bundle file
+  ansible.builtin.stat:
+    path: "{{ aap_bundle_dir }}/aap-bundle.tar.gz"
+  register: aap_bundle_stat
+  failed_when: false
+
+- name: AAP bundle missing - skip service start
+  ansible.builtin.debug:
+    msg: "AAP bundle not found at {{ aap_bundle_dir }}/aap-bundle.tar.gz — skipping
+      HTTP service setup"
+  when: not (aap_bundle_stat.stat.exists | default(false))
+
+- name: Ensure python3 is installed (needed for simple HTTP server)
+  ansible.builtin.package:
+    name: python3
+    state: present
+  when: aap_bundle_stat.stat.exists | default(false)
+
+- name: Ensure HTTP log directory exists
+  ansible.builtin.file:
+    path: "{{ aap_http_log | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: aap_bundle_stat.stat.exists | default(false)
+  become: true
+
+- name: Install systemd unit for AAP bundle HTTP server
+  ansible.builtin.template:
+    src: mrhis-aap-bundle.service.j2
+    dest: "/etc/systemd/system/{{ service_name }}"
+    mode: "0644"
+  when: aap_bundle_stat.stat.exists | default(false)
+  become: true
+
+- name: Reload systemd daemon
+  ansible.builtin.command: systemctl daemon-reload
+  when: aap_bundle_stat.stat.exists | default(false)
+  become: true
+
+- name: Check for firewall-cmd availability
+  ansible.builtin.command: command -v firewall-cmd
+  register: fw_cmd
+  failed_when: false
+  changed_when: false
+
+- name: Check if firewalld is active
+  ansible.builtin.command: systemctl is-active firewalld
+  register: fw_active
+  failed_when: false
+  changed_when: false
+
+- name: Open 8080/tcp in libvirt zone (runtime-only) if firewalld present
+  ansible.builtin.command: firewall-cmd --zone={{ firewalld_zone }} --add-port={{ host_port }}/tcp
+  register: fw_add
+  failed_when: false
+  changed_when: false
+  when:
+    - fw_cmd.rc == 0
+    - fw_active.rc == 0
+    - aap_bundle_stat.stat.exists | default(false)
+
+- name: Start AAP bundle HTTP service (do not enable)
+  ansible.builtin.systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: false
+  when: aap_bundle_stat.stat.exists | default(false)
+  become: true
+
+- name: Expose aap_bundle_http_service fact
+  ansible.builtin.set_fact:
+    aap_bundle_http_service: "{{ 'running' if (aap_bundle_stat.stat.exists |
+      default(false)) and (ansible_facts.services[service_name].state is defined
+      and ansible_facts.services[service_name].state == 'running') else (
+      'not-present' if not (aap_bundle_stat.stat.exists | default(false)) else
+      'started' ) }}"
+  when: true

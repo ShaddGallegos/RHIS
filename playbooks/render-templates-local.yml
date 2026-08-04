@@ -1,0 +1,23 @@
+---
+ - name: Render MRHIS local templates
+   hosts: localhost
+   connection: local
+   gather_facts: no
+   vars:
+     # Defaults can be overridden via -e when invoking ansible-playbook
+     inventory_dest: "{{ inventory_dest | default(playbook_dir + '/../inventory/hosts.generated') }}"
+     output_headless: "{{ output_headless | default(playbook_dir + '/../mrhis-headless.env.template') }}"
+   vars_files:
+     - "{{ ansible_env_file | default(playbook_dir + '/../.ansible/conf/env.yml') }}"
+   tasks:
+     - name: Render headless env template
+       ansible.builtin.template:
+         src: "{{ playbook_dir }}/../templates/mrhis-headless.env.j2"
+         dest: "{{ output_headless }}"
+         mode: '0600'
+
+     - name: Render inventory template
+       ansible.builtin.template:
+         src: "{{ playbook_dir }}/../templates/mrhis-inventory.j2"
+         dest: "{{ inventory_dest }}"
+         mode: '0644'

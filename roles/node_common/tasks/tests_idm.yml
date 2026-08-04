@@ -1,0 +1,14 @@
+---
+# IdM-specific tests
+- name: Check sssd service active (if installed)
+  ansible.builtin.shell:
+    cmd: "systemctl is-active sssd"
+  register: sssd_active
+  failed_when: sssd_active.rc != 0
+  changed_when: false
+  ignore_errors: true
+
+- name: Warn if sssd not active
+  ansible.builtin.debug:
+    msg: "sssd service not active or not installed; check IdM installation"
+  when: sssd_active is defined and sssd_active.rc != 0

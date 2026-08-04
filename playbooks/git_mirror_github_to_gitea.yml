@@ -1,0 +1,25 @@
+---
+- name: Mirror selected GitHub repos to Gitea
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    github_user: parmstro
+    gitea_url: "http://gittea.prod.spg"
+  tasks:
+    - name: Ensure mirror script is executable (controller)
+      file:
+        path: "{{ playbook_dir }}/../scripts/mirror_github_repos_to_gitea.sh"
+        mode: '0755'
+
+    - name: Run mirror script (dry-run by default)
+      shell: |
+        GITEA_ADMIN_PASSWORD="{{ lookup('env','GITEA_ADMIN_PASSWORD') | default('', true) }}" \
+        bash "{{ playbook_dir }}/../scripts/mirror_github_repos_to_gitea.sh" --github-user "{{ github_user }}" --gitea-url "{{ gitea_url }}"
+      args:
+        chdir: "{{ playbook_dir }}/.."
+      register: mirror_out
+
+    - name: Show mirror output
+      debug:
+        var: mirror_out.stdout

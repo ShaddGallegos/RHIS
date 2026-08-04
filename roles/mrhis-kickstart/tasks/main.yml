@@ -1,0 +1,44 @@
+---
+# Render kickstart %post snippet templates to a well-known directory.
+
+- name: Normalize kickstart variables
+  ansible.builtin.set_fact:
+    installer_user: "{{ installer_user | default(INSTALLER_USER | default(ADMIN_USER
+      | default('admin'))) }}"
+    admin_user: "{{ global_admin | default(admin_user | default(ADMIN_USER | default('admin'))) }}"
+    admin_pass: "{{ admin_pass | default(ADMIN_PASS | default('')) }}"
+    mrhis_temp_enable_rc_local_exec: "{{ mrhis_temp_enable_rc_local_exec |
+      default(MRHIS_TEMP_ENABLE_RC_LOCAL_EXEC | default('1')) }}"
+    kickstart_output_dir: "{{ kickstart_output_dir | default('/var/lib/mrhis/kickstart') }}"
+
+- name: Ensure kickstart output dir exists
+  ansible.builtin.file:
+    path: "{{ kickstart_output_dir }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: true
+
+- name: Render SSH baseline kickstart snippet
+  ansible.builtin.template:
+    src: ssh_baseline.j2
+    dest: "{{ kickstart_output_dir }}/ssh_baseline.sh"
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+
+- name: Render sudo bootstrap kickstart snippet
+  ansible.builtin.template:
+    src: sudo_bootstrap.j2
+    dest: "{{ kickstart_output_dir }}/sudo_bootstrap.sh"
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+
+- name: Expose kickstart snippet paths as facts
+  ansible.builtin.set_fact:
+    kickstart_ssh_baseline: "{{ kickstart_output_dir }}/ssh_baseline.sh"
+    kickstart_sudo_bootstrap: "{{ kickstart_output_dir }}/sudo_bootstrap.sh"

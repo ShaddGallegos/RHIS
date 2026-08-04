@@ -1,0 +1,15 @@
+---
+# SELinux: optionally set permissive using `mrhis_selinux_permissive` (default: false)
+- name: Ensure SELINUX setting in /etc/selinux/config
+  ansible.builtin.lineinfile:
+    path: /etc/selinux/config
+    regexp: "^SELINUX="
+    line: "SELINUX={{ 'permissive' if (mrhis_selinux_permissive | default(false))
+      else 'enforcing' }}"
+    create: true
+  become: true
+
+- name: Apply SELinux enforcement state at runtime (setenforce)
+  ansible.builtin.command: setenforce 0
+  when: mrhis_selinux_permissive | default(false)
+  become: true

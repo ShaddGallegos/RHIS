@@ -1,0 +1,40 @@
+#! /bin/sh
+# 1.1 SSH baseline for automation and internal preflight
+ks_log "Phase 1.1: Configure SSH baseline"
+mkdir -p /etc/ssh/sshd_config.d
+mkdir -p /etc/ssh/ssh_config.d
+cat > /etc/ssh/sshd_config.d/99-mrhis-root.conf <<'EOF_SSHD'
+PermitRootLogin yes
+PasswordAuthentication yes
+PubkeyAuthentication yes
+X11Forwarding yes
+UseDNS no
+EOF_SSHD
+
+cat > /etc/ssh/ssh_config.d/99-mrhis-client.conf <<'EOF_SSH'
+Host *
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ForwardX11 no
+    ForwardX11Trusted no
+EOF_SSH
+
+systemctl enable --now sshd || true
+systemctl restart sshd || true
+systemctl disable --now firewalld >/dev/null 2>&1 || true
+setenforce 0 >/dev/null 2>&1 || true
+if [ -f /etc/selinux/config ]; then
+    sed -i 's/^SELINUX=.*/SELINUX=permissive/' /etc/selinux/config || true
+fi
+
+# Reduce rc.local generator noise during repeated bootstrap/reboot cycles.
+# Keep this temporary; host workflow will revert to non-executable at the end.
+{% if mrhis_temp_enable_rc_local_exec | default('1') | string == '1' %}
+if [ ! -f /etc/rc.d/rc.local ]; then
+    cat > /etc/rc.d/rc.local <<'EOF_RCLOCAL'
+#!/bin/bash
+exit 0
+EOF_RCLOCAL
+fi
+chmod +x /etc/rc.d/rc.local >/dev/null 2>&1 || true
+{% endif %}

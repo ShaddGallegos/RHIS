@@ -1,0 +1,7 @@
+---
+# Shared defaults for the external inventory.
+
+ansible_user: "{{ global_admin | default(admin_user | default('admin')) }}"
+ansible_become: true
+ansible_connection: ssh
+ansible_ssh_private_key_file: "{{ mrhis_installer_ssh_private_key_file | default('~/.ssh/id_rsa') }}"

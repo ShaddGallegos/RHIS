@@ -1,0 +1,13 @@
+---
+# AAP-specific tests
+- name: Check Podman or Docker present
+  ansible.builtin.shell:
+    cmd: "podman --version || docker --version"
+  register: containers_runtime_check
+  failed_when: containers_runtime_check.rc != 0
+  changed_when: false
+
+- name: Warn if container runtime not found
+  ansible.builtin.debug:
+    msg: "No Podman or Docker binary found; AAP provisioning may fail"
+  when: containers_runtime_check is defined and containers_runtime_check.rc != 0

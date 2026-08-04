@@ -1,0 +1,126 @@
+---
+# Locate AAP staged bundle on the target and extract it to a known directory.
+# This task retries extraction to handle transient failures and ensures required
+# decompressors (zstd, xz, gzip, bzip2) are present via defaults.
+
+- name: Ensure admin home exists and bundle extract dir is present
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ global_admin | default(admin_user | default('admin')) }}"
+    group: "{{ global_admin | default(admin_user | default('admin')) }}"
+    mode: "0755"
+  loop:
+    - { path: "/home/{{ global_admin | default(admin_user | default('admin')) }}" }
+    - { path: "{{ aap_extract_dir }}" }
+
+- name: Normalize AAP bundle URL from environment variables
+  ansible.builtin.set_fact:
+    aap_bundle_url: "{{ aap_bundle_url | default(AAP_BUNDLE_URL | default('')) }}"
+
+- name: Ensure search paths include /var/tmp (where node_common places downloads)
+  ansible.builtin.set_fact:
+    aap_bundle_search_paths: "{{ (aap_bundle_search_paths | default([])) + ['/var/tmp'] | unique }}"
+
+- name: Find AAP staged bundle on host
+  ansible.builtin.find:
+    paths: "{{ aap_bundle_search_paths }}"
+    patterns: "ansible-automation-platform-containerized-setup-bundle-*.tar*"
+    recurse: false
+  register: aap_bundle_search
+
+- name: Fail if AAP bundle not found
+  ansible.builtin.fail:
+    msg: "AAP bundle not found in search paths: {{ aap_bundle_search_paths }}"
+  when: aap_bundle_search.files | length == 0
+
+- name: Set aap_bundle_path fact
+  ansible.builtin.set_fact:
+    aap_bundle_path: "{{ aap_bundle_search.files[0].path }}"
+
+- name: Check for existing extraction marker
+  ansible.builtin.stat:
+    path: "{{ aap_extract_dir }}/.mrhis_extracted"
+  register: aap_existing_marker
+  ignore_errors: true
+
+- name: Create extraction directory
+  ansible.builtin.file:
+    path: "{{ aap_extract_dir }}"
+    state: directory
+    owner: "{{ global_admin | default(admin_user | default('admin')) }}"
+    group: "{{ global_admin | default(admin_user | default('admin')) }}"
+    mode: "0755"
+
+- name: Extract bundle (retry up to 3 times)
+  become: true
+  become_user: "{{ global_admin | default(admin_user | default('admin')) }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    mkdir -p "{{ aap_extract_dir }}"
+    # use tar auto-detect (-a) to pick decompressors based on suffix
+    tar -xaf "{{ aap_bundle_path }}" -C "{{ aap_extract_dir }}"
+    echo extracted
+  register: aap_extract
+  retries: 3
+  delay: 8
+  until: aap_extract.rc == 0
+  when: not (aap_existing_marker.stat.exists | default(false))
+  changed_when: "'extracted' in aap_extract.stdout"
+
+- name: Verify extraction produced files
+  ansible.builtin.command: bash -lc "[ -n \"$(ls -A '{{ aap_extract_dir }}' 2>/dev/null)\" ]"
+  register: aap_extract_verify
+  failed_when: aap_extract_verify.rc != 0
+  when: not (aap_existing_marker.stat.exists | default(false))
+  changed_when: false
+
+- name: Make sure extracted files are readable by admin
+  ansible.builtin.file:
+    path: "{{ aap_extract_dir }}"
+    owner: "{{ global_admin | default(admin_user | default('admin')) }}"
+    group: "{{ global_admin | default(admin_user | default('admin')) }}"
+    recurse: true
+  when: (aap_extract_verify is defined) or (not (aap_existing_marker.stat.exists | default(false)))
+
+- name: Copy any .j2 templates from bundle into /etc/ansible/templates (if present)
+  ansible.builtin.find:
+    paths: "{{ aap_extract_dir }}"
+    patterns: "*.j2"
+    recurse: true
+  register: aap_j2_templates
+
+- name: Ensure ansible templates dir exists
+  ansible.builtin.file:
+    path: /etc/ansible/templates
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure qemu-img is present for verification
+  ansible.builtin.stat:
+    path: /usr/bin/qemu-img
+  register: qemu_img_verify_stat
+
+  # Note: qemu-img verification and backup auditing are out-of-scope for bundle
+  # extraction; we keep a lightweight presence check above for best-effort
+  # verification steps that may be useful in other roles.
+- name: "Copy bundle templates into /etc/ansible/templates"
+  ansible.builtin.copy:
+    src: "{{ item.path }}"
+    dest: /etc/ansible/templates/
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ aap_j2_templates.files }}"
+  when: (aap_j2_templates.files | length > 0) and not (aap_existing_marker.stat.exists | default(false))
+
+- name: Ensure extraction marker file exists
+  ansible.builtin.file:
+    path: "{{ aap_extract_dir }}/.mrhis_extracted"
+    state: touch
+    owner: "{{ global_admin | default(admin_user | default('admin')) }}"
+    mode: "0644"
+  become: true
+  when: not (aap_existing_marker.stat.exists | default(false))

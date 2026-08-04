@@ -1,0 +1,7 @@
+---
+# Defaults for mrhis-recovery role
+recovery_backup_dir: /var/lib/libvirt/images/backups
+mount_point: /mnt/mrhis_recovery
+installer_pubkey: /home/sgallego/.ssh/mrhis-installer/id_rsa.pub
+qemu_img: /usr/bin/qemu-img
+guestmount_bin: /usr/bin/guestmount

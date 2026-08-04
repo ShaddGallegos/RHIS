@@ -1,0 +1,148 @@
+---
+- name: Ensure image-mode provisioning template directory exists
+  ansible.builtin.file:
+    path: /usr/share/foreman/provision_templates/mrhis_image_mode
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy image-mode kickstart ERB to Satellite server
+  ansible.builtin.copy:
+    src: image-mode-kickstart.erb
+    dest: /usr/share/foreman/provision_templates/mrhis_image_mode/image-mode-kickstart.erb
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Optionally import provisioning template via Hammer (opt-in)
+  ansible.builtin.shell: |
+    TMPFILE=$(mktemp /tmp/image-mode-kickstart.XXXX.erb)
+    cp /usr/share/foreman/provision_templates/mrhis_image_mode/image-mode-kickstart.erb "$TMPFILE"
+    bash scripts/hammer_api_fallback.sh unattended/provision_template 'name="{{ template_name }}"' -- \
+      hammer template create --name="{{ template_name }}" --file="$TMPFILE" --template-kind=provision --organization "{{ satellite_org }}" || true
+    rm -f "$TMPFILE"
+  args:
+    executable: /bin/bash
+  when: create_with_hammer | default(false)
+
+
+- name: Optionally create hostgroups for image provisioning (opt-in)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    for HG in {{ image_hostgroups | default(['RHEL10-DEV-Provision','RHEL10-PROD-Provision']) | join(' ') }}; do
+      echo "Ensuring hostgroup ${HG} exists..."
+      bash scripts/hammer_api_fallback.sh hostgroups "name=\"${HG}\"" -- \
+        hammer hostgroup create --name="${HG}" --organization "{{ satellite_org }}" --location "{{ satellite_location | default('Default Location') }}" \
+          --architecture="x86_64" --operatingsystem=$(hammer os list --search "major={{ image_hostgroup_os_major | default('10') }}" --fields=Id --csv | tail -1) \
+          --partition-table="rhel-lvm" --subnet="{{ provisioning_subnet | default('internal-provision') }}" --root-password="{{ satellite_admin_pass | default('changeme') }}" || true
+    done
+  args:
+    executable: /bin/bash
+  when: create_with_hammer | default(false)
+
+
+- name: Create placeholder protected parameters on hostgroups (opt-in, best-effort)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    for HG in {{ image_hostgroups | default(['RHEL10-DEV-Provision','RHEL10-PROD-Provision']) | join(' ') }}; do
+      echo "Preparing protected parameters for hostgroup ${HG}..."
+      # try to find hostgroup id via hammer
+      HG_ID=$(hammer hostgroup list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${HG}" '$2==name{print $1}' | head -1 || true)
+      if [ -z "${HG_ID}" ]; then
+        echo "Could not determine hostgroup id for ${HG}; skipping parameter creation"
+        continue
+      fi
+      # create a placeholder ostreecontainer parameter (empty by default)
+      hammer parameter create --resource-type Hostgroup --resource-id ${HG_ID} --name ostreecontainer --value "" --description "Container image pull path (ostreecontainer)" || true
+      # create protected registry auth parameter (base64-encoded auth.json expected)
+      hammer parameter create --resource-type Hostgroup --resource-id ${HG_ID} --name ostree_registry_auth_b64 --value "" --protected || true
+      # create kickstart kernel custom options parameter
+      hammer parameter create --resource-type Hostgroup --resource-id ${HG_ID} --name kickstart_kernel_custom_options --value "" || true
+    done
+  args:
+    executable: /bin/bash
+  when: create_with_hammer | default(false)
+
+
+- name: Attempt to assign provisioning template to hostgroups (opt-in, best-effort)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    # Find template id
+    TEMPLATE_ID=$(hammer template list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="{{ template_name }}" '$2==name{print $1}' | head -1 || true)
+    if [ -z "${TEMPLATE_ID}" ]; then
+      echo "Template '{{ template_name }}' not found via hammer; skipping assignment"
+      exit 0
+    fi
+    for HG in {{ image_hostgroups | default(['RHEL10-DEV-Provision','RHEL10-PROD-Provision']) | join(' ') }}; do
+      echo "Assigning template {{ template_name }} (id ${TEMPLATE_ID}) to hostgroup ${HG}..."
+      HG_ID=$(hammer hostgroup list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${HG}" '$2==name{print $1}' | head -1 || true)
+      if [ -z "${HG_ID}" ]; then
+        echo "Could not determine hostgroup id for ${HG}; skipping"
+        continue
+      fi
+      # Attempt to update hostgroup to set provisioning template id
+      hammer hostgroup update --id ${HG_ID} --provisioning-template-id ${TEMPLATE_ID} || true
+    done
+  args:
+    executable: /bin/bash
+  when: create_with_hammer | default(false)
+
+
+- name: Optionally create a content view for image provisioning (opt-in, best-effort)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    CV_NAME="{{ content_view_name | default('mrhis-image-cv') }}"
+    ORG="{{ satellite_org }}"
+    CV_ID=$(hammer content-view list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${CV_NAME}" '$2==name{print $1}' | head -1 || true)
+    if [ -n "${CV_ID}" ]; then
+      echo "Content view ${CV_NAME} exists as id ${CV_ID}"
+    else
+      echo "Creating content view ${CV_NAME}..."
+      hammer content-view create --name "${CV_NAME}" --organization "${ORG}" || true
+      CV_ID=$(hammer content-view list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${CV_NAME}" '$2==name{print $1}' | head -1 || true)
+    fi
+    if [ -n "${CV_ID}" ]; then
+      echo "Publishing content view ${CV_NAME} (id ${CV_ID})..."
+      hammer content-view publish --id ${CV_ID} --organization "${ORG}" --description "initial publish" || true
+    fi
+  args:
+    executable: /bin/bash
+  when: create_with_hammer | default(false)
+
+
+- name: Optionally create activation key and associate with content view/hostgroups (opt-in, best-effort)
+  ansible.builtin.shell: |
+    set -euo pipefail
+    AK_NAME="{{ activation_key_name | default('mrhis-image-ak') }}"
+    CV_NAME="{{ content_view_name | default('mrhis-image-cv') }}"
+    ORG="{{ satellite_org }}"
+    CV_ID=$(hammer content-view list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${CV_NAME}" '$2==name{print $1}' | head -1 || true)
+    if [ -z "${CV_ID}" ]; then
+      echo "Content view ${CV_NAME} not found; skipping activation key creation"
+      exit 0
+    fi
+    LE_ID=$(hammer lifecycle-environment list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="Library" '$2==name{print $1}' | head -1 || true)
+    if [ -z "${LE_ID}" ]; then
+      LE_ID=$(hammer lifecycle-environment list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, 'NR==2{print $1}' | head -1 || true)
+    fi
+    AK_ID=$(hammer activation-key list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${AK_NAME}" '$2==name{print $1}' | head -1 || true)
+    if [ -n "${AK_ID}" ]; then
+      echo "Activation key ${AK_NAME} exists as id ${AK_ID}"
+    else
+      echo "Creating activation key ${AK_NAME}..."
+      hammer activation-key create --name "${AK_NAME}" --organization "${ORG}" --content-view-id ${CV_ID} --lifecycle-environment-id ${LE_ID} || true
+      AK_ID=$(hammer activation-key list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${AK_NAME}" '$2==name{print $1}' | head -1 || true)
+    fi
+    if [ -n "${AK_ID}" ]; then
+      for HG in {{ image_hostgroups | default(['RHEL10-DEV-Provision','RHEL10-PROD-Provision']) | join(' ') }}; do
+        HG_ID=$(hammer hostgroup list --per-page 100000 --fields Id,Name --csv 2>/dev/null | awk -F, -v name="${HG}" '$2==name{print $1}' | head -1 || true)
+        if [ -n "${HG_ID}" ]; then
+          echo "Linking activation key ${AK_NAME} to hostgroup ${HG}"
+          hammer hostgroup update --id ${HG_ID} --activation-key-id ${AK_ID} || true
+        fi
+      done
+    fi
+  args:
+    executable: /bin/bash
+  when: create_with_hammer | default(false)

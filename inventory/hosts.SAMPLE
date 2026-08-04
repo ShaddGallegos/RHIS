@@ -1,0 +1,96 @@
+# MRHIS Ansible Inventory — Jinja-style template
+# This template is auto-rendered by run_mrhis_install_sequence.sh into
+# inventory/hosts using values from ~/.ansible/conf/env.yml and runtime host data.
+#
+# The mrhis-provisioner container mounts this directory at:
+#   /mrhis/vars/external_inventory/
+# Playbooks reference the inventory as:
+#   --inventory /mrhis/vars/external_inventory/hosts
+#
+# Group names must match what mrhis-builder playbooks expect:
+#   [ansibledev]        the KVM host / controller running this script
+#   [libvirt]           same host when using the libvirt platform
+#   [installer]         same as ansibledev for most deployments
+#   [mrhis]             compatibility alias for all managed nodes
+#   [satellite]         the Satellite VM
+#   [fullstack]         satellite, aap, idm, gittea, openshift
+#   [osp]               openstack alias group
+#   [git]               gittea alias group
+#   [aap]               the AAP VM
+#   [aap_hosts]         alias expected by mrhis-builder-aap
+#   [platform_installer] alias expected by mrhis-builder-aap
+#   [idm]               the IdM VM
+#   [idm_primary]       alias expected by mrhis-builder-idm
+
+# Template placeholders rendered automatically:
+#   {{CONTROLLER_HOST}} {{HOST_INT_IP}} {{INSTALLER_USER}}
+#   {{SAT_HOSTNAME}} {{SAT_IP}} {{AAP_HOSTNAME}} {{AAP_IP}}
+#   {{IDM_HOSTNAME}} {{IDM_IP}} {{ADMIN_USER}}
+
+# ─── Controller / KVM host ────────────────────────────────────────────────────
+[ansibledev]
+{{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
+
+[libvirt]
+{{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
+
+[installer]
+{{CONTROLLER_HOST}} ansible_host={{HOST_INT_IP}} ansible_user={{INSTALLER_USER}} ansible_become=true
+
+# ─── Managed nodes ────────────────────────────────────────────────────────────
+[mrhis:children]
+satellite
+aap
+idm
+
+[satellite]
+{{SAT_HOSTNAME}} ansible_host={{SAT_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
+
+[satellite:children]
+satellite
+
+[fullstack:children]
+satellite
+aap
+idm
+gittea
+openshift
+
+[osp:children]
+openstack
+
+[git]
+gittea
+
+[aap]
+{{AAP_HOSTNAME}} ansible_host={{AAP_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
+
+[aap_hosts:children]
+aap
+
+[platform_installer:children]
+aap
+
+[idm]
+{{IDM_HOSTNAME}} ansible_host={{IDM_IP}} ansible_user={{ADMIN_USER}} ansible_become=true
+
+[idm_primary:children]
+idm
+
+# ─── Group vars shared across all managed nodes ───────────────────────────────
+[all:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+global_admin_password: ""
+
+# Placeholder groups to avoid noisy "Could not match supplied host pattern" warnings
+# in demo environments where these groups may be referenced but are intentionally
+# absent. Keeping empty groups suppresses the warnings while preserving behavior.
+[ansiblelightspeed]
+
+[ansiblemcp]
+
+[automationmetrics]
+
+[execution_nodes]
+
+[redis]

@@ -1,0 +1,16 @@
+---
+# AAP host defaults shared by all external inventory AAP entries.
+
+ansible_password: "{{ aap_admin_pass | default(global_admin_password) | default('') }}"
+ansible_become_password: "{{ aap_admin_pass | default(global_admin_password) | default('') }}"
+aap_admin_user: "{{ ansible_user }}"
+aap_admin_password: "{{ aap_admin_pass | default(global_admin_password) | default('') }}"
+aap_single_host_mode: true
+aap_gateway_mode: "local-container"
+aap_gateway_host: "{{ inventory_hostname }}"
+aap_gateway_url: "https://{{ inventory_hostname }}/"
+platform_deployment_type: "container"
+aap_topology: "standalone"
+platform_installer_config:
+    deployment_type: "container"
+    topology: "standalone"

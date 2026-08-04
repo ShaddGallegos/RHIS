@@ -1,0 +1,16 @@
+---
+# Satellite host defaults shared by all external inventory Satellite entries.
+
+ansible_password: "{{ sat_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
+ansible_become_password: "{{ sat_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
+satellite_username: "{{ sat_admin_user | default(global_admin | default(admin_user | default('admin'))) }}"
+satellite_password: "{{ sat_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
+satellite_organization: "{{ sat_org | default('REDHAT') }}"
+satellite_location: "{{ sat_loc | default('CORE') }}"
+satellite_url: "https://{{ ansible_host }}"
+sat_firewalld_interface: "{{ sat_firewalld_interface | default('eth0') }}"
+satellite_pre_use_idm: "{{ satellite_pre_use_idm | default(false) | bool }}"
+use_non_idm_certs: "{{ use_non_idm_certs | default(true) | bool }}"
+sat_ssl_certs_dir: "{{ sat_ssl_certs_dir | default('/root/.sat_ssl/') }}"
+ipa_client_dns_servers: "{{ idm_ip | default('10.168.128.3') }}"
+ipa_server_fqdn: "{{ idm_hostname | default('idm.prod.spg') }}"

@@ -1,0 +1,5 @@
+---
+# Handlers for mrhis-recovery role
+- name: Noop
+  ansible.builtin.debug:
+    msg: "mrhis-recovery handler placeholder"

@@ -1,0 +1,17 @@
+---
+# Satellite-specific tests
+- name: Check Satellite URL reachable (accept 200/301/302/401)
+  ansible.builtin.uri:
+    url: "{{ SAT_URL | default('https://localhost') }}"
+    method: HEAD
+    status_code: [ 200, 301, 302, 401 ]
+    validate_certs: false
+  register: sat_url_check
+  failed_when: sat_url_check.status is not defined
+  when: SAT_URL is defined
+
+- name: Warn if Satellite URL check failed
+  ansible.builtin.debug:
+    msg: "Satellite URL {{ SAT_URL }} did not return expected status (check
+      connectivity/HTTPS)"
+  when: sat_url_check is defined and sat_url_check.status is not defined

@@ -1,0 +1,4 @@
+---
+# Controller/installer host defaults for the external inventory.
+
+ansible_user: "{{ installer_user | default(global_admin | default(admin_user | default('admin'))) }}"

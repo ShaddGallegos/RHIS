@@ -1,0 +1,4 @@
+---
+rhis_use_local_defaults_env: true
+rhis_defaults_env_file: "{{ playbook_dir | dirname }}/defaults/env.yml"
+rhis_local_defaults_precedence: "noninteractive"

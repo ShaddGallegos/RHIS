@@ -1,0 +1,3 @@
+---
+# Default variables for mrhis-ssh-keys
+rhis_ssh_installer: {}

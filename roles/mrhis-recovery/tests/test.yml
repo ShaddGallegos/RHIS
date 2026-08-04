@@ -1,0 +1,6 @@
+---
+- name: Test mrhis-recovery role (smoke)
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - debug: msg="mrhis-recovery role skeleton present"

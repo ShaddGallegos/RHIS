@@ -1,0 +1,51 @@
+---
+
+- name: Share SSH keys between installer and nodes
+  hosts: idm:satellite:aap
+  become: true
+  gather_facts: true
+  pre_tasks:
+    - name: Ensure local collection directory exists before slurping keys
+      ansible.builtin.file:
+        path: /tmp/mrhis_node_keys
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
+
+  roles:
+    - role: server_bootstrap
+      share_ssh_keys: true
+
+- name: Import collected node public keys into installer
+  hosts: installer
+  become: true
+  gather_facts: false
+  remote_user: admin
+  vars:
+    ansible_password: "{{ admin_pass | default(global_admin_password | default('')) }}"
+
+  tasks:
+    - name: Ensure local collection directory exists
+      ansible.builtin.file:
+        path: /tmp/mrhis_node_keys
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+
+    - name: Find collected node public keys on controller
+      ansible.builtin.find:
+        paths: /tmp/mrhis_node_keys
+        patterns: "*.pub"
+      register: collected_keys
+      delegate_to: localhost
+
+    - name: Add collected node public keys to installer authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ global_admin | default(admin_user | default(ansible_user | default('admin'))) }}"
+        key: "{{ lookup('file', item.path) }}"
+      loop: "{{ collected_keys.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: collected_keys.matched is defined and collected_keys.matched > 0

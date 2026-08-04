@@ -1,0 +1,13 @@
+---
+# Default variables for mrhis-rhsm role
+# Controls early RHSM/Insights registration behavior and retry policy.
+ensure_insights: true
+mrhis_rhsm_retries: 3
+mrhis_rhsm_retry_delay: 15
+mrhis_rhsm_check_host: subscription.rhsm.redhat.com
+mrhis_rhsm_check_port: 443
+
+# Backwards-compatible aliases/explicit defaults for RHSM registration retry
+# These names are referenced in tasks and may be undefined in some environments.
+rhsm_register_retries: "{{ mrhis_rhsm_retries | default(3) }}"
+rhsm_register_delay: "{{ mrhis_rhsm_retry_delay | default(15) }}"

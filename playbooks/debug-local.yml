@@ -1,0 +1,14 @@
+---
+- name: Debug local file task
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure /tmp/mrhis_debug_local exists
+      ansible.builtin.file:
+        path: /tmp/mrhis_debug_local
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'

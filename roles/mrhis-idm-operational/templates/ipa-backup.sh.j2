@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+BACKUP_DIR={{ ipa_backup_dir }}
+mkdir -p "$BACKUP_DIR"
+if command -v ipa-backup >/dev/null 2>&1; then
+  ipa-backup --data --dir "$BACKUP_DIR"
+else
+  echo "ipa-backup not found; skipping backup" >&2
+  exit 0
+fi

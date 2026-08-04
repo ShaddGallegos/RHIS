@@ -1,0 +1,1240 @@
+# MRHIS - Red Hat Infrastructure Standard
+
+## Synopsis
+
+MRHIS stands for **Red Hat Infrastructure Standard**.
+
+## Rules & Policies
+
+- This project follows a strict configuration-as-code model. See `docs/RULES.md` and `docs/assistant-adherence-rules.md` for full rules and guidance.
+- Quick policy: do NOT use containerized workflows unless you explicitly pass a container flag (for example `--container` or `--use-container`). The default behavior is host-based operations.
+
+This repository is built around `MRHIS.sh` (MRHIS), an orchestration script for building and bootstrapping a Red Hat management lab on libvirt/KVM.
+
+The current workflow focuses on:
+
+- **Red Hat Satellite 6.18**
+- **Red Hat Ansible Automation Platform 2.6**
+- **Red Hat Identity Management (IdM / FreeIPA)**
+- optional **MRHIS container** deployment
+
+The script automates:
+
+- encrypted configuration capture with `ansible-vault`
+- RHEL ISO preparation
+- kickstart generation for Satellite, AAP, and IdM
+- unattended VM creation on libvirt/KVM
+- RHSM registration and repo enablement during kickstart `%post`
+- automatic `rhc connect` in guest `%post` (enabled by default)
+- initial Day-0 bootstrap actions required to continue automated configuration
+
+If you are starting fresh, review:
+
+- [CHECKLIST.md](CHECKLIST.md) — what must be provided by the user and where to obtain it
+
+---
+
+## Table of contents
+
+- [Quick start](#quick-start)
+- [Main entry point](#main-entry-point)
+- [Headless Operations](#headless-operations)
+- [Headless Quick Reference](#headless-quick-reference)
+- [Headless Troubleshooting](#headless-troubleshooting)
+- [Recovery & Diagnostics](#recovery--diagnostics)
+- [Configuration and secrets](#configuration-and-secrets)
+
+### Secrets and vaulted configuration
+
+All sensitive values (passwords, tokens, keys) must be stored in the vaulted
+file at `~/.ansible/conf/env.yml` and never committed in plaintext. `MRHIS.sh`
+will attempt to load that file at startup using `ansible-vault` and the
+`ANSIBLE_VAULT_PASSWORD_FILE` mechanism. If you do not have a vaulted env file,
+use `./MRHIS.sh --reconfigure` to create one interactively (it will be
+encrypted with your configured vault password file).
+
+Notes:
+- Do not hard-code any production or demo passwords in tracked files.
+- Use the `scripts/normalize_env_password_aliases.sh` helper to canonicalize
+  password aliases into `aap_admin_pass`/`admin_pass` inside the vaulted file.
+- You can inspect the vaulted file with:
+
+```bash
+ANSIBLE_VAULT_PASSWORD_FILE=$HOME/.ansible/conf/.vaultpass.txt ansible-vault view $HOME/.ansible/conf/env.yml
+```
+
+- [Default lab layout](#default-lab-layout)
+- [Kickstart generation](#kickstart-generation)
+- [VM provisioning behavior](#vm-provisioning-behavior)
+- [Virt-manager and libvirt setup](#virt-manager-and-libvirt-setup)
+- [DEMOKILL behavior](#demokill-behavior)
+- [MRHIS CMDB / HTML dashboard](#mrhis-cmdb--html-dashboard)
+- [MRHIS Hardware Planning & Resource Management Guide (RHEL 10)](#mrhis-hardware-planning--resource-management-guide-rhel-10)
+- [Directory Structure & Configuration Files](#directory-structure--configuration-files)
+- [Important files](#important-files)
+- [Recommended run sequence](#recommended-run-sequence)
+- [Troubleshooting](#troubleshooting)
+- [Support](#support)
+
+---
+
+## Purpose of this repository
+
+[⬆ Back to top](#table-of-contents)
+
+This repository is intended for repeatable build-out of a Red Hat infrastructure management stack with:
+
+- one **external** network for updates and remote access
+- one **internal** network for provisioning, orchestration, and management
+- consistent bootstrap of these core nodes:
+  - `satellite`
+  - `aap`
+  - `idm`
+
+This is primarily an **infrastructure provisioning and bootstrap repository**, not just a generic application project.
+
+The machine where you execute `MRHIS.sh` is the **installer host**. Host-side prerequisites and collection management are resolved there.
+
+---
+
+## Installer host responsibilities
+
+[⬆ Back to top](#table-of-contents)
+
+`MRHIS.sh` is expected to ensure installer-host software requirements using `dnf`/`pip` (current platform profile focuses on libvirt + virt-manager workflows).
+
+It also ensures host-side Ansible collections in this order:
+
+1. Red Hat Automation Hub (`console.redhat.com`, published/validated)
+2. Fallback to `galaxy.ansible.com` when not available there
+
+This keeps the installer host self-sufficient for the MRHIS workflow.
+
+---
+
+## Quick start
+
+[⬆ Back to top](#table-of-contents)
+
+### What's new
+
+- Container-first automation now supports a prescribed config order:
+  - `IdM -> Satellite -> AAP`
+ - Demo AAP VM sizing: demo AAP RAM allocation increased by +1GB to improve installer reliability.
+-- Full Stack Build (menu `3`) now auto-runs config-as-code by default.
+- Retry behavior for transient failures:
+  - Failed phases are retried once by default.
+  - Disable with `MRHIS_RETRY_FAILED_PHASES_ONCE=0`.
+-- Auto-sequence after full-stack runs can be disabled with:
+  - `MRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0`
+- AAP API readiness wait now uses a single-line live progress bar and continues immediately as soon as `/api/v2/ping/` responds.
+- SSH mesh now has explicit lifecycle behavior:
+  - bootstrap phase shares installer key temporarily to managed nodes for installation access
+  - finalize phase removes temporary installer-key trust from managed nodes after config-as-code
+
+### Recommended first run
+
+```bash
+./MRHIS.sh --reconfigure
+```
+
+### Clean up a previous demo run
+
+```bash
+./MRHIS.sh --DEMOKILL
+```
+
+### Build the demo stack
+
+```bash
+./MRHIS.sh --DEMO
+```
+ 
+## Tools
+
+- `tools/get_ocm.sh` — helper to obtain the Red Hat `ocm` CLI. It tries the official Red Hat URL, common GitHub release assets, and falls back to `go install` when needed. Example:
+
+```bash
+./tools/get_ocm.sh --dest tools/ocm
+```
+
+- `scripts/install-tools.sh` — helper to expose repo-local tools to your shell or system. It supports:
+  - `--symlink` — create symlinks for executables under `tools/` into a system `--dest` (default `/usr/local/bin`). May require `--sudo`.
+  - `--path` — append an `export PATH="<repo>/tools:$PATH"` line to common shell rc files (`.bashrc`, `.zshrc`, or `.profile`).
+  - `--all` — do both `--symlink` and `--path`.
+  - `--dry-run` — show actions without making changes.
+
+Examples:
+
+```bash
+# Dry-run both actions
+./scripts/install-tools.sh --all --dry-run
+
+# Create system symlinks (requires sudo)
+./scripts/install-tools.sh --symlink --dest /usr/local/bin --sudo
+
+# Add repo/tools to your user PATH
+./scripts/install-tools.sh --path
+```
+
+Note: direct downloads from Red Hat may require a subscription or different asset paths; `tools/get_ocm.sh` falls back to `go install` when assets cannot be found.
+
+
+---
+
+### Importing accounts from Excel
+
+If you have account lists in Excel (.xlsx/.xls) you can convert them to a
+repository YAML suitable for Ansible with the provided helper:
+
+```bash
+python3 scripts/import_accounts_from_excel.py accounts.xlsx -o local/vars/external_inventory/accounts/region.yml
+```
+
+The script auto-detects common column names (username, groups, comment,
+ssh_key, shell), deduplicates by username (case-insensitive), and writes a
+`node_common_users` style YAML fragment which can be included in your
+inventory or referenced by roles such as `node_common`.
+
+
+## Main entry point
+
+[⬆ Back to top](#table-of-contents)
+
+The main workflow is:
+
+```bash
+./MRHIS.sh
+```
+
+### Interactive menu options
+
+- `1` Platform Selection (Default: libvirt)
+  - Choose target platform provider: OpenShift, Nutanix, VMware, BareMetal
+- `2` Configure Installer (RHEL10/Fedora)
+  - Prepare installer host packages, ISO tools and Ansible collections
+- `3` Full Stack Build
+  - Orchestrates VM creation and config-as-code for IdM, Satellite, AAP, Gitea, OpenShift
+- `4` Install Individual System Components
+  - Install or operate single components: IdM, Satellite, AAP, Gitea, OpenShift
+- `5` Configure Only Individual System Components
+  - Run config-as-code for one or more components (comma-separated list)
+- `6` Build ~/.ansible/conf/env.yml (Prompts Only)
+  - Interactive prompts to construct or update vaulted env.yml
+- `7` Generate Kickstarts / OEMDRV
+  - Produce PXE/OEMDRV kickstarts for components
+- `8` Documentation (submenu)
+  - Browse curated documentation topics: RHIS, IdM, Satellite, AAP, Gitea, OpenShift
+- `9` Report
+  - Show health and status report for the current environment
+- `0` Exit
+
+Environment toggles:
+
+- `MRHIS_AUTO_CONFIG_ON_CONTAINER_ONLY=0` disables auto config-as-code after auto-sequenced full-stack runs
+- `MRHIS_RETRY_FAILED_PHASES_ONCE=0` disables automatic retry of failed config-as-code phases
+- `RHC_AUTO_CONNECT=0` disables automatic `rhc connect` during guest kickstart `%post`
+- `MRHIS_POST_VM_SETTLE_GRACE=650` default guest settle window before SSH preflight checks
+- `MRHIS_INTERNAL_SSH_WARN_GRACE=<seconds>` delay before per-host warning logs (default `600`)
+- `MRHIS_INTERNAL_SSH_LOG_EVERY=<seconds>` periodic preflight progress log cadence (default `60`)
+- `AAP_API_WAIT_INTERVAL=<seconds>` AAP API readiness poll interval (default `10`)
+- `MRHIS_ALLOW_DEFERRED_SSH_MESH=1` allow deferred SSH mesh bootstrap and retry later
+- `MRHIS_REQUIRE_ROOT_SSH_MESH=1` fail on root mesh errors instead of best-effort
+- `MRHIS_ALLOW_SSHPASS=0` SSH password fallback opt-in (default `0`). When set to `1` the installer may attempt password-based SSH operations using `sshpass` and will install `sshpass` if needed; otherwise the workflow prefers key-based authentication only.
+
+### Command-line options
+
+```text
+--non-interactive, --notouch
+                         Run without prompts; required values must already be set
+--menu-choice <0-9>     Preselect a visible menu option
+--env-file <path>        Load preseed variables from a custom env file
+--inventory <template>   Pin AAP inventory template; skips interactive submenu
+--inventory-growth <tpl> Pin AAP inventory-growth template; skips interactive submenu
+                         Interactive (no --non-interactive): a guided submenu with
+                         About pages is presented when template values are unset.
+                         --DEMO always forces DEMO-inventory.j2 and skips the submenu.
+--satellite              Run Satellite 6.18-only workflow
+--idm                    Run IdM 5.0-only workflow
+--aap                    Run AAP 2.6-only workflow
+--attach-consoles        Re-open VM console monitors for Satellite/AAP/IdM
+  --status                 Read-only status snapshot (no provisioning changes)
+--openshift              Run OpenShift-target workflow (hands-free/non-interactive fast-path)
+--openshift-virt         Run OpenShift-on-virtual-hosts workflow (hands-free/non-interactive fast-path)
+--reconfigure            Prompt for all installer values and update env.yml
+--test[=fast|full]       Run a curated non-interactive test sweep and print a summary
+--DEMO            Use demo sizing/profile for VM specs
+--DEMOKILL        CLI-only cleanup for demo VMs/files/temp artifacts/lock files/processes
+--help                   Show usage
+```
+
+### AAP installer inventory selection
+
+When running interactively without a pre-configured template, the script presents
+a guided **inventory architecture submenu**:
+
+```text
+  0) Exit              -- Return to previous menu
+  1) inventory         -- Enterprise / Multi-Node deployment
+  2) About inventory   -- Name, synopsis, diagram & guidance
+  3) inventory-growth  -- Growth / Single-Node containerized
+  4) About inventory-growth
+                       -- Name, synopsis, diagram & guidance
+```
+
+Choosing **2** or **4** shows a full About page (topology diagram, setup steps,
+why Red Hat recommends that model) and then returns to the submenu.
+`--DEMO` bypasses the submenu and auto-selects `DEMO-inventory.j2`.
+
+To skip the submenu non-interactively, pass `--inventory` and `--inventory-growth`
+or pre-set `AAP_INVENTORY_TEMPLATE` / `AAP_INVENTORY_GROWTH_TEMPLATE` in your env file.
+See [inventory/README.md](inventory/README.md) for template details.
+
+### Generated Ansible runtime files
+
+MRHIS now generates a host-side Ansible config for provisioner runs and mounts it into the container automatically:
+
+- `~/.ansible/conf/mrhis-ansible.cfg` — generated MRHIS Ansible runtime config
+- `~/.ansible/conf/ansible-provisioner.log` — stable provisioner log file
+- `~/.ansible/conf/facts-cache/` — Ansible fact cache
+
+The provisioner container uses that generated config via `ANSIBLE_CONFIG` and writes logs/cache on the host through the existing vault bind mount.
+
+### IdM 5.0 repository prerequisites
+
+For IdM 5.0 installation/configuration paths, ensure the target system has access to these repositories:
+
+```bash
+subscription-manager repos --enable="rhel-10-for-x86_64-baseos-rpms" \
+--enable="rhel-10-for-x86_64-appstream-rpms"
+```
+
+### Full-stack one-shot examples
+
+```bash
+./MRHIS.sh --mrhis --notouch
+```
+
+Run one-shot container workflow without retries:
+
+```bash
+MRHIS_RETRY_FAILED_PHASES_ONCE=0 ./MRHIS.sh --mrhis --notouch
+```
+
+Re-open VM console monitors after boot:
+
+```bash
+./MRHIS.sh --attach-consoles
+```
+
+Read-only health/status snapshot (no provisioning changes):
+
+```bash
+./MRHIS.sh --status
+```
+
+Run a fast noninteractive validation sweep (recommended after `--DEMOKILL`):
+
+```bash
+./MRHIS.sh --test=fast --DEMO
+```
+
+Run the broader integration-style validation sweep:
+
+```bash
+./MRHIS.sh --test=full --DEMO
+```
+
+### Common examples
+
+Generate only the Satellite kickstart and `OEMDRV.iso`:
+
+```bash
+./MRHIS.sh --menu-choice 7
+```
+
+Run fully unattended:
+
+```bash
+./MRHIS.sh --non-interactive --menu-choice 7
+```
+
+Use a custom bootstrap env file:
+
+```bash
+./MRHIS.sh --env-file /path/to/custom.env --menu-choice 3
+```
+
+Re-prompt for all saved values:
+
+```bash
+./MRHIS.sh --reconfigure
+```
+
+Destroy demo resources and clean leftovers:
+
+```bash
+./MRHIS.sh --DEMOKILL
+```
+
+---
+
+## Headless Operations
+
+[⬆ Back to top](#table-of-contents)
+
+MRHIS supports headless execution via environment files and `--env-file`.
+
+- Create an env file from the provided template `mrhis-headless.env.template` or use `--env-file` to pass values at runtime.
+- Do NOT commit secrets or credentials to the repository. Store secrets encrypted with `ansible-vault` (for example `~/.ansible/conf/env.yml`) or manage them outside version control.
+- See `CHECKLIST.md` and `inventory/README.md` for the minimal variables required for non-interactive runs.
+
+## Headless Quick Reference
+
+[⬆ Back to top](#table-of-contents)
+
+### One-Command Deployment
+
+```bash
+# 1. Copy template
+cp mrhis-headless.env.template /etc/mrhis/headless.env
+
+# 2. Edit with your values
+nano /etc/mrhis/headless.env
+
+# 3. Run deployment
+source /etc/mrhis/headless.env
+./MRHIS.sh --non-interactive --menu-choice 3
+```
+
+### Headless Noninteractive Test (developer)
+
+Run the fast-path DEMO non-interactive test (captures logs):
+
+```bash
+cd /home/sgallego/GIT/RHIS && \
+NONINTERACTIVE=1 MENU_CHOICE=1 bash MRHIS.sh --DEMO --rhis 2>&1 | tee /tmp/mrhis-demo-run.final.log
+```
+
+Check these artifacts after the run:
+
+- Kickstarts: ${KS_DIR}/*.ks
+- OEMDRV ISO: ${OEMDRV_ISO}
+- Headless runner log: /tmp/mrhis-demo-run.final.log
+- Install logs: /var/log/MRHIS/install_*.log
+
+Notes:
+
+- Ensure `~/.ansible/conf/env.yml` is present and vaulted (contains `idm_ds_pass`, `idm_admin_pass`, `IDM_REALM`, IPs, tokens). Never commit this file.
+- If the script prompts for missing values, run `./MRHIS.sh --env-file /path/to/env.yml` or populate the vaulted env file first.
+
+### Environment Variables Cheat Sheet
+
+| Variable       | Purpose              | Example                                          | Required     |
+| -------------- | -------------------- | ------------------------------------------------ | ------------ |
+| `RH_USER`      | Red Hat CDN username | `<your-rh-username>`                             | Menu 1,2,4,5 |
+| `RH_PASS`      | Red Hat CDN password | `<your-rh-password>`                             | Menu 1,2,4,5 |
+| `ADMIN_PASS`   | Local admin password | `<your-admin-password>`                          | Menu 3,4,5,7 |
+| `IDM_IP`       | IdM VM IP (internal) | `$IDM_IP`                                        | Menu 3,4,5,7 |
+| `IDM_HOSTNAME` | IdM FQDN             | `idm.<domain>` (defaults to `example.com`)       | Menu 4,5,7   |
+| `SAT_IP`       | Satellite VM IP      | `$SAT_IP`                                        | Menu 3,4,5,7 |
+| `SAT_HOSTNAME` | Satellite FQDN       | `satellite.<domain>` (defaults to `example.com`) | Menu 4,5,7   |
+| `AAP_IP`       | AAP VM IP            | `$AAP_IP`                                        | Menu 3,4,5,7 |
+| `AAP_HOSTNAME` | AAP FQDN             | `aap.<domain>` (defaults to `example.com`)       | Menu 4,5,7   |
+| `HUB_TOKEN`    | Automation Hub token | `<your-hub-token>`                               | Menu 4,5,7   |
+
+---
+
+## Headless Troubleshooting
+
+[⬆ Back to top](#table-of-contents)
+
+### Common Issues & Solutions
+
+#### Issue 1: "NONINTERACTIVE mode requires X to be set"
+
+```bash
+# Check which variable is missing
+env | grep -E "^(RH_|IDM_|SAT_|AAP_|ADMIN_|HUB_|DOMAIN|HOST_)"
+
+# Export individually if needed
+# Set required variables via your env file, or use Ansible Vault; avoid exporting
+# plaintext credentials on shared shells.
+```
+
+#### Issue 2: "Cannot reach aap via SSH"
+
+```bash
+# Check VM status
+virsh list --all | grep aap
+
+# Test SSH manually
+ssh -o ConnectTimeout=5 root@${AAP_IP:-10.168.128.2} "hostname"
+
+# Check SSH key permissions
+chmod 600 ~/.ssh/id_rsa
+chmod 644 ~/.ssh/id_rsa.pub
+```
+
+#### Issue 3: Installation hangs with no output
+
+```bash
+# Monitor real-time logs
+tail -100f /var/log/mrhis/mrhis_install_*.log
+
+# Check container execution
+podman ps -a
+podman logs -f mrhis-provisioner
+```
+
+#### Issue 4: Container fails to start
+
+```bash
+# Stop and remove old container
+podman stop mrhis-provisioner 2>/dev/null || true
+podman rm mrhis-provisioner 2>/dev/null || true
+
+# Re-run installer
+./MRHIS.sh --non-interactive --menu-choice 3
+```
+
+#### Issue 5: "Failed to reach Satellite/IdM web UI"
+
+```bash
+# Check service status
+ssh root@${SAT_IP:-10.168.128.1} "systemctl status satellite"
+ssh root@${SAT_IP:-10.168.128.1} "systemctl status httpd"
+
+# Check if port is listening
+ssh root@${SAT_IP:-10.168.128.1} "ss -tlnp | grep :443"
+```
+
+### Cleanup
+
+After deployment or if starting over:
+
+```bash
+# Stop all MRHIS services
+podman stop mrhis-provisioner
+
+# Remove all VMs  
+for vm in satellite aap idm; do
+  virsh destroy "$vm" 2>/dev/null || true
+  virsh undefine "$vm" --remove-all-storage 2>/dev/null || true
+done
+
+# Remove container
+podman rm mrhis-provisioner
+
+# Start fresh
+./MRHIS.sh --non-interactive --menu-choice 3
+```
+
+---
+
+## Recovery & Diagnostics
+
+[⬆ Back to top](#table-of-contents)
+
+### Situation: Config-as-Code Phases Failed
+
+If IdM, Satellite, or AAP playbooks fail during deployment:
+
+## Recovery Procedures
+
+### Option A: Retry Config-as-Code (Recommended - Simple)
+
+```bash
+# Re-run the config-as-code phases (use Configure Only menu)
+./MRHIS.sh --non-interactive --menu-choice 5
+```
+
+### Option B: Re-run Full MRHIS Installer
+
+```bash
+# Backup any important logs/configs:
+cp -r /var/log/mrhis /var/log/mrhis.backup.2026-03-24
+
+# Stop the container:
+podman rm -f mrhis-provisioner
+
+# Re-run the installer:
+cd ~/GIT/MRHIS
+./MRHIS.sh
+```
+
+### Option C: Manual Phase Re-execution
+
+```bash
+# Connect to provisioner container:
+podman exec -it -e ANSIBLE_DEBUG=1 mrhis-provisioner /bin/bash
+
+# Run IdM with verbose output:
+cd /mrhis
+ansible-playbook -vvv \
+  --inventory /mrhis/vars/external_inventory/hosts \
+  --vault-password-file /mrhis/vars/vault/.vaultpass.container \
+  --extra-vars @/mrhis/vars/vault/env.yml \
+  --limit scenario_idm \
+  /mrhis/mrhis-builder-idm/main.yml 2>&1 | tee /tmp/idm-playbook.log
+```
+
+### Option D: Isolated Component Testing
+
+```bash
+# Test IdM SSH connectivity and basic services:
+ssh root@${IDM_IP:-10.168.128.3} "ipactl status && systemctl status ipa httpd"
+
+# Test Satellite SSH connectivity:
+ssh root@${SAT_IP:-10.168.128.1} "systemctl status httpd"
+
+# Test AAP SSH connectivity:
+ssh root@${AAP_IP:-10.168.128.2} "whoami"
+```
+
+### Verification
+
+After remediation, verify all phases pass:
+
+```bash
+# Check IdM
+curl -k https://${IDM_IP:-10.168.128.3}/ipa/ui/ && echo "✓  IdM UI reached"
+
+# Check Satellite
+curl -k https://${SAT_IP:-10.168.128.1}/ && echo "✓  Satellite web reached"
+
+# Check AAP (after setup completes)
+curl -k https://${AAP_IP:-10.168.128.2}/ && echo "✓  AAP web reached"
+```
+
+---
+
+## Directory Structure & Configuration Files
+
+[⬆ Back to top](#table-of-contents)
+
+### Top-Level Files
+
+| File           | Purpose                                             |
+| -------------- | --------------------------------------------------- |
+| `MRHIS.sh`  | Primary orchestration script                        |
+| `CHECKLIST.md` | Required user-provided inputs and where to get them |
+| `README.md`    | This document - complete MRHIS documentation     |
+| `LICENSE`      | License information                                 |
+
+### Directory: `host_vars/`
+
+This directory is bind-mounted into the `mrhis-provisioner` container at `/mrhis/vars/host_vars/`.
+
+**Setup:** Copy each `*.SAMPLE` file to its actual name and fill in real values:
+
+- `host_vars/satellite.yml` — Satellite VM connection + org/location vars
+- `host_vars/aap.yml` — AAP admin credentials
+- `host_vars/idm.yml` — IdM realm/domain overrides
+- `host_vars/installer.yml` — Controller/installer host SSH settings
+
+**Runtime Note:** `MRHIS.sh` regenerates `host_vars/*.yml` during config-as-code startup. Treat these files as generated runtime artifacts.
+
+### Directory: `inventory/`
+
+This directory is bind-mounted into the `mrhis-provisioner` container at `/mrhis/vars/external_inventory/`.
+
+**Setup:**
+
+1. Copy `hosts.SAMPLE` → `hosts` and fill in your actual hostnames and IPs.
+2. The `hosts` file is referenced by all mrhis-builder playbooks.
+
+**Group Names:**
+
+| Group                | Purpose                        |
+| -------------------- | ------------------------------ |
+| `satellite`          | Satellite VM                   |
+| `mrhis`              | Compatibility alias for managed nodes |
+| `aap`                | Ansible Automation Platform VM |
+| `idm`                | Red Hat Identity Management VM |
+
+**AAP Inventory Templates:**
+
+Available deployment models:
+
+1. **Enterprise / Multi-Node** (`inventory.j2`): All AAP components on separate VMs
+2. **Growth / Single-Node** (`inventory-growth.j2`): All AAP components co-located on one VM
+3. **DEMO** (`DEMO-inventory.j2`): Forced automatically with `--DEMO`
+
+**CLI Overrides:**
+
+```bash
+# Force DEMO model
+./MRHIS.sh --non-interactive --DEMO
+
+# Pin specific topology
+./MRHIS.sh --non-interactive \
+   --inventory inventory.j2
+```
+
+---
+
+## Configuration and secrets
+
+[⬆ Back to top](#table-of-contents)
+
+The script stores working configuration in:
+
+- `~/.ansible/conf/env.yml` — encrypted with `ansible-vault`
+- `~/.ansible/conf/.vaultpass.txt` — local vault password file
+
+On first run, the script prompts for required values and writes encrypted configuration.
+On later runs, it reloads saved values and only prompts for missing or unresolved entries unless `--reconfigure` is used.
+
+`--env-file` remains supported for bootstrap/preseed use, but the vault-backed `env.yml` is the authoritative runtime source.
+
+### Core user-supplied values
+
+At minimum, be ready to provide:
+
+- Red Hat CDN username and password
+- Red Hat offline token
+- Red Hat access token
+- RHEL ISO URL
+- AAP bundle URL
+- Automation Hub token
+- shared admin username/password
+- shared domain and realm
+- Satellite, AAP, and IdM IPs / hostnames
+- Satellite organization and location
+- IdM admin and DS passwords
+
+For the detailed list, use:
+
+- `CHECKLIST.md`
+
+---
+
+## Default lab layout
+
+[⬆ Back to top](#table-of-contents)
+
+By default, the script uses these internal addresses:
+
+| Node      |     Default IP | Default Hostname Pattern |
+| --------- | -------------: | ------------------------ |
+| Satellite | `${SAT_IP:-10.168.128.1}` | `${SAT_HOSTNAME:-satellite.<domain>}`     |
+| AAP       | `${AAP_IP:-10.168.128.2}` | `${AAP_HOSTNAME:-aap.<domain>}`           |
+| IdM       | `${IDM_IP:-10.168.128.3}` | `${IDM_HOSTNAME:-idm.<domain>}`           |
+
+Shared defaults also include:
+
+ - `INTERNAL_NETWORK=${INTERNAL_NETWORK:-10.168.0.0}`
+ - `NETMASK=${NETMASK:-255.255.0.0}`
+ - `INTERNAL_GW=${INTERNAL_GW:-10.168.0.1}`
+
+Connectivity defaults also include:
+
+- `RHC_AUTO_CONNECT=1` (attempt `rhc connect` by default on Satellite, AAP, and IdM)
+
+Role aliases (used for hostname-role matching and inventory convenience names):
+
+- `SAT_ALIAS=satellite`
+- `AAP_ALIAS=aap`
+- `IDM_ALIAS=idm`
+
+Adjust these during `--reconfigure` if your environment needs different values.
+
+Satellite service/provisioning settings are also defaulted, prompted, and then
+persisted in encrypted `~/.ansible/conf/env.yml` (for example:
+`SAT_FIREWALLD_INTERFACE`, `SAT_FIREWALLD_ZONE`,
+`SAT_FIREWALLD_SERVICES_JSON`, `SAT_PROVISIONING_*`, `SAT_DNS_ZONE`,
+`SAT_DNS_REVERSE_ZONE`).
+
+Prompt simplification defaults:
+
+- `MRHIS_PROMPT_COMPONENT_OVERRIDES=0` (default): do not prompt for per-component override fields that duplicate shared values (for example component domain/realm/password overrides). These fields auto-inherit from shared values.
+- `MRHIS_PROMPT_COMPONENT_OVERRIDES=1`: prompt for all component-specific override fields during `--reconfigure`.
+
+---
+
+## Kickstart generation
+
+[⬆ Back to top](#table-of-contents)
+
+The script generates unattended kickstarts for:
+
+- Satellite
+- AAP
+- IdM
+
+### Satellite OEMDRV workflow
+
+The Satellite build produces:
+
+- `kickstarts/satellite.ks`
+- `/var/lib/libvirt/images/OEMDRV.iso`
+
+Satellite boots using:
+
+- `inst.ks=hd:LABEL=OEMDRV:/ks.cfg`
+
+### What the generated kickstarts include
+
+All generated kickstarts include the automation required for Day-0 bootstrap, including:
+
+- text-mode unattended installation
+- BIOS/GPT-safe partitioning
+- root/admin bootstrap accounts
+- static provisioning-side internal network configuration
+- local `/etc/hosts` seeding across Satellite, AAP, and IdM
+- RHSM registration in `%post`
+- purpose-specific repository enablement with validation
+
+### Product-specific kickstart behavior
+
+#### Satellite
+
+- registers to RHSM during `%post`
+- enables required Satellite 6.18 repositories
+- runs `satellite-installer`
+- prepares the system for management, provisioning, and follow-on automation
+
+#### AAP
+
+- registers to RHSM during `%post`
+- enables AAP-specific repositories
+- stages the AAP containerized setup bundle
+- accepts duplicate downloaded bundle filenames by matching with wildcard pattern (for example `...tar.gz` and `...(1).tar.gz`)
+- prepares SSH/bootstrap content used by the host callback workflow
+
+#### IdM
+
+- registers to RHSM during `%post`
+- enables required base repositories
+- runs unattended `ipa-server-install`
+
+### RHSM and repository enablement
+
+The script now enforces registration and repo configuration during kickstart `%post` by:
+
+- retrying RHSM registration
+- refreshing subscription data
+- disabling all repositories first
+- enabling only required repositories for the system’s role
+- validating that those repositories are actually enabled before continuing
+
+---
+
+## VM provisioning behavior
+
+[⬆ Back to top](#table-of-contents)
+
+When you choose a libvirt build path, the script:
+
+1. validates configuration
+2. generates kickstarts
+3. stages the AAP bundle on the host
+4. creates these VMs:
+
+- `idm`
+- `satellite`
+- `aap`
+
+1. enables `virsh autostart` for each VM
+2. checks that the three VMs are left in an ON/running state so automation can continue
+
+After provisioning, config-as-code is executed in dependency order:
+
+1. `IdM`
+2. `Satellite`
+3. `AAP`
+
+The AAP callback/install step is deferred until the AAP phase so foundational
+IdM/Satellite phases can proceed first.
+
+### AAP callback progress + fail-fast behavior
+
+While waiting for AAP SSH callback readiness, MRHIS now reports live progress with:
+
+- VM state transitions (including power-state changes)
+- detected IP changes
+- SSH reachability transitions
+- periodic progress heartbeat with percent + ETA-style remaining time
+
+If callback state does not progress for a configured timeout window, MRHIS now
+fails fast so troubleshooting can begin immediately instead of waiting silently.
+
+Relevant environment controls:
+
+- `AAP_SSH_WAIT_TIMEOUT` (default `5400`)
+- `AAP_SSH_WAIT_INTERVAL` (default `10`)
+- `AAP_SSH_PROGRESS_EVERY` (default `30`)
+- `AAP_SSH_NO_PROGRESS_TIMEOUT` (default `900`)
+
+### AAP API readiness wait behavior
+
+After installer execution, API readiness checks now:
+
+- print a same-line progress bar with elapsed time
+- poll at `AAP_API_WAIT_INTERVAL` cadence (default `10s`)
+- continue immediately once `https://<aap>/api/v2/ping/` returns a valid response
+
+If a phase fails, the script retries only failed phases once by default.
+
+### Console monitoring during build
+
+During provisioning, the script attempts to open console monitors automatically:
+
+- if a desktop terminal is available, it opens separate terminal windows
+- on headless systems, it falls back to a detached `tmux` session
+
+This makes it easier to watch Anaconda and serial console output while the stack is installing.
+
+---
+
+## Virt-manager and libvirt setup
+
+[⬆ Back to top](#table-of-contents)
+
+The script can configure:
+
+- `libvirtd`
+- libvirt networks
+- `virt-manager`
+- libvirt storage pool handling
+- XML editor preferences
+- guest resize behavior
+
+### Expected network model
+
+- **external** — outbound connectivity, updates, remote access
+- **internal** — provisioning, orchestration, and management traffic
+
+This matches the intended MRHIS lab design.
+
+---
+
+## DEMOKILL behavior
+
+[⬆ Back to top](#table-of-contents)
+
+`--DEMOKILL` is intended for interrupted runs, rebuilds, and stale lab cleanup.
+
+It currently cleans up:
+
+- demo VMs
+- qcow2 disks
+- generated kickstarts
+- `OEMDRV.iso`
+- staged AAP bundle content
+- known lock files
+- MRHIS temp/cache artifacts
+- stale MRHIS node SSH trust entries in the installer host's `~/.ssh/known_hosts`
+- stale MRHIS node hostname/IP comment lines in the installer host's `~/.ssh/authorized_keys`
+- auto-opened console monitor windows
+- fallback `tmux` console sessions
+- known leftover processes from current or previous MRHIS runs
+
+It also:
+
+- restarts `libvirtd`
+- reconnects `qemu:///system`
+- re-enables libvirt networks
+- restarts `virt-manager` when a desktop session is available
+
+Use this before retrying a build if a prior run failed or was interrupted.
+
+---
+
+## MRHIS CMDB / HTML dashboard
+
+[⬆ Back to top](#table-of-contents)
+
+The script includes bootstrap logic for a lightweight MRHIS CMDB-style dashboard on the Satellite node using:
+
+- `ansible-cmdb`
+- a simple Python HTTP server
+
+The intent is to provide a single-pane view of the MRHIS nodes and related services.
+
+### Live Status Dashboard (Report menu `9` or `--status`)
+
+The interactive dashboard now includes:
+
+- VM power state and discovered IPs
+- current provisioning / installer activity
+- provisioner container state and recent logs
+- tail of `~/.ansible/conf/ansible-provisioner.log`
+- tail of the temporary AAP bundle HTTP log
+- AAP callback log presence
+- Satellite CMDB URL / port status
+
+### Read-only status mode (`--status`)
+
+The script can provide a non-destructive snapshot without provisioning changes:
+
+- runtime configuration summary
+- VM state + internal SSH reachability summary
+- one-shot dashboard snapshot
+
+Use:
+
+```bash
+./MRHIS.sh --status
+```
+
+### Ports used by the workflow
+
+- `3000/tcp` — MRHIS local/web application
+- `8080/tcp` — temporary AAP bundle HTTP server during provisioning
+- `18080/tcp` — MRHIS CMDB / HTML dashboard on the Satellite node
+
+---
+
+## MRHIS Hardware Planning & Resource Management Guide (RHEL 10)
+
+[⬆ Back to top](#table-of-contents)
+
+This document consolidates the resource requirements, platform comparisons, overcommit strategies, and health-check commands for a Red Hat Infrastructure Setup (MRHIS) consisting of **Satellite 6.18**, **Ansible Automation Platform (AAP) 2.6**, and **Identity Management (IdM)**.
+
+---
+
+## 1. Product Resource Requirements
+
+[⬆ Back to top](#table-of-contents)
+
+These specifications are tailored for **RHEL 10** environments. Satellite and AAP are resource-intensive due to their database and containerization (Podman) requirements.
+
+| Product            | Role                 | Min vCPU | Min RAM   | Rec vCPU | Rec RAM    | Storage Notes                    |
+| :----------------- | :------------------- | :------- | :-------- | :------- | :--------- | :------------------------------- |
+| **Satellite 6.18** | Lifecycle & Repos    | 4        | 20 GB     | 8        | 32 GB+     | 500GB+ for `/var/lib/pulp`       |
+| **AAP 2.6**        | Automation (Bundled) | 4        | 16 GB     | 8-16     | 32 GB      | 100GB+ for `/var/lib/containers` |
+| **IdM**            | Identity & DNS       | 2        | 4 GB      | 4        | 8-16 GB    | 50GB for LDAP & Logs             |
+| **TOTAL**          | **Full Stack**       | **10**   | **40 GB** | **20**   | **80 GB+** | **~700GB Total SSD/NVMe**        |
+
+---
+
+## 2. Platform Overhead Comparison
+
+[⬆ Back to top](#table-of-contents)
+
+The hypervisor choice dictates how much "tax" is taken from your physical hardware before the VMs even boot.
+
+| Platform Type           | Examples                | CPU Overhead  | RAM Overhead    | Impact on MRHIS                    |
+| :---------------------- | :---------------------- | :------------ | :-------------- | :------------------------------------ |
+| **Type 1 (Bare Metal)** | ESXi, Nutanix, KVM      | Low (~2-5%)   | Fixed (~1-2GB)  | Most efficient for heavy stacks.      |
+| **Type 2 (Hosted)**     | Workstation, VirtualBox | Medium (~15%) | High (Host OS)  | Not recommended for production.       |
+| **Cloud (Off-Prem)**    | AWS, Azure, GCP         | Variable      | Included in SKU | Avoid "Burstable" CPUs for Satellite. |
+
+---
+
+## 3. Safe Overcommit Ratios
+
+[⬆ Back to top](#table-of-contents)
+
+Overcommitting allows you to run more virtual resources than you have physical hardware, provided you follow these "Golden Ratios."
+
+- **vCPU Overcommit (3:1 to 5:1):** Generally safe. You can assign 3–5 vCPUs per physical core.
+- **RAM Overcommit (1:1):** Highly dangerous for MRHIS. Satellite and AAP rely on PostgreSQL; if they are forced into swap, performance collapses.
+
+### Sample Calculation: 64GB RAM / 12-Core (24 Thread) Host
+
+| VM Name            | vCPU | RAM   | Note                               |
+| :----------------- | :--- | :---- | :--------------------------------- |
+| **Satellite 6.18** | 8    | 28 GB | Priority for RAM                   |
+| **AAP 2.6**        | 8    | 24 GB | Needs RAM for Execution Envs       |
+| **IdM Server**     | 4    | 6 GB  | Lightweight                        |
+| **Host Buffer**    | -    | 6 GB  | Essential for Hypervisor stability |
+
+---
+
+## 4. Monitoring Host Health & Memory Pressure
+
+[⬆ Back to top](#table-of-contents)
+
+Use these commands to determine if your hardware can handle an additional VM or if it is currently "thrashing."
+
+### A. Pressure Stall Information (PSI)
+
+The most accurate health metric in RHEL 10. It measures how much time processes spend waiting for resources.
+
+```bash
+# Check for Memory Stalls
+cat /proc/pressure/memory
+```
+
+- **avg10 > 10.00:** Your RAM is over-saturated. Do not add more VMs.
+
+- **avg10 < 1.00:** Your system is healthy and has room to grow.
+
+### B. Hypervisor Stats (virsh)
+
+Run these on the KVM/Libvirt host to see actual physical memory footprint (`rss`).
+
+```bash
+# Get memory stats for all running domains
+virsh domstats --memory
+
+# Check for specific domain memory ballooning
+virsh memstat <domain_name>
+```
+
+### C. Standard Linux Monitoring
+
+| Tool       | Command      | Focus                                                                 |
+| :--------- | :----------- | :-------------------------------------------------------------------- |
+| **Free**   | `free -h`    | Look at the **available** column only.                                |
+| **Vmstat** | `vmstat 1 5` | If **si** (swap in) or **so** (swap out) are > 0, you are out of RAM. |
+| **Top**    | `top`        | Press `m` to sort by memory; check `avail Mem`.                       |
+
+---
+
+## 5. Performance Optimization: KSM
+
+[⬆ Back to top](#table-of-contents)
+
+For RHEL 10 hosts running multiple RHEL 10 guests, enable **Kernel Same-page Merging**. This de-duplicates identical memory pages (like the kernel code) across all VMs, often freeing up several gigabytes of RAM.
+
+```bash
+# Enable KSM and the tuning daemon
+systemctl enable --now ksm ksmtuned
+
+# Check how much memory KSM has saved (in pages)
+cat /sys/kernel/mm/ksm/pages_shared
+```
+
+---
+
+## Important files
+
+[⬆ Back to top](#table-of-contents)
+
+- `MRHIS.sh` — primary orchestration script
+- `CHECKLIST.md` — required user-provided inputs and where to get them
+- `README.md` — this document
+
+For a minimal source tree model, treat these as the canonical non-hidden top-level artifacts:
+
+- `CHECKLIST.md`
+- `LICENSE`
+- `README.md`
+- `MRHIS.sh`
+
+Other runtime directories/files (for example `inventory/`, `host_vars/`, generated placeholders) can be generated by the script if missing.
+
+---
+
+## Recommended run sequence
+
+[⬆ Back to top](#table-of-contents)
+
+```bash
+# 1. Review what you need
+cat CHECKLIST.md
+
+# 2. Configure or update saved values
+./MRHIS.sh --reconfigure
+
+# 3. Clean old lab state if needed
+./MRHIS.sh --DEMOKILL
+
+# 4. Build the demo stack
+./MRHIS.sh --DEMO
+
+# 5. Optional: run a fast end-to-end wiring check
+./MRHIS.sh --test=fast --DEMO
+```
+
+---
+
+## Troubleshooting
+
+[⬆ Back to top](#table-of-contents)
+
+If provisioning behaves unexpectedly:
+
+- verify `virsh list --all`
+- verify libvirt networks are active
+- watch the console monitor windows / tmux monitor
+- inspect generated kickstarts in `/var/lib/libvirt/images/kickstarts/`
+- inspect guest `%post` logs such as `/root/ks-post.log`
+- use `--DEMOKILL` before retrying a clean rebuild
+
+### Current pre-flight safeguards (built into script)
+
+- Managed-node package pre-flight now ensures `rhel-system-roles` and `rhc-worker-playbook` are installed before phase playbooks.
+  - `rhc-worker-playbook` install order: pinned version first, then latest if unavailable.
+  - If install fails, script retries with `--nogpgcheck`.
+- Satellite entitlement pre-flight now validates against **enabled** repos (`subscription-manager repos --list-enabled`) to avoid false negatives.
+- Satellite RHSM remediation prints a one-line cause classification (for easier log scanning):
+  - `remediation-ok`
+  - `auth-failed`
+  - `auth-failed-both`
+  - `remediation-failed`
+
+### Manual rerun command format
+
+When running `ansible-playbook` manually, keep the JSON extra-vars argument quoted as one shell token.
+
+Before any manual re-run, ensure the provisioner container exists and is running:
+
+```bash
+podman ps -a --format '{{.Names}} {{.Status}}' | grep -E '^mrhis-provisioner\b' || echo 'Container missing: run container deployment or run Full Stack Build'
+podman start mrhis-provisioner >/dev/null 2>&1 || true
+```
+
+Example:
+
+```bash
+podman exec -it mrhis-provisioner ansible-playbook --inventory /mrhis/vars/external_inventory/hosts --vault-password-file /mrhis/vars/vault/.vaultpass.container --extra-vars @/mrhis/vars/vault/env.yml --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}' --limit idm /mrhis/mrhis-builder-idm/main.yml
+```
+
+If inventory/admin auth fails, use root-auth fallback explicitly:
+
+```bash
+podman exec -it -e ANSIBLE_CONFIG=/mrhis/vars/vault/mrhis-ansible.cfg mrhis-provisioner ansible-playbook --inventory /mrhis/vars/external_inventory/hosts --vault-password-file /mrhis/vars/vault/.vaultpass.container --extra-vars @/mrhis/vars/vault/env.yml --extra-vars '{"satellite_disconnected":false,"register_to_satellite":false}' -e ansible_user=root -e ansible_password='<ROOT_PASS>' -e ansible_become=false --limit idm /mrhis/mrhis-builder-idm/main.yml
+```
+
+If configuration values are wrong, rerun:
+
+```bash
+./MRHIS.sh --reconfigure
+```
+
+---
+
+## Artifacts & Debugging
+
+[⬆ Back to top](#table-of-contents)
+
+Runtime debugging artifacts created during recent troubleshooting runs are written to `artifacts_user/` in the repository working tree on the installer host. Common files you may find there:
+
+- `artifacts_user/gw-automation-gateway-${AAP_HOSTNAME:-aap.prod.spg}.log`
+- `artifacts_user/gw-automation-gateway-proxy-${AAP_HOSTNAME:-aap.prod.spg}.log`
+- `artifacts_user/controller-logs-${AAP_HOSTNAME:-aap.prod.spg}.tar.gz`
+- `artifacts_user/aap-root-ca.pem`
+
+Quick TLS verification using the extracted CA (no install). Note: AAP gateway listens on port 443 by default (configurable via `AAP_GATEWAY_HTTPS_PORT`):
+
+```bash
+openssl s_client -connect ${AAP_IP:-10.168.128.2}:443 -servername ${AAP_HOSTNAME:-aap.prod.spg} -CAfile artifacts_user/aap-root-ca.pem
+```
+
+If using a custom port (e.g., `AAP_GATEWAY_HTTPS_PORT=8446`):
+
+```bash
+openssl s_client -connect ${AAP_IP:-10.168.128.2}:8446 -servername ${AAP_HOSTNAME:-aap.prod.spg} -CAfile artifacts_user/aap-root-ca.pem
+```
+
+To install the extracted root CA system-wide on a RHEL installer host (requires sudo):
+
+```bash
+sudo cp artifacts_user/aap-root-ca.pem /etc/pki/ca-trust/source/anchors/
+sudo update-ca-trust extract
+```
+
+After installing the CA, re-run any host-side verification checks.
+
+## Support
+
+[⬆ Back to top](#table-of-contents)
+
+For issues, improvements, or repo-specific workflow questions, open a repository issue or contact the maintainers.
+
+**License**: MIT

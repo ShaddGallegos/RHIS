@@ -1,0 +1,29 @@
+---
+
+- name: "Server bootstrap: apply baseline server config"
+  hosts: idm:satellite:aap
+  become: true
+  gather_facts: false
+  pre_tasks:
+    - name: Load vaulted env from user's home
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env','HOME') + '/.ansible/conf/env.yml' }}"
+        ignore_missing: true
+    - name: Wait for SSH connectivity to hosts
+      ansible.builtin.wait_for_connection:
+        timeout: 900
+      # Allow play to fail gracefully if connection is not established in CI or special flows
+      # Caller scripts (MRHIS.sh) perform additional preflight/VM checks before invoking playbooks.
+
+    - name: Gather facts after connectivity is confirmed
+      ansible.builtin.setup:
+
+  roles:
+    - role: mrhis-rhsm
+      # role will read RHSM vars from env or inventory (rh_user/rh_pass or cdn_organization_id/cdn_sat_activation_key)
+    - role: mrhis-kickstart
+    - role: mrhis-aap-serve
+    - role: server_bootstrap
+      open_9443: false
+      ensure_httpd: false
+      wait_for_web: false

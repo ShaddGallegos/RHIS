@@ -1,0 +1,19 @@
+---
+# Installer-specific tests
+- name: Check installer user exists (if defined)
+  ansible.builtin.shell:
+    cmd: "getent passwd {{ installer_user | default(global_admin | default('admin')) }}"
+  register: installer_user_check
+  failed_when: installer_user_check.rc != 0
+  when: installer_user is defined
+
+- name: Ensure terminator launcher script exists (if expected)
+  ansible.builtin.stat:
+    path: /usr/local/bin/mrhis-terminator-launcher.sh
+  register: terminator_launcher_stat
+
+- name: Fail if terminator launcher missing
+  ansible.builtin.fail:
+    msg: "/usr/local/bin/mrhis-terminator-launcher.sh not found"
+  when: terminator_launcher_stat.stat.exists is not defined or not
+    terminator_launcher_stat.stat.exists

@@ -1,0 +1,131 @@
+---
+# Prepare host for containerized AAP controller (idempotent)
+
+- name: Install bundle extraction prerequisites
+  ansible.builtin.package:
+    name: "{{ aap_extract_prereqs }}"
+    state: present
+
+- name: Ensure qemu-guest-agent is installed
+  ansible.builtin.package:
+    name: qemu-guest-agent
+    state: present
+  failed_when: false
+
+- name: Ensure qemu-guest-agent enabled and started
+  ansible.builtin.service:
+    name: qemu-guest-agent
+    enabled: true
+    state: started
+  failed_when: false
+
+- name: Ensure podman package is installed
+  ansible.builtin.package:
+    name: "{{ podman_pkg }}"
+    state: present
+
+- name: Ensure crun is installed (recommended runtime)
+  ansible.builtin.package:
+    name: "{{ crun_pkg }}"
+    state: present
+  failed_when: false
+
+- name: Ensure AAP controller volumes exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: 0
+    ansible.builtin.group: 0
+    mode: "0755"
+  loop: "{{ aap_controller_volumes }}"
+
+- name: Include bundle extraction tasks
+  ansible.builtin.include_tasks: extract_bundle.yml
+
+- name: Pull AAP controller image (placeholder)
+  become: true
+  ansible.builtin.command: podman pull {{ aap_controller_image }}
+  register: podman_pull
+  changed_when: podman_pull.rc == 0 and 'Downloaded' in (podman_pull.stdout +
+    podman_pull.stderr)
+  failed_when: podman_pull.rc != 0 and 'not found' not in (podman_pull.stdout +
+    podman_pull.stderr)
+  ignore_errors: true
+
+- name: Ensure systemd unit stub for AAP controller container (will not run
+    automatically)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/aap-controller-container.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=AAP controller container (placeholder)
+      After=network.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/podman run --rm --name aap-controller \
+        -v /var/lib/aap-controller/data:/data \
+        -v /var/lib/aap-controller/pgdata:/pgdata \
+        {{ aap_controller_image }}
+      ExecStop=/usr/bin/podman stop aap-controller
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: daemon-reload
+
+- name: Ensure /etc/subuid contains admin mapping (idempotent)
+  ansible.builtin.lineinfile:
+    path: /etc/subuid
+    regexp: "^admin:"
+    line: "admin:100000:65536"
+    create: true
+    backup: true
+  become: true
+
+- name: Ensure /etc/subgid contains admin mapping (idempotent)
+  ansible.builtin.lineinfile:
+    path: /etc/subgid
+    regexp: "^admin:"
+    line: "admin:100000:65536"
+    create: true
+    backup: true
+  become: true
+
+- name: Set setuid on newuidmap/newgidmap where present (best-effort)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "04755"
+    owner: root
+    group: root
+  loop:
+    - /usr/libexec/newuidmap
+    - /usr/libexec/newgidmap
+    - /usr/bin/newuidmap
+    - /usr/bin/newgidmap
+    - /sbin/newuidmap
+    - /sbin/newgidmap
+  ignore_errors: true
+  become: true
+
+- name: Enable user lingering for admin (so user services start at boot)
+  ansible.builtin.command: loginctl enable-linger admin
+  changed_when: false
+  failed_when: false
+  become: true
+
+- name: Ensure automation-gateway user unit enabled for admin (best-effort)
+  ansible.builtin.shell: |
+    su - admin -c "systemctl --user daemon-reload || true; systemctl --user enable automation-gateway.service 2>/dev/null || true"
+  args:
+    warn: false
+  become: true
+
+- name: Enable aap-bundle-fetch system service if present (do not fail if missing)
+  ansible.builtin.systemd:
+    name: aap-bundle-fetch.service
+    enabled: true
+    state: started
+  failed_when: false
+  become: true

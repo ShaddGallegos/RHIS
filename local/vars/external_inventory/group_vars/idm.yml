@@ -1,0 +1,59 @@
+---
+# IdM host defaults shared by all external inventory IdM entries.
+
+ansible_password: "{{ idm_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
+ansible_become_password: "{{ idm_admin_pass | default(aap_admin_pass | default(global_admin_password)) | default('') }}"
+idm_realm: "{{ idm_realm | default('PROD.SPG') }}"
+idm_domain: "{{ idm_domain | default('prod.spg') }}"
+idm_user_groups:
+    - name: "{{ idm_admins_group | default('mrhis-admins') }}"
+        description: "MRHIS Infrastructure Administrators"
+        state: present
+        user_list:
+            - mrhis-operator
+    - name: "{{ idm_content_managers_group | default('content-managers') }}"
+        description: "MRHIS Content Managers (Satellite, Repos, Lifecycle)"
+        state: present
+        user_list:
+            - satellite-svc
+    - name: "{{ idm_automation_engineers_group | default('automation-engineers') }}"
+        description: "MRHIS Automation Engineers (Ansible, AAP)"
+        state: present
+        user_list:
+            - aap-svc
+    - name: "{{ idm_system_services_group | default('system-services') }}"
+        description: "MRHIS System Service Accounts"
+        state: present
+idm_users:
+    - login: satellite-svc
+        first: Satellite
+        last: "Service Account"
+        displayname: "Satellite Service User"
+        email:
+            - "satellite-svc@{{ idm_domain | default(domain | default('localdomain')) }}"
+        random: true
+        state: present
+    - login: aap-svc
+        first: AAP
+        last: "Service Account"
+        displayname: "AAP Service User"
+        email:
+            - "aap-svc@{{ idm_domain | default(domain | default('localdomain')) }}"
+        random: true
+        state: present
+    - login: mrhis-operator
+        first: MRHIS
+        last: Operator
+        displayname: "MRHIS Operator User"
+        email:
+            - "mrhis-operator@{{ idm_domain | default(domain | default('localdomain')) }}"
+        password: "{{ aap_admin_pass | default(global_admin_password | default(idm_admin_pass | default(''))) }}"
+        state: present
+idm_password_policies:
+    - group_name: global_policy
+        minlife: "0"
+        maxlife: "365"
+        minclasses: "3"
+        minlength: "12"
+        history: "6"
+        state: present

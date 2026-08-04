@@ -1,0 +1,6 @@
+---
+- name: Test mrhis-aap-container role (smoke)
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - debug: msg="mrhis-aap-container role skeleton present"

@@ -1,0 +1,45 @@
+---
+# Scaffold tasks for mrhis-ssh-keys
+# This role is intended to be called from the installer host (delegate to localhost
+# for key generation) and then run against target hosts to deploy public keys.
+
+- name: Ensure vaulted installer public key is available
+  ansible.builtin.assert:
+    that:
+      - rhis_ssh_installer is defined
+      - rhis_ssh_installer.public_key is defined
+  tags: always
+
+- name: Create .ssh for target user(s)
+  ansible.builtin.file:
+    path: "/home/{{ item }}/.ssh"
+    state: directory
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    mode: '0700'
+  loop: "{{ rhis_ssh_installer.users | default(['admin','root']) }}"
+  become: true
+
+- name: Install installer public key into authorized_keys for users
+  ansible.builtin.authorized_key:
+    user: "{{ item }}"
+    key: "{{ rhis_ssh_installer.public_key | trim }}"
+    state: present
+    manage_dir: no
+  loop: "{{ rhis_ssh_installer.users | default(['admin','root']) }}"
+  become: true
+
+- name: Open SSH port in firewall (firewalld)
+  ansible.builtin.command: >-
+    firewall-cmd --permanent --add-service=ssh
+  args:
+    warn: false
+  register: _fw_add
+  failed_when: false
+  changed_when: _fw_add.rc == 0
+  become: true
+
+- name: Reload firewall if changed
+  ansible.builtin.command: firewall-cmd --reload
+  when: _fw_add.rc == 0
+  become: true
